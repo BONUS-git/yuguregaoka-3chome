@@ -1,5 +1,5 @@
 # YGO-003 システムアーキテクチャと技術選定（.ai/architecture.md）
-状態: open
+状態: done
 
 ## 目的
 Goal の条件 4「`.ai/architecture.md` にシステムアーキテクチャと技術選定（選んだ理由は ADR）がある」を満たす。
