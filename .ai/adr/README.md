@@ -30,3 +30,5 @@
 - [0011 — 組版エンジンは TSX を静的 HTML に描く](0011-newspaper-template-engine.md)
 - [0012 — 想定規模](0012-assumed-scale.md)
 - [0013 — 退去処理とデータ保持期間](0013-account-deletion-and-retention.md)
+- [0014 — API は即時性と数値を返さない](0014-api-no-immediacy-no-counts.md)
+- [0015 — API・DB・バッチの責務の境界](0015-api-db-batch-boundary.md)

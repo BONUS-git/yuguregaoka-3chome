@@ -1,5 +1,5 @@
 # YGO-005 API 設計方針（.ai/api.md）
-状態: open
+状態: done
 
 ## 目的
 目標の条件 6「`.ai/api.md` に API 設計方針（API・DB・バッチの責務の分け方）がある」を満たす。
