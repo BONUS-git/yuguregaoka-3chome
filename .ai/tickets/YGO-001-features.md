@@ -1,5 +1,5 @@
 # YGO-001 機能一覧と優先順位（.ai/features.md）
-状態: open
+状態: done
 
 ## 目的
 Goal g-a5d50c08 の受け入れ条件 2（`.ai/features.md` に機能一覧と優先順位がある）を満たす。
