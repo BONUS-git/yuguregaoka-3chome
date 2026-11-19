@@ -41,3 +41,4 @@ FR-006 は「一定期間ログインのない住所は空き家に分類する�
 - DB 設計: `addresses` に `status`（active / dormant / vacant_deleted / vacant_expired / vacant_forwarded）と
   `last_login_at`・`forwarding_expires_at` を持つ
 - 非同期処理: 休眠判定バッチが定期実行される（`async.md` で設計）
+- 時期: 休眠と空き家の再割り当ては段階 3（F-16）で入れる。MVP の候補は使われたことのない住所だけ（→ ADR-0023）
