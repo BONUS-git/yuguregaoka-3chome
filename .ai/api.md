@@ -131,7 +131,7 @@ db.md §4 の状態遷移に合わせる。
 | 403 | `forbidden`（admin 経路のみ） |
 | 404 | `not_found` |
 | 409 | `conflict`（住所を選ぶときの競合など） |
-| 429 | `daily_limit_reached`（残りの数は返さない） |
+| 429 | `daily_limit_reached`（手紙・投稿の JST の暦日ごとの上限）、`rate_limited`（登録の要求・ログイン試行・パスワード再設定・確認メール送信の流量の制限、security.md §3.5、ADR-0030）。どちらも残りの数・解除までの時間は返さない |
 | 500 | `internal` |
 | 503 | `unavailable` |
 
@@ -163,7 +163,7 @@ db.md §4 の状態遷移に合わせる。
 
 | メソッド | パス | 要約 | 状態コード | FR / ADR |
 |---|---|---|---|---|
-| `POST` | `/api/v1/registrations` | 住所の選択と認証情報の登録。認証情報は security.md で決める。開放式（OQ-007 の暫定） | 201 | FR-001, ADR-0001 |
+| `POST` | `/api/v1/registrations` | 住所の選択と認証情報の登録。認証情報は security.md で決める。開放式で、招待トークン・紹介者は受け取らない（ADR-0030） | 201 | FR-001, FR-091, ADR-0001, ADR-0030 |
 | `POST` | `/api/v1/sessions` | ログイン | 200 | FR-011 |
 | `DELETE` | `/api/v1/sessions/current` | ログアウト | 204 | — |
 | `GET` | `/api/v1/me` | 自分のプロフィールを返す | 200 | FR-008 |
