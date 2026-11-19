@@ -38,3 +38,5 @@
 - [0019 — セッションはサーバー側に持つ。複数デバイスを許す。重要な操作では再認証する](0019-server-side-sessions-and-reauth.md)
 - [0020 — ロールは住民とモデレーターの 2 つ。権限の規則表は 1 か所に持ち LLM は判定に関わらない](0020-staff-roles-and-permission-table.md)
 - [0021 — 手紙の暗号鍵に版を付けて入れ替える。AAD に手紙の ID を含める](0021-encryption-key-versioning.md)
+- [0022 — 段階は features.md の 3 つのまま。MVP は作る順に M0〜M6 に分け、各段階は受け入れ条件・見直し・マスターの確認で閉じる](0022-roadmap-stages-and-gates.md)
+- [0023 — 休眠と空き家の再割り当ては段階 3。MVP の住所の候補は使われたことのない住所だけ](0023-dormancy-and-address-reuse-in-stage-3.md)

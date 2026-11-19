@@ -24,7 +24,8 @@
    排除（P-1, P-2）に従い、いいね数・フォロワー数・スコア・既読状態は一切保存しない。
 
 5. **実世界の個人情報は最小限** [inferred]（NFR-002）: 住民の実名・実住所・顔写真を
-   システム内部で保持しない。認証に必要な情報（メールアドレス等）の保持方針は `security.md` で定義する（OQ-028）。
+   システム内部で保持しない。認証はメールアドレス＋パスワード（ADR-0018）、セッションはサーバー側に持ち複数の端末で持てる（ADR-0019）。
+   メールアドレスとパスワードのハッシュ・セッションの保持方針は `security.md` §3 に従う（OQ-028・OQ-036 は決定）。
 
 6. **ジョブのペイロードは ID のみ** [inferred]（ADR-0010）: ジョブキューに積むペイロードには
    対象レコードの ID のみを含め、本文など大きなデータは含めない。
@@ -246,7 +247,7 @@ UNIQUE(blocker_id, blocked_id)
 |--------|------|
 | `id` UUID PK | — |
 | `report_id` UUID FK→reports | — |
-| `moderator_id` UUID FK→residents | 操作したモデレーター（権限定義は security.md / OQ-031） |
+| `moderator_id` UUID FK→residents | 操作したモデレーター（権限は ADR-0020・security.md §4） |
 | `action` text | approve / reject / dismiss |
 | `note` text NULL | 操作メモ |
 | `created_at` timestamptz | — |
@@ -325,7 +326,7 @@ ADR-0002 は「空き家は新規住民の割り当て候補となる」と定�
 | データ種別 | テーブル | 作る | 保つ | 消す |
 |-----------|---------|------|------|------|
 | 住民 | `residents` | 新規登録時に作成 | アカウント削除まで | 削除申請で即時物理削除（ADR-0013）→ erasure_log に記録 |
-| 住所 | `addresses` | 住民登録時・新規割り当て時 | 居住中は保持。空き家後も割り当て候補として保持 | 管理者が廃棄するまで削除しない（住所のプールを維持） |
+| 住所 | `addresses` | 住民登録時・新規割り当て時 | 居住中は保持。空き家後も保持し、段階 3 から割り当て候補に戻す（ADR-0023） | 管理者が廃棄するまで削除しない（住所のプールを維持） |
 | 居住記録 | `tenancies` | 住所割り当て時・転入時 | 歴史として保持（配達先解決に使う） | 住民削除から 1 年後に削除（ADR-0013） |
 | 手紙（本体） | `letters` | 送信時（`pending` 状態） | 配達後も保持。送信者が削除されても `body_encrypted` は残す（受取人保護）。ただし送信者フラグを「退去済み」に更新 | 受取人全員が郵便受けから削除したとき、または通報クローズから 1 年後（レポート対象分）（ADR-0013） |
 | 手紙（宛先） | `letter_recipients` | 送信時 | 手紙本体と同期 | 手紙削除時 |
@@ -384,6 +385,10 @@ stateDiagram-v2
     vacant_deleted --> active : 新規住民の割り当て
     vacant_forwarded --> active : 新規住民の割り当て
 ```
+
+**段階**（ADR-0023）: MVP で起きる遷移は `[*] → active`（使われたことのない住所の割り当て）と
+`active → vacant_deleted`（アカウント削除）だけ。`dormant` に関わる遷移・`vacant_expired`・
+`vacant_forwarded`・空き家から `active` への再割り当ては段階 3（F-16）で入れる。
 
 ---
 
@@ -459,9 +464,9 @@ stateDiagram-v2
 
 | OQ | 本文書での仮の扱い |
 |----|-----------------|
-| OQ-003（クローズドな手紙のモデレーション） | クローズドな手紙は `moderation_queue` に積まない（MVPは対象外、architecture.md §4）。通報分の扱いは OQ-003 の回答と OQ-031 の権限設計を待つ |
+| OQ-003（クローズドな手紙のモデレーション） | クローズドな手紙は `moderation_queue` に積まない（MVPは対象外、architecture.md §4）。通報分は security.md §5.4 の暫定（モデレーターが 1 通だけ復号して確認）に従い、OQ-003 の回答で変わりうる |
 | OQ-030（アカウント情報の保持期間） | ADR-0013 の数値（logs 30 日, moderation 1 年, reports クローズ後 1 年, backups 30 日, erasure_log 60 日）を `[assumed]` として仮置き。確定したら ADR-0013 を更新する |
-| OQ-031（管理者・モデレーター役割） | `moderation_actions.moderator_id` は `residents` の FK として保持。権限チェックは `security.md` で定義待ち |
+| OQ-031（管理者・モデレーター役割）→ 決定 | ロールは住民とモデレーターの 2 つ（ADR-0020）。`moderation_actions.moderator_id` は `residents` の FK として保持し、モデレーターのロールを持つ住民だけが書ける。権限の規則表は `security.md` §4。ロールの保持（`staff_roles` テーブルか `residents` の列か）は実装で決める |
 
 ---
 
