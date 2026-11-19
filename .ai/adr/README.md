@@ -45,3 +45,4 @@
 - [0026 — クローズドな手紙も審査する。本文は LLM に渡さず、ルール表だけで照合し、復号できる場面を限る](0026-closed-letters-rule-only-moderation.md)
 - [0027 — 未成年の利用を認め、年齢制限・特別な制限を置かない。生年月日・年齢は集めない](0027-minors-no-age-restriction.md)
 - [0028 — 架空の街の地図は、1 枚の静的な画像として MVP（M1）で作る。API・DB・ジオデータは持たない](0028-town-map-static-image-in-mvp.md)
+- [0029 — 商店・団体のアカウントは管理者（運用者の CLI）が作る。住民は商店・団体を開けない](0029-shop-and-group-accounts-created-by-operators.md)
