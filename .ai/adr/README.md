@@ -44,3 +44,4 @@
 - [0025 — 配達完了の通知は、配達回の公開のあとに Web Push で 1 回送り、郵便の件数を含める](0025-delivery-notification-web-push-with-count.md)
 - [0026 — クローズドな手紙も審査する。本文は LLM に渡さず、ルール表だけで照合し、復号できる場面を限る](0026-closed-letters-rule-only-moderation.md)
 - [0027 — 未成年の利用を認め、年齢制限・特別な制限を置かない。生年月日・年齢は集めない](0027-minors-no-age-restriction.md)
+- [0028 — 架空の街の地図は、1 枚の静的な画像として MVP（M1）で作る。API・DB・ジオデータは持たない](0028-town-map-static-image-in-mvp.md)
