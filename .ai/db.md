@@ -112,7 +112,7 @@ UNIQUE 制約なし。複数宛先は `letter_recipients` で管理する。
 | `letter_id` UUID FK→letters | — |
 | `recipient_address_text` text | 宛先住所（登録時点の文字列、ADR-0003） |
 | `registered_tenancy_id` UUID FK→tenancies NULL | 住所録登録時点の居住記録（§3 参照）。画面・API 非公開 |
-| `delivered_at` timestamptz NULL | 配達完了日時 |
+| `delivered_at` timestamptz NULL | 配達完了日時。J5 が `delivered` を確定するとき、受取人の `mailbox_items.visible_at`（手紙の枠の時刻）を書く（ADR-0035）。送った人には返さない（送信済みの「配達済み」は時間帯の終わり 12:00 / 21:00 を過ぎてから見せる、api.md §7 F-04） |
 
 UNIQUE(letter_id, recipient_address_text)
 
@@ -125,10 +125,12 @@ UNIQUE(letter_id, recipient_address_text)
 | `delivery_run_id` text FK→delivery_runs | 配達回 ID |
 | `kind` text | letter / newspaper / board_post |
 | `item_id` UUID | 対応するレコードの ID（letters.id / newspapers.id / board_posts.id） |
+| `visible_at` timestamptz | 受取人に見せ始める時刻（ADR-0035 の D10）。J4 が書く。新聞はその便の公開の時刻（07:00 / 17:00）、手紙は受取人ごとの枠の時刻（午前 08:00〜11:50・午後 18:00〜20:50 の 10 分刻み）。API では返さない |
 | `deleted_at` timestamptz NULL | 受取人が削除した日時（FR-099） |
 | `created_at` timestamptz | — |
 
-UNIQUE(delivery_run_id, resident_id, kind, item_id) — 配達の冪等性を保証する（ADR-0010）
+UNIQUE(delivery_run_id, resident_id, kind, item_id) — 配達の冪等性を保証する（ADR-0010）  
+INDEX(resident_id, visible_at) — 郵便受けの一覧で、`visible_at` を過ぎた行を住民ごとに引くため（ADR-0035）
 
 ---
 
@@ -168,10 +170,11 @@ UNIQUE(delivery_run_id, resident_id, kind, item_id) — 配達の冪等性を保
 | `delivery_run_id` text FK→delivery_runs | 配達回 ID。保持期間はこの配達回の `finished_at` から数え、J14 が `delivery_runs` より先に消す（async.md J14） |
 | `push_subscription_id` UUID FK→push_subscriptions | 送った購読。購読を消すときは、この行も一緒に消す |
 | `resident_id` UUID FK→residents | 受け取る住民 |
+| `kind` text | newspaper / letter（新聞の通知か手紙の通知か、ADR-0035 の D12） |
 | `created_at` timestamptz | J15 が行を入れた日時 |
 | `sent_at` timestamptz NULL | 送った日時（NULL は未送信） |
 
-UNIQUE(delivery_run_id, push_subscription_id) — 通知の重複を防ぐ（async.md J15）。件数は持たない（送るときに数える）。
+UNIQUE(delivery_run_id, push_subscription_id, kind) — 通知の重複を防ぐ（async.md J15、ADR-0035）。件数は持たない（送るときに数える）。
 
 ---
 
@@ -465,13 +468,14 @@ stateDiagram-v2
 
 ## §7 `async.md` への引き継ぎ
 
-非同期処理の冪等性は次の 3 つの DB 制約で保証する:
+非同期処理の冪等性は次の 3 つの DB 制約と、手紙の時刻の決定的な計算で保証する:
 
 | 保証 | 仕組み |
 |------|-------|
 | 配達の重複防止 | `mailbox_items` の UNIQUE(delivery_run_id, resident_id, kind, item_id)（ADR-0010） |
 | 組版の重複防止 | `newspapers` の UNIQUE(delivery_run_id) |
-| 配達完了の通知の重複防止 | `delivery_notifications` の UNIQUE(delivery_run_id, push_subscription_id)（ADR-0025） |
+| 配達の通知の重複防止 | `delivery_notifications` の UNIQUE(delivery_run_id, push_subscription_id, kind)（ADR-0025・ADR-0035） |
+| 手紙の時刻の再現 | `mailbox_items.visible_at` は `SHA-256(run_id:resident_id)` から決めるので、J4 をやり直しても同じ値（ADR-0035 の D9） |
 
 ジョブのペイロードには ID のみを含める（§1 原則 6）。
 本文など大きなデータをペイロードに入れると、ジョブ再実行時に古い内容が使われる恐れがあるため。
@@ -488,7 +492,8 @@ stateDiagram-v2
 | FR-011〜014 | §2 `letters` / `mailbox_items` |
 | FR-017 | 既読フラグなし（§1 原則 4）|
 | FR-021〜030 | §2 `delivery_runs`・§4 配達回ライフサイクル（ADR-0004） |
-| FR-028, FR-102 | §2 通知（`push_subscriptions`・`delivery_notifications`、ADR-0025） |
+| FR-028, FR-102 | §2 通知（`push_subscriptions`・`delivery_notifications` の `kind`、ADR-0025・ADR-0035） |
+| FR-105, FR-106 | §2 `mailbox_items.visible_at`（手紙の枠の時刻・新聞の定時、全住民への新聞の行、ADR-0035） |
 | FR-031〜039 | §2 `newspapers` / `newspaper_items`・§4 新聞ライフサイクル |
 | FR-041〜050 | §2 `board_posts`・§4 掲示板ライフサイクル |
 | FR-051〜057 | §2 `address_book`・§3 ADR-0003（自動更新なし） |
