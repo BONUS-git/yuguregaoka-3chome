@@ -50,3 +50,4 @@
 - [0031 — 外部 LLM の費用の見積もりはロードマップに置き、サービスは秘書が暫定で選ぶ（Anthropic API の Haiku）。本番のアダプタは承認のあとに作る](0031-llm-service-provisional-selection-and-cost-estimate.md)
 - [0032 — 違反した住民への処置の内容は、マスターが後で決める。決まるまで処置を実行する手段は作らない](0032-resident-sanctions-deferred-to-master.md)
 - [0033 — メール送信は、テスト環境ではモックかローカルの SMTP を使う。本番のサービスはマスターの事前承認を得て選ぶ](0033-email-mock-or-local-smtp-in-test-production-by-approval.md)
+- [0034 — 共有を禁止する「連絡先」は街の外の連絡先だけ。禁止はマッチングの中だけで、掲示板・手紙には及ばない](0034-contact-sharing-ban-outside-contacts-in-matching-only.md)
