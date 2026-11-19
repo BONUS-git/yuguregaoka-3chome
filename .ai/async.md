@@ -4,7 +4,7 @@
 - 日付: 2026-11-19
 - チケット: YGO-006
 - 根拠: `.ai/brief.md`・`.ai/requirements.md`・`.ai/architecture.md`・`.ai/db.md`・`.ai/api.md`
-- 関連 ADR: 0002・0004・0005・0006・0007・0008・0010・0011・0012・0013・0014・0015・0016・0017・0025
+- 関連 ADR: 0002・0004・0005・0006・0007・0008・0010・0011・0012・0013・0014・0015・0016・0017・0025・0026
 
 ---
 
@@ -31,6 +31,7 @@
 
 6. **LLM は審査のラベルを返すだけ** [explicit]（ADR-0005）: `ok` / `review` / `block` の
    いずれかを返す。公開可否の最終判断はルール表との突合で決める。
+   クローズドな手紙の本文は LLM に渡さず、ルール表だけで照合する [inferred]（OQ-003 → 決定、ADR-0026）。
 
 7. **即時の配達や通知はしない** [explicit]（P-1）: 定時配達以外に住民に物を届けない。
    配達完了の通知（OQ-002 → 決定、ADR-0025）は、J5 の公開のあとに J15 が配達回ごと・購読ごとに 1 回だけ送る。
@@ -45,8 +46,8 @@
 | ID | キュー名 | きっかけ | 入力 | 出力 |
 |----|---------|---------|------|------|
 | J0 | `delivery.tick` | 定時（5 分ごと）[assumed] | なし | J1〜J6 を必要に応じて積む |
-| J1 | `delivery.close` | 01:00 / 14:00 JST 以降、J0 が判断 | `run_id` | 配達回を `running` にする。手紙を `pending` → `scheduled`。`moderation_queue` に行を入れる |
-| J2 | `moderation.review` | 02:00 / 15:00 JST 以降、J0 が判断 | `run_id` | ラベルと判定。投稿を `approved` / `rejected` にする |
+| J1 | `delivery.close` | 01:00 / 14:00 JST 以降、J0 が判断 | `run_id` | 配達回を `running` にする。手紙を `pending` → `scheduled`。`moderation_queue` に投稿と手紙の行を入れる |
+| J2 | `moderation.review` | 02:00 / 15:00 JST 以降、J0 が判断 | `run_id` | ラベルと判定。投稿を `approved` / `rejected` にする。手紙はルール表だけで照合し、当たれば `blocked` にする（LLM は使わない、ADR-0026） |
 | J3 | `newspaper.typeset` | J2 完了か打ち切り後、J0 が判断（締め切りは 05:00 / 16:30）| `run_id` | 静的 HTML と `newspapers` の行。間に合わなければ休刊 |
 | J4 | `delivery.prepare` | `newspapers` の行ができた後、J0 が判断 | `run_id` | 見せる前の `mailbox_items`。宛先ごとの振り分け |
 | J5 | `delivery.publish` | 07:00 / 17:00 JST、J0 が判断 | `run_id` | 配達回を `done` に。手紙と投稿の最終状態を確定 |
@@ -74,7 +75,6 @@ J13 は段階 2（F-11）。
 |------|------|
 | マッチング | 段階 3（F-18）。アルゴリズム（FR-066）とカテゴリの分け方（FR-069）が未確定。恋愛のカテゴリは設けない（ADR-0024） |
 | 広告・折込チラシ | FR-090 はこのフェーズの範囲外（F-20）|
-| クローズドな手紙の審査 | OQ-003 未回答。通報された手紙の復号権限が確定していない |
 
 ---
 
@@ -166,6 +166,7 @@ J0 の判断ロジック（概略）:
 - `delivery_runs.status` を `pending` → `running` に更新
 - 対象配達回の手紙を `state = 'scheduled'` に更新
 - 対象配達回の掲示板投稿を `moderation_queue` に登録
+- 対象配達回の `scheduled` の手紙（J5・J6 で持ち越されてきたものを含む）を `moderation_queue` に `content_kind = 'letter'` で登録（ADR-0026）。入れるのは ID だけで、本文は入れない。この行は M4（J2 を作る段階）から入れる（`roadmap.md` §4）
 
 **冪等性**:
 - `delivery_runs` の行は `INSERT … ON CONFLICT DO NOTHING` で作る（API が作ってなければここで作る）
@@ -208,18 +209,27 @@ COMMIT;
 **出力**:
 - `moderation_queue` の各行にラベル（`llm_label`）と判定（`policy_decision`）を記録
 - `board_posts.status` を `approved` / `rejected` に更新
+- 手紙の行には判定（`policy_decision`）と、当たったときの規則の ID（`matched_rule_id`）・ルール表の版（`rule_version`）だけを記録し、当たった手紙を `letters.state = 'blocked'` に更新
 
-**対象**: 掲示板の投稿のみ（クローズドな手紙は OQ-003 の回答待ち [assumed]）
+**対象**: 掲示板の投稿と、クローズドな手紙（OQ-003 → 決定、ADR-0026）
 
-**判定の順序**（ADR-0005）:
+**投稿の判定の順序**（ADR-0005）:
 1. ルール表を先に当てる（即座に `blocked` → `rejected`）
 2. ルール表で決まらなければ LLM がラベルを付ける
 3. LLM のラベルをルール表と突き合わせて `approved` / `rejected` を決める
+
+**手紙の判定**（ADR-0026）:
+1. 手紙の経路には LLM の分類器のアダプタを渡さない。`llm_label` は常に NULL（DB の CHECK 制約、db.md §2）
+2. worker の中で本文を復号し、ルール表のうち手紙に当てる項目だけで照合する。平文はメモリの中だけに置き、DB・ログ・ジョブのペイロード・例外のメッセージに書かない
+3. 当たらない → `policy_decision = 'approved'`（J4 が配達の準備をする）。当たった → `policy_decision = 'blocked'`・`letters.state = 'blocked'`（配達しない）
+4. 人の審査の段はない。手紙の行は管理用の審査キューに出さない（api.md §7 F-08）
+5. 本番のルール表には手紙に当てる項目を置かない（OQ-043 の暫定）ので、本番ではすべての手紙が `approved` になる。止める経路はテスト用の偽の規則で確かめる
 
 **冪等性**:
 - `moderation_queue.llm_label` がすでに記録済みなら LLM を呼び直さない（費用の二重払いを避ける）
 - ラベル・判定・投稿の状態は 1 つのトランザクションで書く
 - `UPDATE board_posts SET status=… WHERE id=$1 AND status='awaiting_review'`
+- 手紙は `UPDATE letters SET state='blocked' WHERE id=$1 AND state='scheduled'` と判定の記録を 1 つのトランザクションで書く。`policy_decision` が記録済みの行は照合し直さない
 
 **失敗とやり直し**:
 - LLM が失敗したら、打ち切り時刻（04:00 / 16:00 JST）まで指数バックオフで再試行
@@ -228,7 +238,13 @@ COMMIT;
 - `review` の投稿と打ち切りまでに決まらなかった投稿は、モデレーターが人の審査で `approved` / `rejected` にする
   （security.md §5.2 の 3、ロールは ADR-0020 で決定・OQ-031）。人の審査が済むまで J2 は公開しない側に倒し、
   `awaiting_review` のまま持ち越す
-- テストではモックの LLM を使う（ADR-0005）
+- 打ち切りまでに判定できなかった手紙（復号の失敗・worker の停止など）は届けない。J2 は判定を書かずに残すだけで、手紙を動かさない。
+  J4 は判定が `approved` の手紙だけを準備する。J4 が準備しなかった `scheduled` の手紙は、J5 が公開のトランザクションの中で次の配達回に移す（J5 が公開できなければ J6 が移す）。
+  J2 が止まっていても、打ち切りのあとに動かなくても、手紙は J5 か J6 のどちらかで次の便に移る（ADR-0026 の D3）
+- J2 は打ち切りのあとも動き続けることがあり、J4 の準備が済んだあとに手紙の `approved` を書くことがある。
+  J5 が移すかどうかは判定の有無ではなく「J4 が準備したか」で決めるので、この手紙も J4 が準備していなければ次の便に移り、
+  移し先の配達回で審査し直される（判定の行は配達回ごと）。J4 のあとで `blocked` を書いた手紙は `state = 'blocked'` なので移らず、配達されない
+- テストではモックの LLM を使う（ADR-0005）。手紙の経路のテストでは、呼ばれたら失敗するモックの LLM を差し込む
 
 ---
 
@@ -276,6 +292,12 @@ COMMIT;
 - `mailbox_items` に「見せる前の」行を事前に書く
 - 宛先ごとの振り分け結果（通常・転送・差し戻し・抑止）を反映
 
+**対象の手紙**（ADR-0026）:
+- M4 から（J2 がある段階）: その配達回の `scheduled` の手紙のうち、`moderation_queue` のその配達回の行の判定が `approved` のものだけ。
+  `blocked` の手紙と、準備の時点で判定のない手紙（J2 が打ち切りまでに判定できなかったもの）には `mailbox_items` を作らない。
+  J4 が準備しなかった `scheduled` の手紙（準備のあとで `approved` が書かれたものを含む）は J5 が次の便へ移す
+- M3（J2 がない段階、`roadmap.md` §4）: 判定を見ず、その配達回の `scheduled` の手紙をすべて準備する。判定の条件は M4 で足す
+
 **宛先の振り分け**（db.md §3 の表）:
 - `tenancies.is_current = true` → 通常配達（そのまま `mailbox_items` を作る）
 - 転送期間 6 か月以内（ADR-0002）→ 新住所の住民に `mailbox_items` を作る
@@ -307,15 +329,28 @@ COMMIT;
 - `board_posts.status` を `published` に更新
 
 **1 つのトランザクションで行うこと**:
-1. 退去などで状態が変わった（無効になった）`mailbox_items` の行を削除する
-2. 手紙の `state` を `delivered` / `suppressed` / `returned` / `blocked` に確定させる
-3. `board_posts.status` を `published` に・`published_at` を記録する
-4. `delivery_runs.status` を `done` にする
-5. J15（配達完了の通知）を `singletonKey = notify.delivery:<run_id>` で積む（ADR-0025）
+1. J4 が準備しなかった手紙を次の便へ移す（ADR-0026 の D3）: この配達回の `state = 'scheduled'` の手紙のうち、
+   この配達回の `mailbox_items` がないもの（J4 が準備していないもの）を、次の受付中の配達回に移す
+   （J6 の 1・2 と同じく、次の配達回を `FOR UPDATE` で取るか `INSERT … ON CONFLICT DO NOTHING` で作り、`delivery_run_id` を変え、`scheduled` のまま）。
+   - 判定の有無では決めない。J4 のあとで J2 が `approved` を書いた手紙も、準備されていなければ移す
+   - `blocked`・`returned`・`suppressed` の手紙は `state` が `scheduled` でないので移さない
+   - 2 の削除より先に行う（退去で `mailbox_items` を消された手紙を、準備されなかった手紙と取り違えないため）
+   - M3 では J4 が `scheduled` の手紙をすべて準備するので、移る手紙はない
+   - 移した手紙の `moderation_queue` の行を、移し先の配達回で `ON CONFLICT DO NOTHING` で入れる（移し先の J1 がすでに動いていても審査に乗る）
+2. 退去などで状態が変わった（無効になった）`mailbox_items` の行を削除する
+3. 手紙の `state` を `delivered` / `suppressed` / `returned` / `blocked` に確定させる。確定の対象は J4 が準備した手紙
+   （1 の時点でこの配達回の `mailbox_items` があった手紙は `delivered`、J4 か J2 が `returned`・`suppressed`・`blocked` にした手紙はその状態のまま）だけで、
+   1 で移した手紙は対象にしない
+4. `board_posts.status` を `published` に・`published_at` を記録する
+5. `delivery_runs.status` を `done` にする
+6. J15（配達完了の通知）を `singletonKey = notify.delivery:<run_id>` で積む（ADR-0025）
 
 **冪等性**:
 - `UPDATE delivery_runs SET status='done' WHERE run_id=$1 AND status='running'`
   2 回目に動いたとき `status = 'running'` でないので何もしない（J15 も積み直さない）
+- 準備されなかった手紙の移動は `UPDATE letters SET delivery_run_id=<次の便> WHERE delivery_run_id=$1 AND state='scheduled' AND NOT EXISTS (この手紙のこの配達回の mailbox_items の行)`。
+  公開と同じトランザクションなので、失敗すれば移動も戻り、やり直しで同じ手紙を移す。移したあとの 2 回目は対象が 0 行になる。
+  移し先の `moderation_queue` の行は `ON CONFLICT DO NOTHING`（§9 の 4 の UNIQUE 制約）で重複しない
 
 **失敗とやり直し**:
 - 1 つのトランザクションなので、全体が成功か全体が失敗かのどちらか
@@ -338,7 +373,8 @@ J0 が判断し `singletonKey` で積む。
 
 **1 つのトランザクションで行うこと**:
 1. 次の受付中の配達回を `FOR UPDATE` で取る（なければ `INSERT … ON CONFLICT DO NOTHING` で作る）
-2. `letters.delivery_run_id` を次の便に変更（`state = 'scheduled'` のままにする）
+2. `letters.delivery_run_id` を次の便に変更（`state = 'scheduled'` のままにする）。判定の有無にかかわらず `scheduled` の手紙をすべて移し、
+   M4 からは、移した手紙の `moderation_queue` の行を移し先の配達回で `ON CONFLICT DO NOTHING` で入れる（判定は配達回ごとなので、移し先で照合し直す）
 3. `board_posts.delivery_run_id` を次の便に変更（`status = 'awaiting_review'` のままにする）
 4. この配達回の `mailbox_items`（まだ公開前のもの）を削除する
 5. `delivery_runs.status` を `skipped` にする
@@ -349,7 +385,8 @@ J0 が判断し `singletonKey` で積む。
 
 **その他の扱い**:
 - スキップした配達回の紙面は配らない。バックナンバーにも出さない（ADR-0007）[inferred]
-- 移した手紙は `scheduled` のまま。次の締め切りが改めて拾う（状態遷移は増えない）
+- 移した手紙は `scheduled` のまま。移し先の配達回の J2 で照合し直す（状態遷移は増えない。ADR-0026）
+- `blocked` の手紙は移さない（`state = 'scheduled'` のものだけを移す）
 - 何便分も止まっていたときは、古い配達回から順に持ち越す
 
 **失敗とやり直し**:
@@ -578,7 +615,7 @@ worker が 2 台あっても実行は 1 回分になる。`singletonKey` と DB 
 | 事態 | 何が起きるか | 住民に何が見えるか | 記録 |
 |------|------------|-----------------|------|
 | 締め切りの遅れ | 配達回が `running` にならない。手紙は `pending` のまま。次の J0 で再試行 | 「次の便で届く」と見えるまま（表示は変わらない） | pg-boss のジョブ履歴 |
-| 審査が間に合わない | 打ち切り時刻に未審査の投稿は次の便に持ち越し | 投稿が「掲載待ち」のまま継続 | `moderation_queue` の未処理行 |
+| 審査が間に合わない | 打ち切り時刻に未審査の投稿と、判定できなかった手紙は次の便に持ち越し（ADR-0026） | 投稿が「掲載待ち」のまま継続。手紙は「次の便で届く」と見えるまま | `moderation_queue` の未処理行 |
 | 組版の失敗 | 締め切りまでに直せなければ休刊行を挿入 | その配達回は手紙のみ届く。新聞なし | `newspapers.is_holiday = true` |
 | 準備が間に合わない | 公開の打ち切りまでに準備完了しなければ J6 で持ち越し | 配達なし（次の便で届く） | `delivery_runs.status = 'skipped'` |
 | 公開の失敗 | 再試行。打ち切りまでに成功しなければ J6 で持ち越し | 配達なし（次の便で届く） | pg-boss のジョブ履歴 |
@@ -629,7 +666,7 @@ NFR-027（可用性）・NFR-074（障害通知）に合わせる。
 | 項目 | 参照 | 現在の仮の扱い |
 |------|------|--------------|
 | 外部の LLM サービス | OQ-008 | テストではモックを使う（ADR-0005）|
-| クローズドな手紙の審査 | OQ-003 | 対象外として仮置き |
+| 手紙で止める内容と、手紙の閲覧（J2） | OQ-043 | 本番のルール表に手紙に当てる項目を置かない（テストは偽の規則）・止めた手紙は人が見ない（送った人には「届けられませんでした」とだけ見せる）・通報された手紙はモデレーターが 1 通だけ確かめる（YGO-007 からの暫定）。手紙を審査すること・LLM に渡さないことは決定（OQ-003、ADR-0026） |
 | 通知の手段（J12） | OQ-039 | アウトボックス形式で保留。メール送信サービスは environment.md で確定（J12 は段階 3） |
 | 配達の通知の数え方と中身（J15） | OQ-042 | 手紙だけを数え、0 通の住民には送らない。中身は便と件数だけ（OQ-002 は決定、ADR-0025） |
 | 画像の加工（J13） | OQ-026 | 段階 2 として仮置き |
@@ -696,7 +733,7 @@ NFR-027（可用性）・NFR-074（障害通知）に合わせる。
 | FR-075 | §4 J11 |
 | FR-076 | §4 J2（モデレーション）|
 | FR-077 | §4 J2（審査キュー）|
-| FR-078 | §8（OQ-003）|
+| FR-078 | §4 J1・J2・J4・J5・J6（手紙はルール表だけで審査、ADR-0026。止める内容は §8 OQ-043）|
 | FR-079 | §4 J2（LLM の役割、ADR-0005）|
 | FR-080 | §4 J2（配達前に完了）|
 | FR-081 | §4 J2（人の審査はモデレーター、ADR-0020）|
