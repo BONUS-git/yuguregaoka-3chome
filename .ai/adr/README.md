@@ -42,3 +42,4 @@
 - [0023 — 休眠と空き家の再割り当ては段階 3。MVP の住所の候補は使われたことのない住所だけ](0023-dormancy-and-address-reuse-in-stage-3.md)
 - [0024 — マッチングは恋愛のためのものではなく、興味のある人どうしが連絡を取る手段。個別の連絡先の共有は禁止する](0024-matching-not-romance-no-contact-sharing.md)
 - [0025 — 配達完了の通知は、配達回の公開のあとに Web Push で 1 回送り、郵便の件数を含める](0025-delivery-notification-web-push-with-count.md)
+- [0026 — クローズドな手紙も審査する。本文は LLM に渡さず、ルール表だけで照合し、復号できる場面を限る](0026-closed-letters-rule-only-moderation.md)

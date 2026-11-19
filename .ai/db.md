@@ -4,7 +4,7 @@
 - 日付: 2026-11-19
 - 根拠: `.ai/brief.md`・`.ai/requirements.md`・`.ai/features.md`・`.ai/architecture.md`
 - チケット: YGO-004
-- 関連 ADR: 0001〜0012, 0013
+- 関連 ADR: 0001〜0012, 0013, 0026
 
 ---
 
@@ -264,12 +264,17 @@ UNIQUE(blocker_id, blocked_id)
 | カラム | 説明 |
 |--------|------|
 | `id` UUID PK | — |
-| `content_kind` text | board_post（クローズドな手紙は OQ-003 次第） |
+| `content_kind` text | board_post / letter（手紙はルール表だけで審査する、ADR-0026） |
 | `content_id` UUID | 審査対象レコードの ID |
 | `delivery_run_id` text FK→delivery_runs | 対象の配達回 |
-| `llm_label` text NULL | ok / review / block（LLM の一次判定） |
-| `policy_decision` text NULL | approved / blocked（ルール表との突合後、ADR-0005） |
+| `llm_label` text NULL | ok / review / block（LLM の一次判定）。手紙の行では常に NULL |
+| `policy_decision` text NULL | approved / blocked（ルール表との突合後、ADR-0005・ADR-0026） |
+| `matched_rule_id` text NULL | 当たった規則の ID（`blocked` のときだけ）。本文の抜き書きは持たない（ADR-0026 の D3） |
+| `rule_version` text NULL | 判定に使ったルール表の版（security.md §5.2） |
 | `processed_at` timestamptz NULL | — |
+
+CHECK(`content_kind <> 'letter' OR llm_label IS NULL`) — 手紙の本文を LLM に渡さないことを DB でも守る（ADR-0026 の D2）。
+このテーブルにも、ほかのどのテーブルにも、手紙の本文の平文は書かない。
 
 #### `moderation_actions` — モデレーター操作記録
 
@@ -278,7 +283,7 @@ UNIQUE(blocker_id, blocked_id)
 | `id` UUID PK | — |
 | `report_id` UUID FK→reports | — |
 | `moderator_id` UUID FK→residents | 操作したモデレーター（権限は ADR-0020・security.md §4） |
-| `action` text | approve / reject / dismiss |
+| `action` text | approve / reject / dismiss / view_letter（通報された手紙の本文を見た記録。見るたびに 1 行、ADR-0026 の D4 (c)。D4 (c) は OQ-043 (3) の暫定） |
 | `note` text NULL | 操作メモ |
 | `created_at` timestamptz | — |
 
@@ -386,10 +391,13 @@ stateDiagram-v2
     [*] --> pending : 送信
     pending --> scheduled : 締め切り処理
     scheduled --> delivered : 配達成功
-    scheduled --> blocked : モデレーション NG
+    scheduled --> blocked : ルール表に当たった（J2、ADR-0026）
+    scheduled --> scheduled : J4 が準備しなかった（判定が準備に間に合わない）・配達回の持ち越し（次の便へ）
     scheduled --> suppressed : 受取人がブロック中
     scheduled --> returned : 宛先解決不可
 ```
+
+手紙の審査はルール表だけで行い、LLM は使わない（ADR-0026）。`blocked` の手紙は配達せず、送った人には「届けられませんでした」と見せる（api.md §7 F-04）。
 
 #### 掲示板投稿（`board_posts.status`）
 
@@ -500,7 +508,8 @@ stateDiagram-v2
 
 | OQ | 本文書での仮の扱い |
 |----|-----------------|
-| OQ-003（クローズドな手紙のモデレーション） | クローズドな手紙は `moderation_queue` に積まない（MVPは対象外、architecture.md §4）。通報分は security.md §5.4 の暫定（モデレーターが 1 通だけ復号して確認）に従い、OQ-003 の回答で変わりうる |
+| OQ-003（クローズドな手紙のモデレーション）→ 決定 | 手紙も `moderation_queue` に積み、ルール表だけで審査する。手紙の行の `llm_label` は CHECK 制約で NULL に固める。通報された手紙をモデレーターが見るたびに `moderation_actions` に `view_letter` を書く（ADR-0026。見てよいかは OQ-043 (3) の暫定） |
+| OQ-043（手紙で止める内容と、手紙の閲覧） | 本番のルール表に手紙に当てる項目を置かない（テストは偽の規則）・止めた手紙は人が見ない（送った人には「届けられませんでした」とだけ見せる）・通報された手紙はモデレーターが 1 通だけ確かめる（YGO-007 からの暫定。`view_letter` の記録はこの暫定のためで、OQ-043 (3) の答えで変わる）。止めた手紙（`blocked`）の本文の保持期間は ADR-0013 の表にまだなく、答えのあとに足す |
 | OQ-030（アカウント情報の保持期間） | ADR-0013 の数値（logs 30 日, moderation 1 年, reports クローズ後 1 年, backups 30 日, erasure_log 60 日）を `[assumed]` として仮置き。確定したら ADR-0013 を更新する |
 | OQ-031（管理者・モデレーター役割）→ 決定 | ロールは住民とモデレーターの 2 つ（ADR-0020）。`moderation_actions.moderator_id` は `residents` の FK として保持し、モデレーターのロールを持つ住民だけが書ける。権限の規則表は `security.md` §4。ロールの保持（`staff_roles` テーブルか `residents` の列か）は実装で決める |
 
