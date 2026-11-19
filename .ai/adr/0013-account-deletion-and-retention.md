@@ -34,6 +34,7 @@ OQ-030「アカウント情報の保持期間・削除ポリシー」は `db.md`
 | 掲示板投稿（掲載済み） | 即時 `deleted` に変更・`body` を消去。その投稿が含まれる新聞を組み直す |
 | 住所録（所有するもの） | 即時削除 |
 | ブロック（blocker / blocked） | 即時削除 |
+| 通知の購読（`push_subscriptions`）・送った記録（`delivery_notifications`） | 即時削除（ADR-0025） |
 | `tenancies`（居住記録） | アカウント削除から **1 年後**に削除 |
 | `addresses` | `status = vacant_deleted` に変更。住所レコード自体は削除しない |
 
@@ -49,6 +50,7 @@ OQ-030「アカウント情報の保持期間・削除ポリシー」は `db.md`
 |-----------|---------|
 | アクセスログ・操作ログ（DB 外） | 30 日 |
 | `delivery_runs` | 30 日 |
+| `delivery_notifications`（配達完了の通知の記録、ADR-0025） | 30 日 |
 | `moderation_queue` / `moderation_actions` | 1 年 |
 | `reports`（通報） | クローズ日から 1 年 |
 | バックアップ | 30 日 |

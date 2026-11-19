@@ -4,7 +4,7 @@
 - 日付: 2026-11-19
 - チケット: YGO-006
 - 根拠: `.ai/brief.md`・`.ai/requirements.md`・`.ai/architecture.md`・`.ai/db.md`・`.ai/api.md`
-- 関連 ADR: 0002・0004・0005・0006・0007・0008・0010・0011・0012・0013・0014・0015・0016・0017
+- 関連 ADR: 0002・0004・0005・0006・0007・0008・0010・0011・0012・0013・0014・0015・0016・0017・0025
 
 ---
 
@@ -32,7 +32,9 @@
 6. **LLM は審査のラベルを返すだけ** [explicit]（ADR-0005）: `ok` / `review` / `block` の
    いずれかを返す。公開可否の最終判断はルール表との突合で決める。
 
-7. **即時の配達や通知はしない** [explicit]（P-1・OQ-002）: 定時配達以外に住民に物を届けない。
+7. **即時の配達や通知はしない** [explicit]（P-1）: 定時配達以外に住民に物を届けない。
+   配達完了の通知（OQ-002 → 決定、ADR-0025）は、J5 の公開のあとに J15 が配達回ごと・購読ごとに 1 回だけ送る。
+   手紙が届くたびには送らない。公開から 30 分を過ぎたら送らず、`skipped` の便では送らない。
 
 ---
 
@@ -57,12 +59,13 @@
 | J12 | `notify.dormancy` | キュー（段階 3、J10 が積む） | `address_id` | 休眠通知を 1 通送る（メール送信サービスは OQ-039 の回答待ち） |
 | J13 | `image.process` | キュー（段階 2。J0 も滞留分を拾い直す） | `image_id` | 新聞写真風に加工した画像 |
 | J14 | `retention.purge` | 毎日（配達窓を外した時間帯）[assumed] | なし | ADR-0013 の保持期間を過ぎたものを削除 |
+| J15 | `notify.delivery` | キュー（J5 が公開と同じトランザクションで積む。`singletonKey = notify.delivery:<run_id>`） | `run_id` | 購読のある住民へ配達完了の通知（郵便の件数を含む）を 1 回送る（ADR-0025） |
 | — | `erasure.replay` | 手動（リストアの後） | なし | 消したはずのデータを `erasure_log` を元に消し直す |
 
 **毎日のジョブのスケジュール（J9〜J11・J14）**: 配達回の窓（01:00〜07:15 JST と 14:00〜17:15 JST）
 を避けて置く [assumed]。例: 10:00 JST、23:00 JST など。
 
-**段階**: J9〜J12 は段階 3（F-16）で作る（ADR-0023、`roadmap.md` §6）。MVP で作るのは J0〜J8・J14・`erasure.replay`。
+**段階**: J9〜J12 は段階 3（F-16）で作る（ADR-0023、`roadmap.md` §6）。MVP で作るのは J0〜J8・J14・J15・`erasure.replay`（J15 は M3、`roadmap.md` §4）。
 J13 は段階 2（F-11）。
 
 **今の段階で設計しない処理**（理由を添える）:
@@ -71,7 +74,6 @@ J13 は段階 2（F-11）。
 |------|------|
 | マッチング | 段階 3（F-18）。アルゴリズム（FR-066）とカテゴリの分け方（FR-069）が未確定。恋愛のカテゴリは設けない（ADR-0024） |
 | 広告・折込チラシ | FR-090 はこのフェーズの範囲外（F-20）|
-| プッシュ通知 | OQ-002 未回答。P-1 との整合性が確定していない |
 | クローズドな手紙の審査 | OQ-003 未回答。通報された手紙の復号権限が確定していない |
 
 ---
@@ -309,10 +311,11 @@ COMMIT;
 2. 手紙の `state` を `delivered` / `suppressed` / `returned` / `blocked` に確定させる
 3. `board_posts.status` を `published` に・`published_at` を記録する
 4. `delivery_runs.status` を `done` にする
+5. J15（配達完了の通知）を `singletonKey = notify.delivery:<run_id>` で積む（ADR-0025）
 
 **冪等性**:
 - `UPDATE delivery_runs SET status='done' WHERE run_id=$1 AND status='running'`
-  2 回目に動いたとき `status = 'running'` でないので何もしない
+  2 回目に動いたとき `status = 'running'` でないので何もしない（J15 も積み直さない）
 
 **失敗とやり直し**:
 - 1 つのトランザクションなので、全体が成功か全体が失敗かのどちらか
@@ -369,8 +372,9 @@ J0 が判断し `singletonKey` で積む。
 3. 掲示板投稿（掲載済み）を `deleted` に変更・`body` を消去し、同じトランザクションで J8 を積む
 4. 住所録（所有するもの）を削除する
 5. ブロック（blocker / blocked）を削除する
-6. `addresses.status` を `vacant_deleted` に変更する
-7. `residents` を物理削除し、`erasure_log` に記録する（最後に行う）
+6. 通知の購読（`push_subscriptions`）と送った記録（`delivery_notifications`）を削除する（ADR-0013・ADR-0025。退去の受付でセッションと一緒に消えていれば何もしない）
+7. `addresses.status` を `vacant_deleted` に変更する
+8. `residents` を物理削除し、`erasure_log` に記録する（最後に行う）
 
 **冪等性**:
 - 各ステップは `WHERE resident_id=$1` と `WHERE status=<前の状態>` を組み合わせた
@@ -504,6 +508,7 @@ J0 も `state = 'pending'` の滞留分を拾い直す [assumed]。
 
 | テーブル | 条件 |
 |----------|------|
+| `delivery_notifications` | 指している配達回の `delivery_runs.finished_at < now() - interval '30 days'`（ADR-0025）。`created_at` ではなく配達回の `finished_at` で決めるので、消す配達回を指す通知の記録はすべて同じ回で消える。同じジョブの中で `delivery_runs` より先に消す |
 | `delivery_runs` | `finished_at < now() - interval '30 days'` |
 | `moderation_queue` | `processed_at < now() - interval '1 year'` |
 | `moderation_actions` | `created_at < now() - interval '1 year'` |
@@ -514,6 +519,29 @@ J0 も `state = 'pending'` の滞留分を拾い直す [assumed]。
 
 **冪等性**:
 - 小さく区切った DELETE（1,000 件ずつ）で処理する。何度動いても安全
+
+---
+
+### J15 — 配達完了の通知（`notify.delivery`）
+
+**きっかけ**: キュー。J5 が公開と同じトランザクションで `singletonKey = notify.delivery:<run_id>` で積む（ADR-0025）。
+
+**入力**: `run_id`
+
+**出力**: 購読のある住民へ、配達完了の通知を Web Push で 1 回送る（C11。テストではモックのプッシュ送信）
+
+| 項目 | 内容 |
+|---|---|
+| 送る条件 | `delivery_runs.status = 'done'` の配達回だけ。`skipped` の便では送らない（持ち越した手紙は次の便の件数に入る） |
+| 数え方（暫定、OQ-042） | その便の `mailbox_items` のうち `kind = 'letter'` を住民ごとに数える。0 通の住民には送らない |
+| 送る相手 | 有効なセッション（`invalidated_at IS NULL` かつ有効期限内）に結んだ購読（`push_subscriptions`）。期限切れのセッションの購読は送る前に消す |
+| 中身（暫定、OQ-042） | 便（朝便・夕便）と件数だけ。差出人・本文・住所は載せない |
+| 冪等性 | `delivery_notifications` に `UNIQUE(delivery_run_id, push_subscription_id)` で `ON CONFLICT DO NOTHING` で入れ、`sent_at` が NULL のものだけ送る。送ったあと `sent_at` を入れる前に落ちると、まれに 2 通届く。J12 と同じく許容する [assumed] |
+| 期限 | 公開（`delivery_runs.finished_at`）から 30 分を過ぎたら送らない。Web Push の TTL も 30 分 |
+| 失敗 | プッシュサービスが 404・410 を返したら、その購読（と `delivery_notifications` の行）を消す。ほかの失敗は期限まで再試行する |
+| 送り先の検査 | 送る前にも `endpoint` を ADR-0025 の D6 で検査する（名前解決のあとのプライベート・ループバック・リンクローカルの宛先は送らない） |
+| 処理の単位 | keyset で 1,000 件ずつ |
+| 配達との関係 | J15 が失敗しても配達回の状態（`done`）に影響しない |
 
 ---
 
@@ -538,6 +566,7 @@ worker が 2 台あっても実行は 1 回分になる。`singletonKey` と DB 
 | J12 `notify.dormancy` | 3 | true | 3600 | — |
 | J13 `image.process` | 3 | true | 3600 | — |
 | J14 `retention.purge` | 3 | true | 7200 | `'retention.purge:<date>'` |
+| J15 `notify.delivery` | 5 | true | 1800 | `'notify.delivery:<run_id>'` |
 
 **時間のかかる工程**（J2・J3・J4）: `pg_try_advisory_lock` で実行する worker を 1 台にする。
 ロックが取れなかった worker は何もせずに終わる。
@@ -554,6 +583,7 @@ worker が 2 台あっても実行は 1 回分になる。`singletonKey` と DB 
 | 準備が間に合わない | 公開の打ち切りまでに準備完了しなければ J6 で持ち越し | 配達なし（次の便で届く） | `delivery_runs.status = 'skipped'` |
 | 公開の失敗 | 再試行。打ち切りまでに成功しなければ J6 で持ち越し | 配達なし（次の便で届く） | pg-boss のジョブ履歴 |
 | worker が何便分も止まった | 再起動後、J0 が古い配達回から順に持ち越しを実行 | 複数便分が次の 1 便で届く（件数が多い） | 操作ログ |
+| 配達完了の通知の失敗 | J15 が期限（公開から 30 分）まで再試行。期限を過ぎたら送らない。404・410 の購読は消す | 通知が届かないことがある。郵便受けは通常どおり（配達回は `done` のまま） | `delivery_notifications.sent_at` が NULL の行・pg-boss のジョブ履歴 |
 | リストアした | `erasure_log` を再生し、削除済みデータを再削除。`erasure.replay` で実行 | 通常通り（データの整合性が回復後は影響なし） | `erasure_log`・操作ログ |
 
 ---
@@ -588,6 +618,7 @@ NFR-027（可用性）・NFR-074（障害通知）に合わせる。
 | 持ち越し | 公開の打ち切りまでに J5 が完了しないとき `delivery_runs.status = 'skipped'` になり、次の便に移ること |
 | 公開と退去の競合 | J5 の実行中に J7 が動いたとき、退去済み住民の `mailbox_items` が削除されること |
 | モックの LLM が失敗 | LLM のモックが全件エラーを返したとき、打ち切り後に投稿が次の便に持ち越されること |
+| 通知の重複と期限 | J15 を 2 回動かしてもモックのプッシュ送信が受ける通知が増えないこと。公開の前・`skipped` の便・公開から 30 分のあとには送らないこと（`roadmap.md` A-15） |
 
 ---
 
@@ -600,10 +631,10 @@ NFR-027（可用性）・NFR-074（障害通知）に合わせる。
 | 外部の LLM サービス | OQ-008 | テストではモックを使う（ADR-0005）|
 | クローズドな手紙の審査 | OQ-003 | 対象外として仮置き |
 | 通知の手段（J12） | OQ-039 | アウトボックス形式で保留。メール送信サービスは environment.md で確定（J12 は段階 3） |
-| 配達の通知 | OQ-002 | 作らない（P-1 との整合待ち）|
+| 配達の通知の数え方と中身（J15） | OQ-042 | 手紙だけを数え、0 通の住民には送らない。中身は便と件数だけ（OQ-002 は決定、ADR-0025） |
 | 画像の加工（J13） | OQ-026 | 段階 2 として仮置き |
 | マッチング | FR-066・FR-069・OQ-041 | 段階 3 で、アルゴリズムの ADR を書いてから設計する。恋愛のカテゴリは設けない（OQ-001 → 決定、ADR-0024）。提案に連絡先を載せない（FR-101） |
-| `delivery_runs` の保持期間 | OQ-030 / ADR-0013 | ADR-0013 は「30 日で消す」としているが、`mailbox_items` と `newspapers` が外部キーで参照しているため、外部キーの扱いを確定させる必要がある |
+| `delivery_runs` の保持期間 | OQ-030 / ADR-0013 | ADR-0013 は「30 日で消す」としているが、`mailbox_items` と `newspapers` が外部キーで参照しているため、外部キーの扱いを確定させる必要がある。`delivery_notifications` も外部キーで参照するが、J14 が配達回の `finished_at` で先に消すので削除を止めない（ADR-0025） |
 | 宛先の一部だけが差し戻しになったときの `letters.state` | — | 全宛先が確定するまで状態を保留。設計は別チケットで |
 | `mailbox_items.kind = 'board_post'` の使い道 | — | 掲示板の投稿を郵便受けに入れるかどうかが未確定 |
 
@@ -620,7 +651,8 @@ NFR-027（可用性）・NFR-074（障害通知）に合わせる。
    と実際に届けた住民の `resident_id` を追加する
 4. `moderation_queue` に `UNIQUE(content_kind, content_id, delivery_run_id)` を追加する。
    J1 の `ON CONFLICT DO NOTHING` を安全にするため
-5. `delivery_runs` の保持期間を見直す（外部キー参照の問題を解決するまで未確定）
+5. `delivery_runs` の保持期間を見直す（`mailbox_items`・`newspapers` からの外部キー参照の問題を解決するまで未確定。
+   `delivery_notifications` からの参照は、J14 が配達回の `finished_at` で先に消すことで解決済み）
 
 **api.md**:
 1. 郵便受けとバックナンバーは `delivery_runs.status = 'done'` の配達回だけを返すと
@@ -649,7 +681,7 @@ NFR-027（可用性）・NFR-074（障害通知）に合わせる。
 | FR-025 | §1 冪等性・§4 各ジョブの「冪等性」項目 |
 | FR-026 | §4 J6（持ち越し）|
 | FR-027 | §3 時刻表 |
-| FR-028 | §8（プッシュ通知は OQ-002 待ち）|
+| FR-028 | §4 J5・J15（配達完了の通知、ADR-0025。数え方は §8 OQ-042）|
 | FR-029 | §4 J6（持ち越し）|
 | FR-030 | §4 J5（公開完了後に郵便受けに出る）|
 | FR-033 | §4 J3（組版）|
@@ -670,6 +702,7 @@ NFR-027（可用性）・NFR-074（障害通知）に合わせる。
 | FR-081 | §4 J2（人の審査はモデレーター、ADR-0020）|
 | FR-093 | §4 J7（退去処理、ADR-0013）|
 | FR-097 | §4 J14（保持期間による削除）|
+| FR-102 | §4 J15（有効なセッションの購読だけに送る、ADR-0025）|
 | NFR-021 | §1 冪等性・§4 J1・J4・J5 |
 | NFR-022 | §4 J3（組版の冪等性）|
 | NFR-023 | §4 J2（配達前モデレーション完了）|
