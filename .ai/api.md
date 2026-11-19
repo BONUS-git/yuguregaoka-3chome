@@ -239,7 +239,7 @@ MVP では、自分の郵便受けに届いた紙面だけを見られる（バ�
 | `DELETE` | `/api/v1/blocks/{id}` | ブロックを解除する | 204 | FR-068 |
 | `GET` | `/api/v1/admin/reports` | 通報一覧（admin のみ）。手紙の通報でも本文は返さない | 200 | FR-077, FR-078 |
 | `GET` | `/api/v1/admin/reports/{id}/letter` | 通報された手紙を 1 通だけ復号して返す（admin のみ。OQ-043 (3) の暫定）。条件は下に書く | 200, 404 | FR-078, NFR-005, ADR-0026 |
-| `POST` | `/api/v1/admin/reports/{id}/actions` | 通報に対する操作（approve / reject / dismiss） | 200 | FR-077 |
+| `POST` | `/api/v1/admin/reports/{id}/actions` | 通報に対する操作（approve / reject / dismiss。それ以外は 400（`validation_failed`））。住民への処置（停止・警告など）の操作と値は置かない（ADR-0032。内容は OQ-048） | 200, 400 | FR-077, FR-081, ADR-0032 |
 | `GET` | `/api/v1/admin/moderation-queue` | `review` ラベルの審査キュー（admin のみ）。掲示板の投稿だけで、手紙の行は返さない | 200 | FR-080, ADR-0005, ADR-0026 |
 
 **通報された手紙の取得**（`GET /api/v1/admin/reports/{id}/letter`、ADR-0026 の D4 (c)）

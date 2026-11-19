@@ -48,3 +48,4 @@
 - [0029 — 商店・団体のアカウントは管理者（運用者の CLI）が作る。住民は商店・団体を開けない](0029-shop-and-group-accounts-created-by-operators.md)
 - [0030 — 新規登録は開放式（招待なしで誰でも登録できる）。登録の入り口は既存の守りで守る](0030-open-registration.md)
 - [0031 — 外部 LLM の費用の見積もりはロードマップに置き、サービスは秘書が暫定で選ぶ（Anthropic API の Haiku）。本番のアダプタは承認のあとに作る](0031-llm-service-provisional-selection-and-cost-estimate.md)
+- [0032 — 違反した住民への処置の内容は、マスターが後で決める。決まるまで処置を実行する手段は作らない](0032-resident-sanctions-deferred-to-master.md)

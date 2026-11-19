@@ -283,7 +283,7 @@ CHECK(`content_kind <> 'letter' OR llm_label IS NULL`) — 手紙の本文を LL
 | `id` UUID PK | — |
 | `report_id` UUID FK→reports | — |
 | `moderator_id` UUID FK→residents | 操作したモデレーター（権限は ADR-0020・security.md §4） |
-| `action` text | approve / reject / dismiss / view_letter（通報された手紙の本文を見た記録。見るたびに 1 行、ADR-0026 の D4 (c)。D4 (c) は OQ-043 (3) の暫定） |
+| `action` text | approve / reject / dismiss / view_letter（通報された手紙の本文を見た記録。見るたびに 1 行、ADR-0026 の D4 (c)。D4 (c) は OQ-043 (3) の暫定）。住民への処置（停止・警告など）の値は置かない（ADR-0032。内容は OQ-048） |
 | `note` text NULL | 操作メモ |
 | `created_at` timestamptz | — |
 
@@ -512,6 +512,7 @@ stateDiagram-v2
 | OQ-043（手紙で止める内容と、手紙の閲覧） | 本番のルール表に手紙に当てる項目を置かない（テストは偽の規則）・止めた手紙は人が見ない（送った人には「届けられませんでした」とだけ見せる）・通報された手紙はモデレーターが 1 通だけ確かめる（YGO-007 からの暫定。`view_letter` の記録はこの暫定のためで、OQ-043 (3) の答えで変わる）。止めた手紙（`blocked`）の本文の保持期間は ADR-0013 の表にまだなく、答えのあとに足す |
 | OQ-030（アカウント情報の保持期間） | ADR-0013 の数値（logs 30 日, moderation 1 年, reports クローズ後 1 年, backups 30 日, erasure_log 60 日）を `[assumed]` として仮置き。確定したら ADR-0013 を更新する |
 | OQ-031（管理者・モデレーター役割）→ 決定 | ロールは住民とモデレーターの 2 つ（ADR-0020）。`moderation_actions.moderator_id` は `residents` の FK として保持し、モデレーターのロールを持つ住民だけが書ける。権限の規則表は `security.md` §4。ロールの保持（`staff_roles` テーブルか `residents` の列か）は実装で決める |
+| OQ-037（違反した住民への処置）→ 決定 | 処置の内容はマスターが後で決める（2026-11-19、ADR-0032）。決まるまで、住民の停止・警告を表す列や状態（`residents` の列、`moderation_actions.action` の値）を置かない。内容は OQ-048（持ち越し）で、答えのあとに `moderation_actions.action` の値と §4 のライフサイクルを直す |
 
 ---
 
