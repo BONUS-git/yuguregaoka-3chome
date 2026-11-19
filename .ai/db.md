@@ -145,6 +145,36 @@ UNIQUE(delivery_run_id, resident_id, kind, item_id) — 配達の冪等性を保
 
 ---
 
+### 通知
+
+配達完了の通知（ADR-0025、FR-028・FR-102）。`sessions` は security.md §9 の提案のテーブル（ADR-0019）。
+
+#### `push_subscriptions` — 通知の購読（端末ごと）
+
+| カラム | 説明 |
+|--------|------|
+| `id` UUID PK | — |
+| `resident_id` UUID FK→residents | 購読した住民 |
+| `session_id` FK→sessions UNIQUE | 購読を作ったセッション（1 セッションに 1 購読）。セッションを無効にするとき、この行を同じトランザクションで消す（ADR-0019） |
+| `endpoint` text | プッシュサービスの送り先（ADR-0025 の D6 で検査した値）。ログに出さない（security.md §2.5） |
+| `p256dh` text | 中身の暗号化に使う端末の公開鍵 |
+| `auth` text | 中身の暗号化に使う認証の秘密 |
+| `created_at` timestamptz | — |
+
+#### `delivery_notifications` — 配達完了の通知を送った記録
+
+| カラム | 説明 |
+|--------|------|
+| `delivery_run_id` text FK→delivery_runs | 配達回 ID。保持期間はこの配達回の `finished_at` から数え、J14 が `delivery_runs` より先に消す（async.md J14） |
+| `push_subscription_id` UUID FK→push_subscriptions | 送った購読。購読を消すときは、この行も一緒に消す |
+| `resident_id` UUID FK→residents | 受け取る住民 |
+| `created_at` timestamptz | J15 が行を入れた日時 |
+| `sent_at` timestamptz NULL | 送った日時（NULL は未送信） |
+
+UNIQUE(delivery_run_id, push_subscription_id) — 通知の重複を防ぐ（async.md J15）。件数は持たない（送るときに数える）。
+
+---
+
 ### 新聞
 
 #### `newspapers` — 紙面
@@ -332,6 +362,8 @@ ADR-0002 は「空き家は新規住民の割り当て候補となる」と定�
 | 手紙（宛先） | `letter_recipients` | 送信時 | 手紙本体と同期 | 手紙削除時 |
 | 郵便受け | `mailbox_items` | 配達バッチ時 | 受取人が削除するまで保持（FR-099） | 受取人の削除操作 or アカウント削除時 |
 | 配達回 | `delivery_runs` | 締め切り処理時 | 30 日保持（ADR-0013）[assumed] | 30 日経過後に削除 |
+| 通知の購読 | `push_subscriptions` | 住民が端末で通知を許可したとき（API） | セッションが有効な間（ADR-0025） | セッションの無効化・購読の削除・プッシュサービスの 404 / 410・アカウント削除時に即時削除 |
+| 通知を送った記録 | `delivery_notifications` | J15 が送る前 | 30 日保持（ADR-0013・ADR-0025）[assumed] | 指している配達回の `finished_at` から 30 日経過後に、`delivery_runs` より先に削除（async.md J14。外部キーで配達回の削除を止めないため）。購読の削除・アカウント削除時に即時削除 |
 | 朝刊・夕刊（紙面） | `newspapers` | 組版バッチ時 | バックナンバーとして保持（FR-039）。保持期間は OQ-030 次第（仮: 無期限） | 決定次第（OQ-030） |
 | 新聞素材一覧 | `newspaper_items` | 組版時 | 紙面と同期 | 紙面削除時 |
 | 掲示板投稿 | `board_posts` | 投稿時（`awaiting_review`） | 掲載後も保持。投稿者削除で即時 `deleted` に変更（ADR-0013） | 投稿者削除時に `body` を消去。deleted レコード自体は通報クローズから 1 年後削除 |
@@ -407,6 +439,8 @@ stateDiagram-v2
 
 4. **住所**: `addresses.status` を `vacant_deleted` に変更する（ADR-0002）。
 
+   **通知**: 通知の購読（`push_subscriptions`）と送った記録（`delivery_notifications`）は即時削除する（ADR-0013・ADR-0025）。
+
 5. **長期不在による空き家化**: `vacant_expired` になった住所の元住民は、
    さらに 12 か月が経過した時点で退去済みとして扱い、上記 1〜4 を適用する（ADR-0013）[assumed]。
 
@@ -423,12 +457,13 @@ stateDiagram-v2
 
 ## §7 `async.md` への引き継ぎ
 
-非同期処理の冪等性は次の 2 つの DB 制約で保証する:
+非同期処理の冪等性は次の 3 つの DB 制約で保証する:
 
 | 保証 | 仕組み |
 |------|-------|
 | 配達の重複防止 | `mailbox_items` の UNIQUE(delivery_run_id, resident_id, kind, item_id)（ADR-0010） |
 | 組版の重複防止 | `newspapers` の UNIQUE(delivery_run_id) |
+| 配達完了の通知の重複防止 | `delivery_notifications` の UNIQUE(delivery_run_id, push_subscription_id)（ADR-0025） |
 
 ジョブのペイロードには ID のみを含める（§1 原則 6）。
 本文など大きなデータをペイロードに入れると、ジョブ再実行時に古い内容が使われる恐れがあるため。
@@ -445,6 +480,7 @@ stateDiagram-v2
 | FR-011〜014 | §2 `letters` / `mailbox_items` |
 | FR-017 | 既読フラグなし（§1 原則 4）|
 | FR-021〜030 | §2 `delivery_runs`・§4 配達回ライフサイクル（ADR-0004） |
+| FR-028, FR-102 | §2 通知（`push_subscriptions`・`delivery_notifications`、ADR-0025） |
 | FR-031〜039 | §2 `newspapers` / `newspaper_items`・§4 新聞ライフサイクル |
 | FR-041〜050 | §2 `board_posts`・§4 掲示板ライフサイクル |
 | FR-051〜057 | §2 `address_book`・§3 ADR-0003（自動更新なし） |

@@ -77,4 +77,6 @@ API の認証チェックは `invalidated_at IS NULL` かつ有効期限内の�
   `reauthenticated_at`・`invalidated_at`
 - API 設計: `GET /auth/sessions`・`DELETE /auth/sessions/:id`・`POST /auth/reauth` を設ける。
 - async.md: 退去処理（ADR-0015 §4）で `sessions` テーブルの無効化を最初に行うことを確認する。
+- 配達完了の通知（ADR-0025）: セッションを無効にするとき（ログアウト・強制ログアウト・退去）は、
+  そのセッションの購読（`push_subscriptions`）を同じトランザクションで消す。期限切れのセッションの購読は、送る前に J15 が外す。
 - OQ-036: 本 ADR の決定により持ち越し → 決定に変更する。
