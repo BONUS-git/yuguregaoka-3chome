@@ -34,3 +34,7 @@
 - [0015 — API・DB・バッチの責務の境界](0015-api-db-batch-boundary.md)
 - [0016 — 配達回は時刻の関門と見回りのジョブで進める](0016-delivery-run-pipeline-and-tick.md)
 - [0017 — 配達は準備と公開の 2 段に分ける](0017-delivery-prepare-then-publish.md)
+- [0018 — ログインはメールとパスワード。メールは暗号化して持ち検索用に HMAC を持つ](0018-authentication-email-password.md)
+- [0019 — セッションはサーバー側に持つ。複数デバイスを許す。重要な操作では再認証する](0019-server-side-sessions-and-reauth.md)
+- [0020 — ロールは住民とモデレーターの 2 つ。権限の規則表は 1 か所に持ち LLM は判定に関わらない](0020-staff-roles-and-permission-table.md)
+- [0021 — 手紙の暗号鍵に版を付けて入れ替える。AAD に手紙の ID を含める](0021-encryption-key-versioning.md)
