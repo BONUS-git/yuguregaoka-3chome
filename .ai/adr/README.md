@@ -32,3 +32,5 @@
 - [0013 — 退去処理とデータ保持期間](0013-account-deletion-and-retention.md)
 - [0014 — API は即時性と数値を返さない](0014-api-no-immediacy-no-counts.md)
 - [0015 — API・DB・バッチの責務の境界](0015-api-db-batch-boundary.md)
+- [0016 — 配達回は時刻の関門と見回りのジョブで進める](0016-delivery-run-pipeline-and-tick.md)
+- [0017 — 配達は準備と公開の 2 段に分ける](0017-delivery-prepare-then-publish.md)
