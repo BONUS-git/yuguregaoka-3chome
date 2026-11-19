@@ -47,3 +47,4 @@
 - [0028 — 架空の街の地図は、1 枚の静的な画像として MVP（M1）で作る。API・DB・ジオデータは持たない](0028-town-map-static-image-in-mvp.md)
 - [0029 — 商店・団体のアカウントは管理者（運用者の CLI）が作る。住民は商店・団体を開けない](0029-shop-and-group-accounts-created-by-operators.md)
 - [0030 — 新規登録は開放式（招待なしで誰でも登録できる）。登録の入り口は既存の守りで守る](0030-open-registration.md)
+- [0031 — 外部 LLM の費用の見積もりはロードマップに置き、サービスは秘書が暫定で選ぶ（Anthropic API の Haiku）。本番のアダプタは承認のあとに作る](0031-llm-service-provisional-selection-and-cost-estimate.md)
