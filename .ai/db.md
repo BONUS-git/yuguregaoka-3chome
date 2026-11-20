@@ -208,7 +208,7 @@ J3 は `newspapers` の行とすべての版の行を 1 つのトランザクシ
 |--------|------|
 | `id` UUID PK | 郵便受けの `item_id` と、閲覧の API の `{id}` が指す値 |
 | `newspaper_id` UUID FK→newspapers | — |
-| `edition_key` text | `common`（共通の版）/ `interest:<key>`（興味の版、`<key>` は `interest_categories.key`）/ `holiday`（休刊の印）。知り合いの組の版は OQ-058 の答えのあとに足す。API では返さない（ADR-0039 の D11） |
+| `edition_key` text | `common`（共通の版）/ `interest:<key>`（興味の版、`<key>` は `interest_categories.key`）/ `holiday`（休刊の印）/ `acquaintance:<resident_id>`（組 1・2 の住民ごとの版、`<resident_id>` は `residents.id`。ADR-0044 の D4。MVP では作らず、作る時期は OQ-070）。API では返さない（ADR-0039 の D11） |
 | `storage_url` text NULL | 組版済み静的 HTML の保存先（C8）。`holiday` の版は NULL |
 | `typeset_at` timestamptz | 組版完了日時 |
 
@@ -401,9 +401,9 @@ CHECK(`num_nonnulls(report_id, letter_id) = 1`) — 1 つの行は通報か確�
 |--------|------|
 | `id` UUID PK | — |
 | `uploader_id` UUID FK→residents | — |
-| `original_url` text | アップロード元の保存先 |
+| `original_url` text NULL | アップロード元の保存先。J13 の加工が終わるか失敗した時点で元の画像を消して NULL にする。取りこぼしはアップロードから 24 時間 [assumed] を過ぎたあとの次の J14 が消す（最長で約 48 時間）（ADR-0044 の D5、FR-118） |
 | `processed_url` text NULL | 新聞写真風加工後の保存先 |
-| `state` text | pending / processed / failed |
+| `state` text | pending / processing / processed / failed（J13 が始めに `processing` にし、加工が終われば `processed`、最後の再試行に失敗すれば `failed`。再試行は `pending`・`processing` の行で動く。`processing` のまま 24 時間を過ぎた行は J14 が `failed` にする。`async.md` J13・J14、ADR-0044 の D5） |
 | `created_at` timestamptz | — |
 
 #### `jobs` — ジョブキュー
@@ -486,7 +486,7 @@ ADR-0002 は「空き家は新規住民の割り当て候補となる」と定�
 | モデレーション審査 | `moderation_queue` | 締め切り処理時にジョブ経由で登録（掲示板の投稿だけ、ADR-0040） | 審査完了後 1 年保持（ADR-0013）[assumed] | 1 年経過後削除 |
 | モデレーター操作 | `moderation_actions` | モデレーターの操作時 | 1 年保持（ADR-0013）[assumed] | 1 年経過後削除 |
 | 通報 | `reports` | 住民の通報操作時 | クローズまで保持。クローズ後 1 年保持（ADR-0013）[assumed] | クローズから 1 年後に削除 |
-| 画像 | `images` | アップロード時 | 参照するコンテンツ（手紙・掲示板）が存在する間 | コンテンツ削除時にオブジェクトストレージからも削除 |
+| 画像 | `images` | アップロード時 | 加工した画像は、参照するコンテンツ（手紙・掲示板）が存在する間。元の画像は加工が終わるか失敗するまで（取りこぼしは最長でアップロードから約 48 時間。24 時間 [assumed] を過ぎたあとの次の J14 で消す、ADR-0044 の D5） | 元の画像は J13 の加工のあと（失敗でも）に消し、残りは 24 時間を過ぎたあとの次の J14 が消す。加工した画像はコンテンツ削除時にオブジェクトストレージからも削除 |
 | ジョブ | `jobs`（pg-boss） | ジョブ enqueue 時 | 完了後 24 時間（pg-boss の設定）[assumed] | pg-boss が自動削除 |
 | ログ（DB 外） | — | 操作・アクセス時 | 30 日保持（ADR-0013）[assumed] | 30 日経過後廃棄（NFR-009） |
 | 消去ログ | `erasure_log` | 物理削除の実行時 | 60 日保持（ADR-0013）[assumed] | 60 日経過後削除 |
@@ -616,7 +616,8 @@ stateDiagram-v2
 | FR-028, FR-102 | §2 通知（`push_subscriptions`・`delivery_notifications` の `kind`、ADR-0025・ADR-0035） |
 | FR-105, FR-106 | §2 `mailbox_items.visible_at`（手紙の枠の時刻・新聞の定時、全住民への新聞の行、ADR-0035） |
 | FR-031〜039 | §2 `newspapers` / `newspaper_editions` / `newspaper_items`・§4 新聞ライフサイクル |
-| FR-108 | §2 `newspaper_editions.edition_key`・`mailbox_items` の新聞の部分一意索引（ADR-0039） |
+| FR-108 | §2 `newspaper_editions.edition_key`（`acquaintance:<resident_id>` は ADR-0044）・`mailbox_items` の新聞の部分一意索引（ADR-0039）。知り合いは `address_book.registered_tenancy_id`・`tenancies`・`blocks` から求める（表は足さない） |
+| FR-118 | §2 `images.original_url`（NULL 可）・§4 画像の保持（ADR-0044 の D5） |
 | FR-109 | §2 `interest_categories` / `resident_interests`・§5 退去で即時削除（ADR-0039） |
 | FR-110 | §2 `external_news_items`・§4 保持 30 日（ADR-0039） |
 | FR-111 | §2 `newspaper_articles`（`written_by`・`prompt_version`、ADR-0039） |
@@ -646,7 +647,8 @@ stateDiagram-v2
 | OQ-063・OQ-064（年齢で何を変えるか・年齢の扱い） | 生年月日の列は置かない（ADR-0041 の D4）。年齢の列も、答えが出るまで `residents` に置かない（D5）。答えのあとに、年齢の列（年とともに進めるなら基準の日）を足す |
 | OQ-065（手紙の照合の細部） | 長く確かめられない `held` の期限は置かない。決まったら §4 のライフサイクルと J14 を直す |
 | OQ-051（新聞の中身）→ 決定 | 組ごとの版・興味・外のニュース・記事の文字（2026-11-20、ADR-0039）。§2 の新聞と興味の表 |
-| OQ-058（知り合いで埋まる組・一部埋まらない組） | 全住民を知り合い 0 の組として扱うので、`edition_key` は `common` / `interest:<key>` / `holiday` だけ。答えのあとに知り合いの組の版の種類と、組分けに使う関係の表を足す |
+| OQ-058（知り合いで埋まる組・一部埋まらない組）→ 決定 | 2026-11-20、ADR-0044。MVP では全住民を知り合い 0 の組として扱うので、作る `edition_key` は `common` / `interest:<key>` / `holiday` だけ。組 1・2 の版の種類 `acquaintance:<resident_id>` を §2 に書いた（作る時期は OQ-070）。組は保存せず、知り合いは既存の `address_book.registered_tenancy_id`・`tenancies.is_current`・`blocks` から J3 が求めるので、表を足さない。`images.original_url` を NULL 可にし、元の画像の保持を §4 に書いた |
+| OQ-071（地図の知り合いの定義） | 地図の印は `address_book.address_text`（自分の住所録に入れた住民）のまま。(b) にするなら、相手も自分を住所録に入れているかを求める問い合わせが加わる（表は足さない） |
 | OQ-059（検索などから興味を集めること） | 検索からは集めないので、`resident_interests.source` に検索の値を置かず、検索語を保存する表を作らない |
 | OQ-054（地図の印）→ 決定 | 2026-11-20、ADR-0042。表の変更はない。住所と位置の対応は C1 の静的な配置の定義と計算で求め、DB に位置・座標・地図の表を持たない（ADR-0028 の D3）。知り合いの家の印は `address_book.address_text`（登録した時点の住所、ADR-0003）を使う |
 | OQ-066（地図の空き家・入居の表示の範囲・相手の同意） | 空き家・入居の表示は作らないので、表と問い合わせを足さない。答えのあとに、`addresses.status`（ADR-0002 の 5 つの値）と `tenancies.is_current` のどれを「空き家」と読むかと、表示に使う問い合わせを決める。同意が要るなら、住所録に相手の断りを持つ列か表を足す |

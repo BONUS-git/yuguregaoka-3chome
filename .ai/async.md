@@ -282,7 +282,10 @@ M3・M4 は、J2 完了（`moderation_queue` に `processed_at = NULL` の行が
 
 **入力データ**（ADR-0039 の D7）: `newspaper_articles` のその配達回の行。素材は `board_posts.status = 'approved'` かつ
 `board_posts.delivery_run_id = run_id` の投稿（`(created_at, id)` の順）と、`external_news_items.delivery_run_id = run_id` の外のニュース（`(fetched_at, id)` の順）。前の回に取り込んだ外のニュースは素材にしない。
-- 版は、共通の版（`common`）と、興味の一覧の `active` な興味ごとの版（`interest:<key>`）。知り合いの組の版は OQ-058 の答えのあと（暫定では作らない）
+- 版は、共通の版（`common`）と、興味の一覧の `active` な興味ごとの版（`interest:<key>`）。MVP（M5）では全住民を知り合い 0 の組として扱い、知り合いの組の版は作らない（ADR-0044 の D1。作る時期は OQ-070）
+- 組 1・2 を作る段階では（ADR-0044 の D2・D3・D4・D6・D7）、J3 が住民ごとに、その配達回の素材のうち知り合い（互いの `address_book.registered_tenancy_id` が相手の今の居住記録を指し、どちらもブロックしていない住民）の投稿の件数 k を数える。
+  S（組 1・2 のテンプレートの記事の枠の数）に対し、k = 0 なら組 0 で何もしない。1 ≤ k < S なら組 2 で、k 件の知り合いの記事のあとに、その住民が組 0 なら受け取る版（興味の版か共通の版、J4 と同じ選び方）の記事をその版の順に S − k 件足す（すでに載った素材は飛ばす）。
+  k ≥ S なら組 1 で、知り合いの記事を `(created_at, id)` の順で先頭の S 件。どちらも `acquaintance:<resident_id>` の版として、ほかの版と同じトランザクションで入れる。組は保存しない。手紙は載せない。記事の文字は素材ごとの `newspaper_articles` を使い回し、LLM は呼ばない
 - 共通の記事（`interest_category_id` が NULL）はすべての版に、興味の記事はその興味の版に載せる。結び付け方は OQ-062
 - 投稿の本文は `board_posts.body` からそのまま載せ（書き換えない）、LLM が書いた見出し・まとめ・外のニュースの記事には「AI が書いた文」の印を付ける（OQ-061 の暫定、ADR-0039 の D9）
 - 記事の文字はすべてエスケープして描く（HTML として扱わない）
@@ -327,7 +330,7 @@ M3・M4 は、J2 完了（`moderation_queue` に `processed_at = NULL` の行が
 **新聞**（ADR-0035 の D1・D2、FR-106・FR-108、ADR-0039 の D2・D3）:
 - その配達回の紙面を、J4 の時点で住んでいる全住民（`tenancies.is_current = true`）に `kind = 'newspaper'` で 1 行ずつ作る。手紙があるかにかかわらない
 - `item_id` は、その住民に届ける版（`newspaper_editions.id`）。住民ごとに組を決め、版を 1 つ選ぶ:
-  1. 組: 暫定（OQ-058）では、全住民を知り合い 0 の組として扱う
+  1. 組: MVP（M5）では、全住民を知り合い 0 の組として扱う（ADR-0044 の D1）。組 1・2 を作る段階では、J4 は組を計算し直さず、その配達回に `acquaintance:<resident_id>` の版があればそれを選ぶ（ADR-0044 の D7）。なければ組 0 として 3・4 で選ぶ
   2. 休刊の回は全住民に `holiday` の版
   3. 興味（`resident_interests` のうち `active` な興味）がない住民には `common` の版
   4. 興味が 1 つならその興味の版。複数なら `SHA-256(run_id + ":" + resident_id)` を整数として興味の数で割った余りで 1 つ選ぶ（興味は `sort_order, id` の順）
@@ -570,12 +573,15 @@ J0 も `state = 'pending'` の滞留分を拾い直す [assumed]。
 
 **入力**: `image_id`
 
-**出力**: 新聞写真風に加工した画像を `images.processed_url` に記録
+**出力**: 新聞写真風に加工した画像を `images.processed_url` に記録。元の画像は C8 から消し、`images.original_url` を NULL にする（ADR-0044 の D5、FR-118）
 
 **冪等性**:
-- `UPDATE images SET state='processing' WHERE id=$1 AND state='pending'`
-- 加工後に `state = 'processed'` に更新
-- 加工が完了していれば 2 回目のジョブは `state='pending'` でないため何もしない
+- 始めに `UPDATE images SET state='processing' WHERE id=$1 AND state IN ('pending','processing') RETURNING id`。`processing` も受けるので、前の試行が途中で失敗した（`processing` のまま残った）行も、再試行で加工し直せる。行が返らなければ（`processed`・`failed`）何もしないで終わる
+- 同じ画像の J13 が同時に 2 つ走らないよう、`singletonKey` を `'image.process:<image_id>'` にする（§5）。J0 が拾い直すのは `pending` の行だけで、`processing` の行は拾わない（再試行は pg-boss に任せる）
+- 加工後に `state = 'processed'` に更新し、それから元の画像を消して `original_url` を NULL にする
+- 最後の再試行の失敗は、J13 の処理の中で見分ける。加工で例外が出たとき、ジョブの再試行の回数が `retryLimit`（§5 で 3）に達していれば（`job.retryCount >= job.retryLimit`）最後の試行とし、その場で `state = 'failed'` にし、同じく元の画像を消して `original_url` を NULL にしてから、ジョブを失敗で終える（失敗で終わっても元の画像を残さない）。最後でなければ `state` は `processing` のまま例外を投げ、pg-boss の再試行に任せる
+- 加工が完了していれば 2 回目のジョブは `processed` のため何もしない。最後の試行が処理の外で終わった（`expireInSeconds` を過ぎた・worker が止まった）ため `processing` のまま残った行や、消すのに失敗して `original_url` が残った行は、24 時間を過ぎたあとの次の J14 が元の画像を消し、`state = 'failed'` にする（最長でアップロードから約 48 時間）
+- 元の画像は、住民にもモデレーターにも返さない
 
 **その他**:
 - 組版（J3）までに加工が終わらなかった画像は紙面に載せない [assumed]（OQ-026）
@@ -604,6 +610,7 @@ J0 も `state = 'pending'` の滞留分を拾い直す [assumed]。
 | `erasure_log` | `erased_at < now() - interval '60 days'` |
 | `external_news_items` | `fetched_at < now() - interval '30 days'`（ADR-0013・ADR-0039 [assumed]。OQ-060 の利用の条件で変わる）。載った記事の `newspaper_articles` は紙面と同じだけ残すので、`source_id` の参照は外部キーにしない |
 | オブジェクトストレージ（古い組版 HTML）| J8 で差し替えた前のファイル |
+| オブジェクトストレージ（元の画像、段階 2）と `images.original_url` | `original_url IS NOT NULL` かつ `created_at < now() - interval '24 hours'`（ADR-0044 の D5 [assumed]）。J14 は毎日 1 回なので、取りこぼしは最長でアップロードから約 48 時間残る（それより短い間隔の掃除のジョブは足さない）。元の画像を消して `original_url` を NULL にし、加工が済んでいなければ `state = 'failed'` にする。J13 の取りこぼしに備えるもの |
 
 **冪等性**:
 - 小さく区切った DELETE（1,000 件ずつ）で処理する。何度動いても安全
@@ -716,7 +723,7 @@ worker が 2 台あっても実行は 1 回分になる。`singletonKey` と DB 
 | J10 `address.dormancy` | 3 | true | 3600 | `'address.dormancy:<date>'` |
 | J11 `address.forwarding_expire` | 3 | true | 3600 | `'forwarding.expire:<date>'` |
 | J12 `notify.dormancy` | 3 | true | 3600 | — |
-| J13 `image.process` | 3 | true | 3600 | — |
+| J13 `image.process` | 3 | true | 3600 | `'image.process:<image_id>'` |
 | J14 `retention.purge` | 3 | true | 7200 | `'retention.purge:<date>'` |
 | J15 `notify.delivery` | 5 | true | 1800 | `'notify.delivery:<run_id>:newspaper'`・`'notify.delivery:<run_id>:letter:<HHMM>'` |
 | J16 `newspaper.write` | 5 | true | 1800 | `'newspaper.write:<run_id>'` |
@@ -797,7 +804,7 @@ NFR-027（可用性）・NFR-074（障害通知）に合わせる。
 | 外部の LLM サービス | OQ-008（決定）・OQ-047 | 秘書の暫定の選定で Anthropic API の `claude-haiku-5-5`（ADR-0031）。J2 から 1 件ずつ同期で呼び、Batch API は使わない（審査の打ち切りまでに終わる保証がない）。本番のアダプタは承認のあとに作り、テストではモックを使う（ADR-0005・NFR-065）。確定と費用の上限は OQ-047（持ち越し）。J16 の新聞の LLM はこれとは別に OQ-062 で決め、費用の上限は OQ-047 と一緒に聞く（ADR-0039） |
 | 手紙の照合の細部（J7・J14） | OQ-052（決定）・OQ-065・OQ-053 | 手紙は投函のときに API が照合し、worker は照合しない（OQ-052 → 決定、ADR-0040）。J7 は退去した住民の `held`・`blocked` を消し、J14 は `blocked` を 30 日で消す [assumed]。長く確かめられない `held` の扱いは OQ-065（持ち越し、M4 の前に決める）で、それまで J14 は `held` を消さない。年齢で止める項目を変えるかは OQ-063（要回答、ADR-0041）。違法な物の取引の守りは OQ-053（持ち越し、別のチケット） |
 | 通知の手段（J12） | OQ-039（決定）・OQ-049 | アウトボックス形式で保留（J12 は段階 3）。テスト環境はモックかローカルの SMTP（ADR-0033）。本番のメール送信サービスはマスターの事前承認を得て選び、進め方と費用の上限は OQ-049（持ち越し） |
-| 知り合いの組（J4・J3） | OQ-051（決定）・OQ-058 | 新聞の中身は決定（2026-11-20、ADR-0039）。組 1・2 の決め方と中身は OQ-058（要回答）で、暫定は全住民を知り合い 0 の組として扱う（版は `common` と `interest:<key>` だけ） |
+| 知り合いの組（J4・J3） | OQ-051（決定）・OQ-058（決定）・OQ-070 | 新聞の中身は決定（2026-11-20、ADR-0039）。組 1・2 の決め方と中身も決定（2026-11-20、ADR-0044。§4 J3・J4）。MVP では全住民を知り合い 0 の組として扱う（版は `common` と `interest:<key>` だけ）。組 1・2 を作る時期・負荷の見積もり・知り合いの側の同意は OQ-070（持ち越し） |
 | 検索からの興味 | OQ-059 | 検索からは集めない。住所録の検索語を DB・ログに残さない（要回答の暫定） |
 | 外のニュースの配信元（J17） | OQ-060 | 本番のアダプタは作らず、偽の記事のアダプタだけ（持ち越し）。保持は 30 日 [assumed] |
 | LLM の文の印・投稿の書き換え（J16・J3） | OQ-061 | 投稿の本文は書き換えずに載せ、LLM の文に「AI が書いた文」の印を付ける（要回答の暫定） |
@@ -876,10 +883,11 @@ NFR-027（可用性）・NFR-074（障害通知）に合わせる。
 | FR-102 | §4 J15（有効なセッションの購読だけに送る、ADR-0025）|
 | FR-105 | §3 時刻表と手紙の枠・§4 J4（手紙の `visible_at`、ADR-0035）|
 | FR-106 | §4 J4（新聞を全住民に）・J3（紙面の中身は FR-108〜FR-111、ADR-0039）|
-| FR-108 | §4 J3（版ごとの組版）・J4（組分けと版の選び方、§8 OQ-058）|
+| FR-108 | §4 J3（版ごとの組版と組 1・2 の組の計算、ADR-0044）・J4（版の選び方、§8 OQ-070）|
 | FR-109 | §4 J4（J4 の時点の興味）・J7（興味の削除）|
 | FR-110 | §4 J17（外のニュースの取り込み、§8 OQ-060）・J14（保持）|
 | FR-111 | §4 J16（記事の文字）・J3・J8（保存した文字から組み、LLM を呼ばない、§8 OQ-061・OQ-062）|
+| FR-118 | §4 J13（元の画像を消す）・J14（24 時間を過ぎた元の画像、ADR-0044 の D5）|
 | NFR-021 | §1 冪等性・§4 J1・J4・J5 |
 | NFR-022 | §4 J3（組版の冪等性。保存した記事の文字から組む、ADR-0039）・J16 |
 | NFR-023 | §4 J2（配達前モデレーション完了）|
