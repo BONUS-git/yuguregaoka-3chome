@@ -53,8 +53,9 @@
 - [0034 — 共有を禁止する「連絡先」は街の外の連絡先だけ。禁止はマッチングの中だけで、掲示板・手紙には及ばない](0034-contact-sharing-ban-outside-contacts-in-matching-only.md)
 - [0035 — 新聞は全住民に定時に届け、通知も送る。手紙は午前・午後のランダムな時刻に届け、通知を新聞と手紙で分ける](0035-newspaper-for-all-letters-random-am-pm-separate-notifications.md)
 - [0036 — 通報された手紙は、モデレーターが条件付きで 1 通だけ確かめてよい。住民を守る制限は、住民が自分で外せる設定にしない](0036-reported-letters-viewable-by-moderators-protections-not-self-removable.md)
-- [0037 — 架空の街の地図は、全住民で共有する 1 枚の白黒の画像とする。印（知り合いの家・自分の住所・候補）とゲーム風の地図は今は作らない](0037-town-map-shared-monochrome-image.md)
+- [0037 — 架空の街の地図は、全住民で共有する 1 枚の白黒の画像とする。印（知り合いの家・自分の住所・候補）とゲーム風の地図は今は作らない](0037-town-map-shared-monochrome-image.md)（印は ADR-0042 で置き換え）
 - [0038 — 商店には実在の企業・個人のお店を迎えることを目指す。コミュニティ（団体）は住民が趣味などで作り、作ることに制約を置く](0038-shops-real-businesses-communities-by-residents.md)
 - [0039 — 新聞は一人 1 枚にせず、知り合いの数で分けた組ごとの版にする。知り合いのない組は興味で分ける。記事の文字は LLM が作り、組版はサーバーで決定的に行う](0039-newspaper-editions-by-group-and-interest-llm-text-server-typesetting.md)
 - [0040 — 手紙は送るときにルール表に当てる。当たったら送った人に確認を頼むかを選んでもらい、頼んだ手紙をモデレーターが確かめる](0040-letters-checked-at-send-sender-confirms-moderator-reviews.md)
 - [0041 — 年齢で守り方を変える。年齢は住民が設定した値をそのまま使い、確かめない。何を変えるかが決まるまで、年齢による違いと年齢の項目は作らない](0041-age-self-declared-protections-vary-by-age.md)
+- [0042 — 地図に印を付ける。自分の家と登録のときの候補は M1、知り合い（自分の住所録に入れた住民）の家は M2。土台の画像は全住民で同じまま、印は C1 が重ねる。空き家・入居の表示は OQ-066 の答えまで作らない](0042-town-map-marks-own-home-candidates-acquaintances.md)
