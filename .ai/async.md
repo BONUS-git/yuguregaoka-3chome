@@ -327,14 +327,14 @@ M3・M4 は、J2 完了（`moderation_queue` に `processed_at = NULL` の行が
 - 宛先ごとの振り分け結果（通常・転送・差し戻し・抑止）を反映
 - 各行に `visible_at` を書く（ADR-0035 の D10）
 
-**新聞**（ADR-0035 の D1・D2、FR-106・FR-108、ADR-0039 の D2・D3）:
+**新聞**（ADR-0035 の D1・D2、FR-106・FR-108、ADR-0039 の D2・D3、ADR-0045 の D6）:
 - その配達回の紙面を、J4 の時点で住んでいる全住民（`tenancies.is_current = true`）に `kind = 'newspaper'` で 1 行ずつ作る。手紙があるかにかかわらない
 - `item_id` は、その住民に届ける版（`newspaper_editions.id`）。住民ごとに組を決め、版を 1 つ選ぶ:
   1. 組: MVP（M5）では、全住民を知り合い 0 の組として扱う（ADR-0044 の D1）。組 1・2 を作る段階では、J4 は組を計算し直さず、その配達回に `acquaintance:<resident_id>` の版があればそれを選ぶ（ADR-0044 の D7）。なければ組 0 として 3・4 で選ぶ
   2. 休刊の回は全住民に `holiday` の版
-  3. 興味（`resident_interests` のうち `active` な興味）がない住民には `common` の版
-  4. 興味が 1 つならその興味の版。複数なら `SHA-256(run_id + ":" + resident_id)` を整数として興味の数で割った余りで 1 つ選ぶ（興味は `sort_order, id` の順）
-- 興味は J4 の時点の値を使う。部分一意索引 UNIQUE(delivery_run_id, resident_id) WHERE kind = 'newspaper' があるので、やり直しのあいだに興味が変わっても新聞は 1 つだけ（最初に入った行が残る）
+  3. 興味（候補）がない住民には `common` の版。候補は、選んだ興味（`resident_interests`）と推し量った興味（`inferred_interests`、段階 2 の S2-3 から、ADR-0045 の D6）を合わせた集合で、どちらも `active` な興味だけ、重なりは 1 つにする。M5 では `inferred_interests` がないので選んだ興味だけ
+  4. 候補が 1 つならその興味の版。複数なら `SHA-256(run_id + ":" + resident_id)` を整数として候補の数で割った余りで 1 つ選ぶ（候補は `sort_order, id` の順）
+- 興味（選んだものも推し量ったものも）は J4 の時点の値を使う。部分一意索引 UNIQUE(delivery_run_id, resident_id) WHERE kind = 'newspaper' があるので、やり直しのあいだに興味が変わっても新聞は 1 つだけ（最初に入った行が残る）
 - M3・M4（版が `common` 1 つだけの段階）は、全住民に共通の版（M3 は休刊の版）
 - `visible_at` は、その便の公開の時刻（朝便 07:00・夕便 17:00 JST）
 
@@ -459,7 +459,7 @@ J0 が判断し `singletonKey` で積む。
 4. 住所録（所有するもの）を削除する
 5. ブロック（blocker / blocked）を削除する
 6. 通知の購読（`push_subscriptions`）と送った記録（`delivery_notifications`）を削除する（ADR-0013・ADR-0025。退去の受付でセッションと一緒に消えていれば何もしない）
-   興味（`resident_interests`）を削除する（ADR-0039 の D5）。2・3 で消した投稿から作った記事（`newspaper_articles`）は J8 が消す
+   興味（`resident_interests`）と推し量った興味（`inferred_interests`、段階 2）を削除する（ADR-0039 の D5・ADR-0045 の D5）。2・3 で消した投稿から作った記事（`newspaper_articles`）は J8 が消す
 7. `addresses.status` を `vacant_deleted` に変更する
 8. `residents` を物理削除し、`erasure_log` に記録する（最後に行う）
 
@@ -609,6 +609,7 @@ J0 も `state = 'pending'` の滞留分を拾い直す [assumed]。
 | `tenancies`（退去済み）| `ended_at < now() - interval '1 year'` かつ対応する resident が削除済み |
 | `erasure_log` | `erased_at < now() - interval '60 days'` |
 | `external_news_items` | `fetched_at < now() - interval '30 days'`（ADR-0013・ADR-0039 [assumed]。OQ-060 の利用の条件で変わる）。載った記事の `newspaper_articles` は紙面と同じだけ残すので、`source_id` の参照は外部キーにしない |
+| `inferred_interests`（段階 2）| `last_matched_at < now() - interval '30 days'`（ADR-0013・ADR-0045 の D5 [assumed]） |
 | オブジェクトストレージ（古い組版 HTML）| J8 で差し替えた前のファイル |
 | オブジェクトストレージ（元の画像、段階 2）と `images.original_url` | `original_url IS NOT NULL` かつ `created_at < now() - interval '24 hours'`（ADR-0044 の D5 [assumed]）。J14 は毎日 1 回なので、取りこぼしは最長でアップロードから約 48 時間残る（それより短い間隔の掃除のジョブは足さない）。元の画像を消して `original_url` を NULL にし、加工が済んでいなければ `state = 'failed'` にする。J13 の取りこぼしに備えるもの |
 
@@ -805,7 +806,7 @@ NFR-027（可用性）・NFR-074（障害通知）に合わせる。
 | 手紙の照合の細部（J7・J14） | OQ-052（決定）・OQ-065・OQ-053 | 手紙は投函のときに API が照合し、worker は照合しない（OQ-052 → 決定、ADR-0040）。J7 は退去した住民の `held`・`blocked` を消し、J14 は `blocked` を 30 日で消す [assumed]。長く確かめられない `held` の扱いは OQ-065（持ち越し、M4 の前に決める）で、それまで J14 は `held` を消さない。年齢で止める項目を変えるかは OQ-063（要回答、ADR-0041）。違法な物の取引の守りは OQ-053（持ち越し、別のチケット） |
 | 通知の手段（J12） | OQ-039（決定）・OQ-049 | アウトボックス形式で保留（J12 は段階 3）。テスト環境はモックかローカルの SMTP（ADR-0033）。本番のメール送信サービスはマスターの事前承認を得て選び、進め方と費用の上限は OQ-049（持ち越し） |
 | 知り合いの組（J4・J3） | OQ-051（決定）・OQ-058（決定）・OQ-070 | 新聞の中身は決定（2026-11-20、ADR-0039）。組 1・2 の決め方と中身も決定（2026-11-20、ADR-0044。§4 J3・J4）。MVP では全住民を知り合い 0 の組として扱う（版は `common` と `interest:<key>` だけ）。組 1・2 を作る時期・負荷の見積もり・知り合いの側の同意は OQ-070（持ち越し） |
-| 検索からの興味 | OQ-059 | 検索からは集めない。住所録の検索語を DB・ログに残さない（要回答の暫定） |
+| 検索からの興味（J4・J7・J14） | OQ-059（決定）・OQ-072 | OQ-059 → 決定（2026-11-20、ADR-0045）。段階 2 の過去の新聞の検索で、API が当たった興味の ID だけを `inferred_interests` に書く（照合はジョブにしないので、検索語はジョブのペイロードに入らない）。J4 は選んだ興味と合わせて版を選び、J14 は 30 日、J7 は退去で消す。住民が止められるかは OQ-072（要回答。暫定は止める設定を置かない） |
 | 外のニュースの配信元（J17） | OQ-060 | 本番のアダプタは作らず、偽の記事のアダプタだけ（持ち越し）。保持は 30 日 [assumed] |
 | LLM の文の印・投稿の書き換え（J16・J3） | OQ-061 | 投稿の本文は書き換えずに載せ、LLM の文に「AI が書いた文」の印を付ける（要回答の暫定） |
 | 新聞の LLM のモデル・プロンプト（J16） | OQ-062 | モックの文章アダプタで作る（持ち越し、M5 の前に秘書が ADR で決める）。長さの上限と興味の一覧の中身もそこで決める |
@@ -884,7 +885,7 @@ NFR-027（可用性）・NFR-074（障害通知）に合わせる。
 | FR-105 | §3 時刻表と手紙の枠・§4 J4（手紙の `visible_at`、ADR-0035）|
 | FR-106 | §4 J4（新聞を全住民に）・J3（紙面の中身は FR-108〜FR-111、ADR-0039）|
 | FR-108 | §4 J3（版ごとの組版と組 1・2 の組の計算、ADR-0044）・J4（版の選び方、§8 OQ-070）|
-| FR-109 | §4 J4（J4 の時点の興味）・J7（興味の削除）|
+| FR-109 | §4 J4（J4 の時点の選んだ興味と推し量った興味）・J7（興味の削除）・J14（推し量った興味の 30 日、ADR-0045）|
 | FR-110 | §4 J17（外のニュースの取り込み、§8 OQ-060）・J14（保持）|
 | FR-111 | §4 J16（記事の文字）・J3・J8（保存した文字から組み、LLM を呼ばない、§8 OQ-061・OQ-062）|
 | FR-118 | §4 J13（元の画像を消す）・J14（24 時間を過ぎた元の画像、ADR-0044 の D5）|
