@@ -4,7 +4,7 @@
 - 日付: 2026-11-19
 - 根拠: `.ai/brief.md`・`.ai/requirements.md`・`.ai/features.md`・`.ai/architecture.md`
 - チケット: YGO-004
-- 関連 ADR: 0001〜0012, 0013, 0026
+- 関連 ADR: 0001〜0012, 0013, 0026, 0039
 
 ---
 
@@ -124,13 +124,14 @@ UNIQUE(letter_id, recipient_address_text)
 | `resident_id` UUID FK→residents | 受取人 |
 | `delivery_run_id` text FK→delivery_runs | 配達回 ID |
 | `kind` text | letter / newspaper / board_post |
-| `item_id` UUID | 対応するレコードの ID（letters.id / newspapers.id / board_posts.id） |
+| `item_id` UUID | 対応するレコードの ID（letters.id / newspaper_editions.id / board_posts.id）。`kind = newspaper` のときは、その住民に届けた版（ADR-0039 の D1） |
 | `visible_at` timestamptz | 受取人に見せ始める時刻（ADR-0035 の D10）。J4 が書く。新聞はその便の公開の時刻（07:00 / 17:00）、手紙は受取人ごとの枠の時刻（午前 08:00〜11:50・午後 18:00〜20:50 の 10 分刻み）。API では返さない |
 | `deleted_at` timestamptz NULL | 受取人が削除した日時（FR-099） |
 | `created_at` timestamptz | — |
 
 UNIQUE(delivery_run_id, resident_id, kind, item_id) — 配達の冪等性を保証する（ADR-0010）  
-INDEX(resident_id, visible_at) — 郵便受けの一覧で、`visible_at` を過ぎた行を住民ごとに引くため（ADR-0035）
+INDEX(resident_id, visible_at) — 郵便受けの一覧で、`visible_at` を過ぎた行を住民ごとに引くため（ADR-0035）  
+UNIQUE(delivery_run_id, resident_id) WHERE kind = 'newspaper' — 1 回の配達につき新聞は 1 つだけ。J4 のやり直しのあいだに興味が変わっても、別の版が 2 つ届かないようにする（ADR-0039）
 
 ---
 
@@ -180,25 +181,117 @@ UNIQUE(delivery_run_id, push_subscription_id, kind) — 通知の重複を防ぐ
 
 ### 新聞
 
-#### `newspapers` — 紙面
+紙面は一人 1 枚にせず、配達回ごとに版（edition）を組む（ADR-0039 の D1）。`newspapers` は配達回ごとの新聞の 1 行、`newspaper_editions` はその版。
+
+#### `newspapers` — 紙面（配達回ごと）
 
 | カラム | 説明 |
 |--------|------|
 | `id` UUID PK | — |
 | `delivery_run_id` text FK→delivery_runs UNIQUE | この紙面を配達する配達回 |
 | `kind` text | morning / evening |
-| `storage_url` text | 組版済み静的 HTML の保存先（C8 オブジェクトストレージ） |
 | `typeset_at` timestamptz NULL | 組版完了日時 |
 | `is_holiday` bool DEFAULT false | 休刊フラグ（ADR-0007） |
+
+組版済みの HTML の保存先（もとの `storage_url`）は `newspaper_editions` に移した（ADR-0039）。
+J3 は `newspapers` の行とすべての版の行を 1 つのトランザクションで入れる。休刊は J0 が、休刊の行と `holiday` の版の行を一緒に入れる。
+こうして、配達回の新聞は「版がそろう」か「休刊」のどちらかになり、版が一部だけの状態は見えない。
+
+#### `newspaper_editions` — 版（ADR-0039）
+
+| カラム | 説明 |
+|--------|------|
+| `id` UUID PK | 郵便受けの `item_id` と、閲覧の API の `{id}` が指す値 |
+| `newspaper_id` UUID FK→newspapers | — |
+| `edition_key` text | `common`（共通の版）/ `interest:<key>`（興味の版、`<key>` は `interest_categories.key`）/ `holiday`（休刊の印）。知り合いの組の版は OQ-058 の答えのあとに足す。API では返さない（ADR-0039 の D11） |
+| `storage_url` text NULL | 組版済み静的 HTML の保存先（C8）。`holiday` の版は NULL |
+| `typeset_at` timestamptz | 組版完了日時 |
+
+UNIQUE(newspaper_id, edition_key) — 1 つの配達回で同じ版は 1 つだけ。
 
 #### `newspaper_items` — 組版に使った素材
 
 | カラム | 説明 |
 |--------|------|
 | `id` UUID PK | — |
-| `newspaper_id` UUID FK→newspapers | — |
-| `source_kind` text | board_post / image |
+| `newspaper_edition_id` UUID FK→newspaper_editions | 素材が載った版（ADR-0039 で `newspaper_id` から変えた） |
+| `source_kind` text | board_post / external_news / image |
 | `source_id` UUID | 素材レコードの ID |
+| `newspaper_article_id` UUID FK→newspaper_articles NULL | 載せた記事の文字（画像は NULL） |
+
+#### `newspaper_articles` — 記事の文字（ADR-0039 の D7）
+
+J16 が素材ごとに 1 回作り、J3・J8 はこれから組む（LLM を呼び直さない）。
+
+| カラム | 説明 |
+|--------|------|
+| `id` UUID PK | — |
+| `delivery_run_id` text FK→delivery_runs | 配達回 |
+| `source_kind` text | board_post / external_news |
+| `source_id` UUID | 素材（`board_posts.id` / `external_news_items.id`） |
+| `interest_category_id` UUID FK→interest_categories NULL | 結び付けた興味（共通の記事は NULL。結び付け方は OQ-062） |
+| `headline` text | 見出し |
+| `body` text | 記事の文字（文字だけ。HTML は持たず、組版でエスケープする）。投稿の素材では、LLM が書いたまとめだけを持ち、投稿の本文は `board_posts.body` からそのまま載せる（OQ-061 の暫定） |
+| `written_by` text | llm / template（LLM の失敗・検査に外れた・打ち切りのときは template、ADR-0039 の D8） |
+| `prompt_version` text NULL | 使ったプロンプトの版（template は NULL） |
+| `rule_version` text | 出力の検査に使ったルール表の版 |
+| `created_at` timestamptz | — |
+
+UNIQUE(delivery_run_id, source_kind, source_id) — 1 つの素材の記事は 1 回の配達につき 1 つ。版どうしで使い回す。
+
+行を入れる人と時刻（ADR-0039 の D8）:
+- J16 は、記事の打ち切り（04:30 / 16:15 JST）[assumed] より前にしか行を入れない（入れるトランザクションの中で DB の時計で確かめる。J17 の取り込みの打ち切りと同じ形）
+- J3 は組む前に、行のない素材に `written_by = 'template'` の行を `ON CONFLICT DO NOTHING` で入れ、それから組む
+- これで J3 が組んだあとに行が増えず、J3 の再試行・J8 の組み直しは同じ行から同じ HTML を組む（FR-037・NFR-022）。行を消すのは、素材の投稿の削除・投稿者の退去のとき（§4）だけ
+
+#### `external_news_items` — 取り込んだ外のニュース（ADR-0039 の D6）
+
+| カラム | 説明 |
+|--------|------|
+| `id` UUID PK | — |
+| `delivery_run_id` text FK→delivery_runs | 取り込んだ配達回（その回の J17 が入れた。J16・J3 の素材はこの列がその回の行だけ） |
+| `source_key` text | 配信元の識別子（許可した一覧のキー。テストは偽の配信元） |
+| `external_id` text | 配信元の記事の ID |
+| `title` text | 題 |
+| `body` text | 本文（文字だけ） |
+| `url` text NULL | 出典の URL（表示の仕方は OQ-060） |
+| `interest_category_id` UUID FK→interest_categories NULL | 配信元の分類から結び付けた興味（結び付け方は OQ-062） |
+| `fetched_at` timestamptz | 取り込んだ日時（保持は 30 日 [assumed]、ADR-0013） |
+
+UNIQUE(source_key, external_id) — J17 のやり直しで重複しない。前の回に取り込んだ記事は、あとの回の J17 で入れ直さない
+（`ON CONFLICT DO NOTHING` で最初の回の `delivery_run_id` のまま残る）。そのため、1 つの外のニュースが素材になるのは、取り込んだ 1 回の配達だけ。
+
+INDEX(delivery_run_id) — J16・J3 がその回の素材を選ぶため。J17 が行を入れられるのは、その回の取り込みの打ち切り（審査の打ち切りと同じ 04:00 / 16:00 JST [assumed]、`async.md` §3）より前だけ。
+打ち切りのあとは J16 の素材が増えない。
+
+### 興味（ADR-0039 の D4・D5）
+
+#### `interest_categories` — 興味の一覧
+
+運用者の CLI で保つ。シードは架空の一般的な名前だけ（ADR-0038 の D5 と同じ考え）。中身は OQ-062。
+
+| カラム | 説明 |
+|--------|------|
+| `id` UUID PK | — |
+| `key` text UNIQUE | 識別子（API と `edition_key` で使う） |
+| `label` text | 表示名 |
+| `active` bool | 選べるか（外した興味は新しく選べない） |
+| `sort_order` int | 並び順（J4 の版の選び方の順序にも使う） |
+
+一覧は 30 種まで [assumed]。
+
+#### `resident_interests` — 住民の興味
+
+本人だけが読み書きできる（security.md §4.2）。件数を数える経路は作らない（P-2）。
+
+| カラム | 説明 |
+|--------|------|
+| `resident_id` UUID FK→residents | — |
+| `interest_category_id` UUID FK→interest_categories | — |
+| `source` text | CHECK IN ('registration', 'settings')。検索から集めた値は置かない（OQ-059 の暫定） |
+| `created_at` timestamptz | — |
+
+PK(resident_id, interest_category_id)。1 人 5 つまで [assumed]（API が検査する）。
 
 ---
 
@@ -373,7 +466,12 @@ ADR-0002 は「空き家は新規住民の割り当て候補となる」と定�
 | 通知の購読 | `push_subscriptions` | 住民が端末で通知を許可したとき（API） | セッションが有効な間（ADR-0025） | セッションの無効化・購読の削除・プッシュサービスの 404 / 410・アカウント削除時に即時削除 |
 | 通知を送った記録 | `delivery_notifications` | J15 が送る前 | 30 日保持（ADR-0013・ADR-0025）[assumed] | 指している配達回の `finished_at` から 30 日経過後に、`delivery_runs` より先に削除（async.md J14。外部キーで配達回の削除を止めないため）。購読の削除・アカウント削除時に即時削除 |
 | 朝刊・夕刊（紙面） | `newspapers` | 組版バッチ時 | バックナンバーとして保持（FR-039）。保持期間は OQ-030 次第（仮: 無期限） | 決定次第（OQ-030） |
+| 版 | `newspaper_editions` | 組版バッチ時（`newspapers` と同じトランザクション） | 紙面と同期 | 紙面削除時 |
 | 新聞素材一覧 | `newspaper_items` | 組版時 | 紙面と同期 | 紙面削除時 |
+| 記事の文字 | `newspaper_articles` | J16（素材ごとに 1 回、記事の打ち切りの前だけ）・J3（行のない素材に template） | 紙面と同じ（ADR-0013） | 紙面削除時。素材の投稿が削除されたとき・投稿者の退去時に即時削除し、版を組み直す |
+| 外のニュース | `external_news_items` | J17 | 取り込みから 30 日（ADR-0013）[assumed]。OQ-060 の利用の条件で変わる | 30 日経過後に J14 が削除（載った記事の `newspaper_articles` は紙面と同じだけ残る） |
+| 興味の一覧 | `interest_categories` | 運用者の CLI | 運用者が外すまで（外すときは `active = false`） | 削除しない（版の `edition_key` が指すため） |
+| 住民の興味 | `resident_interests` | 登録のとき・設定（API） | 本人が外すまで | 本人が外したとき・アカウント削除時に即時削除（ADR-0013・ADR-0039 の D5） |
 | 掲示板投稿 | `board_posts` | 投稿時（`awaiting_review`） | 掲載後も保持。投稿者削除で即時 `deleted` に変更（ADR-0013） | 投稿者削除時に `body` を消去。deleted レコード自体は通報クローズから 1 年後削除 |
 | 住所録 | `address_book` | 住民が手動で追加（FR-051） | 住民が手動で削除するまで保持（ADR-0003） | 所有者のアカウント削除時に削除 |
 | ブロック | `blocks` | ブロック操作時 | ブロック解除まで | ブロック解除時、またはどちらかが退去時 |
@@ -447,6 +545,9 @@ stateDiagram-v2
 
 3. **掲示板投稿**: 即時 `deleted` 状態に変更し、`body` を消去する。
    その投稿が掲載された新聞を組み直す（掲載内容から除去、ADR-0013）。
+   その投稿から作った記事（`newspaper_articles`）も即時削除し、載った版をすべて組み直す（ADR-0039）。
+
+   **興味**: `resident_interests` を即時削除する（ADR-0013・ADR-0039 の D5）。
 
 4. **住所**: `addresses.status` を `vacant_deleted` に変更する（ADR-0002）。
 
@@ -468,12 +569,16 @@ stateDiagram-v2
 
 ## §7 `async.md` への引き継ぎ
 
-非同期処理の冪等性は次の 3 つの DB 制約と、手紙の時刻の決定的な計算で保証する:
+非同期処理の冪等性は次の DB 制約と、手紙の時刻・新聞の版の決定的な計算で保証する:
 
 | 保証 | 仕組み |
 |------|-------|
 | 配達の重複防止 | `mailbox_items` の UNIQUE(delivery_run_id, resident_id, kind, item_id)（ADR-0010） |
-| 組版の重複防止 | `newspapers` の UNIQUE(delivery_run_id) |
+| 組版の重複防止 | `newspapers` の UNIQUE(delivery_run_id) と `newspaper_editions` の UNIQUE(newspaper_id, edition_key)（ADR-0039） |
+| 記事の文字の重複防止 | `newspaper_articles` の UNIQUE(delivery_run_id, source_kind, source_id)。あれば LLM を呼ばない（ADR-0039 の D7） |
+| 外のニュースの重複防止 | `external_news_items` の UNIQUE(source_key, external_id)。素材はその回の `delivery_run_id` の行だけなので、同じ記事がほかの回に載らない（ADR-0039 の D6） |
+| 新聞は 1 回の配達につき 1 つ | `mailbox_items` の部分一意索引 UNIQUE(delivery_run_id, resident_id) WHERE kind = 'newspaper'（ADR-0039） |
+| 版の選び方の再現 | 興味が複数ある住民の版は `SHA-256(run_id:resident_id)` から決めるので、J4 をやり直しても同じ版（ADR-0039 の D3） |
 | 配達の通知の重複防止 | `delivery_notifications` の UNIQUE(delivery_run_id, push_subscription_id, kind)（ADR-0025・ADR-0035） |
 | 手紙の時刻の再現 | `mailbox_items.visible_at` は `SHA-256(run_id:resident_id)` から決めるので、J4 をやり直しても同じ値（ADR-0035 の D9） |
 
@@ -494,7 +599,11 @@ stateDiagram-v2
 | FR-021〜030 | §2 `delivery_runs`・§4 配達回ライフサイクル（ADR-0004） |
 | FR-028, FR-102 | §2 通知（`push_subscriptions`・`delivery_notifications` の `kind`、ADR-0025・ADR-0035） |
 | FR-105, FR-106 | §2 `mailbox_items.visible_at`（手紙の枠の時刻・新聞の定時、全住民への新聞の行、ADR-0035） |
-| FR-031〜039 | §2 `newspapers` / `newspaper_items`・§4 新聞ライフサイクル |
+| FR-031〜039 | §2 `newspapers` / `newspaper_editions` / `newspaper_items`・§4 新聞ライフサイクル |
+| FR-108 | §2 `newspaper_editions.edition_key`・`mailbox_items` の新聞の部分一意索引（ADR-0039） |
+| FR-109 | §2 `interest_categories` / `resident_interests`・§5 退去で即時削除（ADR-0039） |
+| FR-110 | §2 `external_news_items`・§4 保持 30 日（ADR-0039） |
+| FR-111 | §2 `newspaper_articles`（`written_by`・`prompt_version`、ADR-0039） |
 | FR-041〜050 | §2 `board_posts`・§4 掲示板ライフサイクル |
 | FR-051〜057 | §2 `address_book`・§3 ADR-0003（自動更新なし） |
 | FR-068 | §2 `blocks`・§3 suppressed 処理 |
@@ -516,6 +625,10 @@ stateDiagram-v2
 | OQ-003（クローズドな手紙のモデレーション）→ 決定 | 手紙も `moderation_queue` に積み、ルール表だけで審査する。手紙の行の `llm_label` は CHECK 制約で NULL に固める。通報された手紙をモデレーターが見るたびに `moderation_actions` に `view_letter` を書く（ADR-0026。見てよいことは OQ-043 → 決定、ADR-0036） |
 | OQ-043（手紙で止める内容と、手紙の閲覧）→ 決定 | 通報された手紙はモデレーターが条件付きで 1 通だけ確かめてよい（2026-11-19、ADR-0036）。`moderation_actions.action` の `view_letter` は決定の記録として残す。表の変更はない |
 | OQ-052（手紙で止める内容・止めた手紙の閲覧と、年齢や設定で守り方を変えるか） | 本番のルール表に手紙に当てる項目を置かない（テストは偽の規則）・止めた手紙は人が見ない（送った人には「届けられませんでした」とだけ見せる）・生年月日と年齢の列を置かない（ADR-0027）。止めた手紙（`blocked`）の本文の保持期間は ADR-0013 の表にまだなく、答えのあとに足す。年齢で変えるなら `residents` に年齢の列が要る |
+| OQ-051（新聞の中身）→ 決定 | 組ごとの版・興味・外のニュース・記事の文字（2026-11-20、ADR-0039）。§2 の新聞と興味の表 |
+| OQ-058（知り合いで埋まる組・一部埋まらない組） | 全住民を知り合い 0 の組として扱うので、`edition_key` は `common` / `interest:<key>` / `holiday` だけ。答えのあとに知り合いの組の版の種類と、組分けに使う関係の表を足す |
+| OQ-059（検索などから興味を集めること） | 検索からは集めないので、`resident_interests.source` に検索の値を置かず、検索語を保存する表を作らない |
+| OQ-060（外のニュースの配信元・利用の条件） | `external_news_items` の保持は 30 日 [assumed]。条件で保持期間と `url` の扱いが変わる |
 | OQ-030（アカウント情報の保持期間） | ADR-0013 の数値（logs 30 日, moderation 1 年, reports クローズ後 1 年, backups 30 日, erasure_log 60 日）を `[assumed]` として仮置き。確定したら ADR-0013 を更新する |
 | OQ-031（管理者・モデレーター役割）→ 決定 | ロールは住民とモデレーターの 2 つ（ADR-0020）。`moderation_actions.moderator_id` は `residents` の FK として保持し、モデレーターのロールを持つ住民だけが書ける。権限の規則表は `security.md` §4。ロールの保持（`staff_roles` テーブルか `residents` の列か）は実装で決める |
 | OQ-037（違反した住民への処置）→ 決定 | 処置の内容はマスターが後で決める（2026-11-19、ADR-0032）。決まるまで、住民の停止・警告を表す列や状態（`residents` の列、`moderation_actions.action` の値）を置かない。内容は OQ-048（持ち越し）で、答えのあとに `moderation_actions.action` の値と §4 のライフサイクルを直す |
