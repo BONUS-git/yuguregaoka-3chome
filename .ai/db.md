@@ -269,7 +269,7 @@ UNIQUE(source_key, external_id) — J17 のやり直しで重複しない。前�
 INDEX(delivery_run_id) — J16・J3 がその回の素材を選ぶため。J17 が行を入れられるのは、その回の取り込みの打ち切り（審査の打ち切りと同じ 04:00 / 16:00 JST [assumed]、`async.md` §3）より前だけ。
 打ち切りのあとは J16 の素材が増えない。
 
-### 興味（ADR-0039 の D4・D5）
+### 興味（ADR-0039 の D4・D5、ADR-0045）
 
 #### `interest_categories` — 興味の一覧
 
@@ -282,6 +282,7 @@ INDEX(delivery_run_id) — J16・J3 がその回の素材を選ぶため。J17 �
 | `label` text | 表示名 |
 | `active` bool | 選べるか（外した興味は新しく選べない） |
 | `sort_order` int | 並び順（J4 の版の選び方の順序にも使う） |
+| `keywords` text[] NOT NULL DEFAULT '{}' | 過去の新聞の検索で興味に当てる語（段階 2、ADR-0045 の D3）。運用者の CLI が NFKC・小文字にそろえて保ち、2 文字以上の語だけを受け付ける。シードは架空の一般的な語だけ。中身は OQ-062 |
 
 一覧は 30 種まで [assumed]。
 
@@ -293,10 +294,24 @@ INDEX(delivery_run_id) — J16・J3 がその回の素材を選ぶため。J17 �
 |--------|------|
 | `resident_id` UUID FK→residents | — |
 | `interest_category_id` UUID FK→interest_categories | — |
-| `source` text | CHECK IN ('registration', 'settings')。検索から集めた値は置かない（OQ-059 の暫定） |
+| `source` text | CHECK IN ('registration', 'settings')。検索から推し量った興味はこの表に置かず、`inferred_interests` に置く（ADR-0045 の D4） |
 | `created_at` timestamptz | — |
 
 PK(resident_id, interest_category_id)。1 人 5 つまで [assumed]（API が検査する）。
+
+#### `inferred_interests` — 過去の新聞の検索から推し量った興味（段階 2、ADR-0045）
+
+S2-3 で足す。自分に届いた過去の新聞の検索（`GET /api/v1/newspapers?q=`）の検索語が興味の `label` か `keywords` に当たったとき、API がその興味の ID だけを書く。
+検索語・検索の結果を持つ列は置かない。本人にも返さず、ほかの住民・モデレーターに返す経路も作らない（ADR-0045 の D8）。件数を数える経路は作らない（P-2）。
+
+| カラム | 説明 |
+|--------|------|
+| `resident_id` UUID FK→residents | — |
+| `interest_category_id` UUID FK→interest_categories | — |
+| `last_matched_at` timestamptz | 最後に当たった時刻。同じ興味にまた当たったら更新する |
+
+PK(resident_id, interest_category_id)。1 人 5 つまで [assumed]。5 つあるときに新しい興味に当たったら、`last_matched_at` がいちばん古い行を同じトランザクションで置き換える（API が `residents` の行を `FOR UPDATE` で読んでから行う）。
+最後に当たってから 30 日 [assumed] を過ぎた行は J14 が消す。退去で即時に消す（§5）。
 
 ---
 
@@ -480,6 +495,7 @@ ADR-0002 は「空き家は新規住民の割り当て候補となる」と定�
 | 外のニュース | `external_news_items` | J17 | 取り込みから 30 日（ADR-0013）[assumed]。OQ-060 の利用の条件で変わる | 30 日経過後に J14 が削除（載った記事の `newspaper_articles` は紙面と同じだけ残る） |
 | 興味の一覧 | `interest_categories` | 運用者の CLI | 運用者が外すまで（外すときは `active = false`） | 削除しない（版の `edition_key` が指すため） |
 | 住民の興味 | `resident_interests` | 登録のとき・設定（API） | 本人が外すまで | 本人が外したとき・アカウント削除時に即時削除（ADR-0013・ADR-0039 の D5） |
+| 推し量った興味（段階 2） | `inferred_interests` | 過去の新聞の検索で興味に当たったとき（API、ADR-0045） | 最後に当たってから 30 日 [assumed] | 30 日経過後に J14 が削除。5 つを超えるときはいちばん古い行を置き換える。アカウント削除時に即時削除（ADR-0013・ADR-0045 の D5）。本人が消す経路はない（D8） |
 | 掲示板投稿 | `board_posts` | 投稿時（`awaiting_review`） | 掲載後も保持。投稿者削除で即時 `deleted` に変更（ADR-0013） | 投稿者削除時に `body` を消去。deleted レコード自体は通報クローズから 1 年後削除 |
 | 住所録 | `address_book` | 住民が手動で追加（FR-051） | 住民が手動で削除するまで保持（ADR-0003） | 所有者のアカウント削除時に削除 |
 | ブロック | `blocks` | ブロック操作時 | ブロック解除まで | ブロック解除時、またはどちらかが退去時 |
@@ -563,7 +579,7 @@ stateDiagram-v2
    その投稿が掲載された新聞を組み直す（掲載内容から除去、ADR-0013）。
    その投稿から作った記事（`newspaper_articles`）も即時削除し、載った版をすべて組み直す（ADR-0039）。
 
-   **興味**: `resident_interests` を即時削除する（ADR-0013・ADR-0039 の D5）。
+   **興味**: `resident_interests` と `inferred_interests`（段階 2）を即時削除する（ADR-0013・ADR-0039 の D5・ADR-0045 の D5）。
 
 4. **住所**: `addresses.status` を `vacant_deleted` に変更する（ADR-0002）。
 
@@ -618,7 +634,8 @@ stateDiagram-v2
 | FR-031〜039 | §2 `newspapers` / `newspaper_editions` / `newspaper_items`・§4 新聞ライフサイクル |
 | FR-108 | §2 `newspaper_editions.edition_key`（`acquaintance:<resident_id>` は ADR-0044）・`mailbox_items` の新聞の部分一意索引（ADR-0039）。知り合いは `address_book.registered_tenancy_id`・`tenancies`・`blocks` から求める（表は足さない） |
 | FR-118 | §2 `images.original_url`（NULL 可）・§4 画像の保持（ADR-0044 の D5） |
-| FR-109 | §2 `interest_categories` / `resident_interests`・§5 退去で即時削除（ADR-0039） |
+| FR-109 | §2 `interest_categories`（`keywords`）/ `resident_interests` / `inferred_interests`・§4 推し量った興味の保持 30 日・§5 退去で即時削除（ADR-0039・ADR-0045） |
+| FR-119 | 表は足さない。検索の対象は `mailbox_items`（自分に届いた版）・`newspaper_editions`・`newspaper_articles`。検索語は保存しない（ADR-0045 の D1・D4） |
 | FR-110 | §2 `external_news_items`・§4 保持 30 日（ADR-0039） |
 | FR-111 | §2 `newspaper_articles`（`written_by`・`prompt_version`、ADR-0039） |
 | FR-041〜050 | §2 `board_posts`・§4 掲示板ライフサイクル |
@@ -649,7 +666,8 @@ stateDiagram-v2
 | OQ-051（新聞の中身）→ 決定 | 組ごとの版・興味・外のニュース・記事の文字（2026-11-20、ADR-0039）。§2 の新聞と興味の表 |
 | OQ-058（知り合いで埋まる組・一部埋まらない組）→ 決定 | 2026-11-20、ADR-0044。MVP では全住民を知り合い 0 の組として扱うので、作る `edition_key` は `common` / `interest:<key>` / `holiday` だけ。組 1・2 の版の種類 `acquaintance:<resident_id>` を §2 に書いた（作る時期は OQ-070）。組は保存せず、知り合いは既存の `address_book.registered_tenancy_id`・`tenancies.is_current`・`blocks` から J3 が求めるので、表を足さない。`images.original_url` を NULL 可にし、元の画像の保持を §4 に書いた |
 | OQ-071（地図の知り合いの定義） | 地図の印は `address_book.address_text`（自分の住所録に入れた住民）のまま。(b) にするなら、相手も自分を住所録に入れているかを求める問い合わせが加わる（表は足さない） |
-| OQ-059（検索などから興味を集めること） | 検索からは集めないので、`resident_interests.source` に検索の値を置かず、検索語を保存する表を作らない |
+| OQ-059（検索などから興味を集めること）→ 決定 | 2026-11-20、ADR-0045。`interest_categories.keywords` と `inferred_interests` を足した（段階 2）。`resident_interests.source` は `registration` / `settings` のまま。検索語を保存する列・表は作らない。保持は §4 |
+| OQ-072（推し量ることを住民が止められるか） | 止める設定の列は置かない（ADR-0045 の D7 の暫定）。止められるなら、`residents` の列か新しい表に止めたことを持つ |
 | OQ-054（地図の印）→ 決定 | 2026-11-20、ADR-0042。表の変更はない。住所と位置の対応は C1 の静的な配置の定義と計算で求め、DB に位置・座標・地図の表を持たない（ADR-0028 の D3）。知り合いの家の印は `address_book.address_text`（登録した時点の住所、ADR-0003）を使う |
 | OQ-066（地図の空き家・入居の表示の範囲・相手の同意） | 空き家・入居の表示は作らないので、表と問い合わせを足さない。答えのあとに、`addresses.status`（ADR-0002 の 5 つの値）と `tenancies.is_current` のどれを「空き家」と読むかと、表示に使う問い合わせを決める。同意が要るなら、住所録に相手の断りを持つ列か表を足す |
 | OQ-060（外のニュースの配信元・利用の条件） | `external_news_items` の保持は 30 日 [assumed]。条件で保持期間と `url` の扱いが変わる |

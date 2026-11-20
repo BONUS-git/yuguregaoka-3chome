@@ -1,6 +1,6 @@
 # 0013 — 退去処理とデータ保持期間
 
-- 状態: 採用（興味・新聞の記事・外のニュースの行を ADR-0039 で追加）
+- 状態: 採用（興味・新聞の記事・外のニュースの行を ADR-0039 で追加。推し量った興味の行を ADR-0045 で追加）
 - 日付: 2026-11-19
 
 ## 背景
@@ -37,6 +37,7 @@ OQ-030「アカウント情報の保持期間・削除ポリシー」は `db.md`
 | ブロック（blocker / blocked） | 即時削除 |
 | 通知の購読（`push_subscriptions`）・送った記録（`delivery_notifications`） | 即時削除（ADR-0025） |
 | 興味（`resident_interests`） | 即時削除（ADR-0039 の D5） |
+| 推し量った興味（`inferred_interests`、段階 2、ADR-0045 で追記） | 即時削除（ADR-0045 の D5） |
 | その住民の投稿から作った記事（`newspaper_articles`） | 即時削除。その記事が載った版をすべて組み直す（ADR-0039） |
 | `tenancies`（居住記録） | アカウント削除から **1 年後**に削除 |
 | `addresses` | `status = vacant_deleted` に変更。住所レコード自体は削除しない |
@@ -56,6 +57,7 @@ OQ-030「アカウント情報の保持期間・削除ポリシー」は `db.md`
 | `delivery_notifications`（配達完了の通知の記録、ADR-0025） | 30 日 |
 | `newspaper_articles`（新聞の記事の文字、ADR-0039） | 紙面（`newspapers`・`newspaper_editions`）と同じ |
 | `external_news_items`（取り込んだ外のニュース、ADR-0039） | 取り込みから 30 日（OQ-060 の利用の条件で変わる） |
+| `inferred_interests`（過去の新聞の検索から推し量った興味、段階 2、ADR-0045 で追記） | 最後に当たってから 30 日 [assumed]（J14 が消す） |
 | `moderation_queue` / `moderation_actions` | 1 年 |
 | 届けられなかった手紙（`letters.state = blocked`、本文と宛先、ADR-0040 で追記） | `blocked` にしてから 30 日 [assumed] |
 | 確認待ちの手紙（`letters.state = held`、ADR-0040 で追記） | モデレーターが操作するまで（長く確かめられないときの扱いは OQ-065） |
