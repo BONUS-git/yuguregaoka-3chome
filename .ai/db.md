@@ -701,7 +701,7 @@ stateDiagram-v2
 | OQ-065（手紙の照合の細部） | 長く確かめられない `held` の期限は置かない。決まったら §4 のライフサイクルと J14 を直す |
 | OQ-051（新聞の中身）→ 決定 | 組ごとの版・興味・外のニュース・記事の文字（2026-11-20、ADR-0039）。§2 の新聞と興味の表 |
 | OQ-058（知り合いで埋まる組・一部埋まらない組）→ 決定 | 2026-11-20、ADR-0044。MVP では全住民を知り合い 0 の組として扱うので、作る `edition_key` は `common` / `interest:<key>` / `holiday` だけ。組 1・2 の版の種類 `acquaintance:<resident_id>` を §2 に書いた（作る時期は OQ-070）。組は保存せず、知り合いは既存の `address_book.registered_tenancy_id`・`tenancies.is_current`・`blocks` から J3 が求めるので、表を足さない。`images.original_url` を NULL 可にし、元の画像の保持を §4 に書いた |
-| OQ-071（地図の印を付けるエントリ） | 暫定 (i): 印は本人の住所録のすべてのエントリの `address_book.address_text` に付ける（OQ-054 の答え「2:1」、ADR-0042 の D1 (c)・ADR-0049 の D8）。(ii) なら、`acquainted: true`（§2 `address_book` の知り合いの求め方。手紙の知り合いと同じ問い合わせ、ADR-0049 の D4）のエントリだけを使う。どちらでも表は足さない |
+| OQ-071（地図の印を付けるエントリ）→ 決定 | 2026-11-20、ADR-0051。印は本人の住所録のすべてのエントリの `address_book.address_text` に付ける（OQ-054 の答え「2:1」、ADR-0042 の D1 (c)・ADR-0049 の D8）。地図の印には `acquainted`（§2 `address_book` の知り合いの求め方）を使わない。表と列の変更はない |
 | OQ-059（検索などから興味を集めること）→ 決定 | 2026-11-20、ADR-0045。`interest_categories.keywords` と `inferred_interests` を足した（段階 2）。`resident_interests.source` は `registration` / `settings` のまま。検索語を保存する列・表は作らない。保持は §4 |
 | OQ-072（推し量ることを住民が止められるか） | 止める設定の列は置かない（ADR-0045 の D7 の暫定）。止められるなら、`residents` の列か新しい表に止めたことを持つ |
 | OQ-054（地図の印）→ 決定 | 2026-11-20、ADR-0042。表の変更はない。住所と位置の対応は C1 の静的な配置の定義と計算で求め、DB に位置・座標・地図の表を持たない（ADR-0028 の D3）。知り合いの家の印は `address_book.address_text`（登録した時点の住所、ADR-0003）を使う |
