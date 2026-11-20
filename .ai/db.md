@@ -351,6 +351,28 @@ PK(resident_id, interest_category_id)。1 人 5 つまで [assumed]。5 つあ�
 
 UNIQUE(owner_id, address_text)
 
+知り合い（ADR-0049 の D2、OQ-066 → 決定）は列を足さず、そのつど求める。A の行の `registered_tenancy_id` が B の `tenancies.is_current = true` の行を指し、
+かつ B の行が A の今の居住記録を指すとき、A と B は知り合い。手紙の知り合いと住所録の `acquainted`（api.md §7 F-09）は `blocks` を見ない。
+新聞の知り合い（ADR-0044 の D2）だけは、これに `blocks` に行がないことを足す。住所がない・空き家の住所を足した行は `registered_tenancy_id` が NULL で、知り合いにならない。
+住所録の追加の 1 日 20 件 `[assumed]` は、`address_book` の `created_at` では数えない（行を消して足し直せば上限を越えられるため）。
+下の `address_book_daily_counts` で数える（ADR-0049 の D4）。
+
+#### `address_book_daily_counts` — 住所録の追加の 1 日の数え（ADR-0049 の D4）
+
+| カラム | 説明 |
+|--------|------|
+| `owner_id` UUID FK→residents ON DELETE CASCADE | 数える住民 |
+| `jst_date` date | JST の暦日 |
+| `count` integer | その日に数えた件数（0〜20） |
+
+PRIMARY KEY(owner_id, jst_date)
+
+- 数えるのは、`address_book` の行を作った `POST /api/v1/address-book` と、`address_text` を変えた `PATCH /api/v1/address-book/{id}`（`registered_tenancy_id` を取り直す）。
+  メモだけの `PATCH`・`DELETE`・400 と 429 の要求は数えない。`DELETE` しても `count` は減らない。
+- API は住民ごとの `pg_advisory_xact_lock`（api.md の 1 日の上限の数え方と同じ）の中で、`count` が 20 なら 429 `daily_limit_reached` を返して何も変えない。20 未満なら、エントリの作成か住所の変更と同じトランザクションで `count` を 1 足す（行がなければ作る）。
+- 住所は書かない。件数だけを置き、何を足したか・探ったかを残さない。
+- `address_book` と別の表にするのは、`address_book` の行は本人が消せ（FR-053）、行に数えを置くと消せば数えも消えるため。
+
 ---
 
 ### ブロック・モデレーション・通報
@@ -473,7 +495,10 @@ ADR-0002 は「空き家は新規住民の割り当て候補となる」と定�
 | 受取人が送信者をブロックしている（FR-068） | 配達せず `state = suppressed`（差し戻しもしない。ブロックを明かさないため） |
 
 **ADR-0003 との整合**: 住所録の表示上の住所は登録時点のまま変わらない。
-`registered_tenancy_id` は内部の配達先解決にのみ使い、住所録の住所文字列は書き換えない。
+`registered_tenancy_id` は内部の配達先解決と知り合いの判定（§2 `address_book`、ADR-0049）にだけ使い、住所録の住所文字列は書き換えない。
+
+**知り合いとの関係**（ADR-0049 の D5）: 投函のときに知り合いを確かめるので、出せるのは、互いのエントリが相手の今の居住記録を指す相手への手紙だけになる。
+上の振り分けは投函のあとに状況が変わった手紙（相手が引っ越した・空き家になった・ブロックした）に使う。転送と知り合いの関係は OQ-082（持ち越し、段階 3）。
 
 ---
 
@@ -502,6 +527,7 @@ ADR-0002 は「空き家は新規住民の割り当て候補となる」と定�
 | 推し量った興味（段階 2） | `inferred_interests` | 過去の新聞の検索で興味に当たったとき（API、ADR-0045） | 最後に当たってから 30 日 [assumed] | 30 日経過後に J14 が削除。5 つを超えるときはいちばん古い行を置き換える。アカウント削除時に即時削除（ADR-0013・ADR-0045 の D5）。本人が消す経路はない（D8） |
 | 掲示板投稿 | `board_posts` | 投稿時（`awaiting_review`） | 掲載後も保持。投稿者削除で即時 `deleted` に変更（ADR-0013） | 投稿者削除時に `body` を消去。deleted レコード自体は通報クローズから 1 年後削除 |
 | 住所録 | `address_book` | 住民が手動で追加（FR-051） | 住民が手動で削除するまで保持（ADR-0003） | 所有者のアカウント削除時に削除 |
+| 住所録の追加の数え | `address_book_daily_counts` | 住所録の追加・住所を変えた更新のとき（API、ADR-0049 の D4） | その JST の暦日のあいだ。エントリを消しても減らさない | `jst_date` が今日（JST）より前の行を次の J14 が削除。アカウント削除時に即時削除（外部キーの CASCADE） |
 | ブロック | `blocks` | ブロック操作時 | ブロック解除まで | ブロック解除時、またはどちらかが退去時 |
 | モデレーション審査 | `moderation_queue` | 締め切り処理時にジョブ経由で登録（掲示板の投稿だけ、ADR-0040） | 審査完了後 1 年保持（ADR-0013）[assumed] | 1 年経過後削除 |
 | モデレーター操作 | `moderation_actions` | モデレーターの操作時 | 1 年保持（ADR-0013）[assumed] | 1 年経過後削除 |
@@ -585,6 +611,8 @@ stateDiagram-v2
 
    **興味**: `resident_interests` と `inferred_interests`（段階 2）を即時削除する（ADR-0013・ADR-0039 の D5・ADR-0045 の D5）。
 
+   **住所録の追加の数え**: `address_book_daily_counts` は `residents` の削除で即時に消える（外部キーの CASCADE、ADR-0049 の D4）。
+
 4. **住所**: `addresses.status` を `vacant_deleted` に変更する（ADR-0002）。
 
    **通知**: 通知の購読（`push_subscriptions`）と送った記録（`delivery_notifications`）は即時削除する（ADR-0013・ADR-0025）。
@@ -644,6 +672,8 @@ stateDiagram-v2
 | FR-111 | §2 `newspaper_articles`（`written_by`・`prompt_version`、ADR-0039） |
 | FR-041〜050 | §2 `board_posts`・§4 掲示板ライフサイクル |
 | FR-051〜057 | §2 `address_book`・§3 ADR-0003（自動更新なし） |
+| FR-121 | §2 `address_book` の知り合いの求め方・§3 知り合いとの関係（投函のときに確かめる。表は足さない、ADR-0049） |
+| FR-122 | §2 `address_book`（知り合いは列を足さず求める・`blocks` は見ない）・§2 `address_book_daily_counts`（1 日 20 件。追加と住所を変えた更新を数え、削除で減らさない）。掲示板の経路の列・表は OQ-081 の答えまで足さない（ADR-0049） |
 | FR-068 | §2 `blocks`・§3 suppressed 処理 |
 | FR-076〜082 | §2 `moderation_queue` / `reports` / `moderation_actions` |
 | FR-112 | §2 `letters`（`held`・`rule_version`・`matched_rule_id`・`decided_at`）・`moderation_actions.letter_id`・§4 手紙の状態遷移と保持（ADR-0040） |
@@ -671,11 +701,14 @@ stateDiagram-v2
 | OQ-065（手紙の照合の細部） | 長く確かめられない `held` の期限は置かない。決まったら §4 のライフサイクルと J14 を直す |
 | OQ-051（新聞の中身）→ 決定 | 組ごとの版・興味・外のニュース・記事の文字（2026-11-20、ADR-0039）。§2 の新聞と興味の表 |
 | OQ-058（知り合いで埋まる組・一部埋まらない組）→ 決定 | 2026-11-20、ADR-0044。MVP では全住民を知り合い 0 の組として扱うので、作る `edition_key` は `common` / `interest:<key>` / `holiday` だけ。組 1・2 の版の種類 `acquaintance:<resident_id>` を §2 に書いた（作る時期は OQ-070）。組は保存せず、知り合いは既存の `address_book.registered_tenancy_id`・`tenancies.is_current`・`blocks` から J3 が求めるので、表を足さない。`images.original_url` を NULL 可にし、元の画像の保持を §4 に書いた |
-| OQ-071（地図の知り合いの定義） | 地図の印は `address_book.address_text`（自分の住所録に入れた住民）のまま。(b) にするなら、相手も自分を住所録に入れているかを求める問い合わせが加わる（表は足さない） |
+| OQ-071（地図の印を付けるエントリ） | 暫定 (i): 印は本人の住所録のすべてのエントリの `address_book.address_text` に付ける（OQ-054 の答え「2:1」、ADR-0042 の D1 (c)・ADR-0049 の D8）。(ii) なら、`acquainted: true`（§2 `address_book` の知り合いの求め方。手紙の知り合いと同じ問い合わせ、ADR-0049 の D4）のエントリだけを使う。どちらでも表は足さない |
 | OQ-059（検索などから興味を集めること）→ 決定 | 2026-11-20、ADR-0045。`interest_categories.keywords` と `inferred_interests` を足した（段階 2）。`resident_interests.source` は `registration` / `settings` のまま。検索語を保存する列・表は作らない。保持は §4 |
 | OQ-072（推し量ることを住民が止められるか） | 止める設定の列は置かない（ADR-0045 の D7 の暫定）。止められるなら、`residents` の列か新しい表に止めたことを持つ |
 | OQ-054（地図の印）→ 決定 | 2026-11-20、ADR-0042。表の変更はない。住所と位置の対応は C1 の静的な配置の定義と計算で求め、DB に位置・座標・地図の表を持たない（ADR-0028 の D3）。知り合いの家の印は `address_book.address_text`（登録した時点の住所、ADR-0003）を使う |
-| OQ-066（地図の空き家・入居の表示の範囲・相手の同意） | 空き家・入居の表示は作らないので、表と問い合わせを足さない。答えのあとに、`addresses.status`（ADR-0002 の 5 つの値）と `tenancies.is_current` のどれを「空き家」と読むかと、表示に使う問い合わせを決める。同意が要るなら、住所録に相手の断りを持つ列か表を足す |
+| OQ-066（手紙は知り合いにだけ・知り合いの登録）→ 決定 | 2026-11-20、ADR-0049。知り合いのための表と列は足さない。知り合いは `address_book.registered_tenancy_id` と `tenancies.is_current` から `blocks` を見ずに求める（§2）。住所録の追加の 1 日 20 件は、消しても減らない `address_book_daily_counts`（住民と JST の暦日ごと）で数え、住所を変えた `PATCH` も数える（§2、ADR-0049 の D4） |
+| OQ-079（地図の空き家・入居の表示の範囲） | 空き家・入居の表示は作らないので、表と問い合わせを足さない。答えのあとに、`addresses.status`（ADR-0002 の 5 つの値）と `tenancies.is_current` のどれを「空き家」と読むかと、表示に使う問い合わせを決める |
+| OQ-081（掲示板の経路の中身） | 列・表は足さない（作らない暫定）。答えで、オープンにしたことを持つ列（`board_posts` か `residents`）か表と、掲示板の経路の知り合いの求め方が加わりうる |
+| OQ-082（マッチング・商店・団体との手紙、転送のときの知り合い） | 仮置きなし（どれも MVP の外）。転送中の相手を知り合いとみなすなら、§3 の振り分けと知り合いの求め方（`tenancies` の転送の行）を直す |
 | OQ-060（外のニュースの配信元・利用の条件） | `external_news_items` の保持は 30 日 [assumed]。条件で保持期間と `url` の扱いが変わる |
 | OQ-030（アカウント情報の保持期間） | ADR-0013 の数値（logs 30 日, moderation 1 年, reports クローズ後 1 年, backups 30 日, erasure_log 60 日）を `[assumed]` として仮置き。確定したら ADR-0013 を更新する |
 | OQ-031（管理者・モデレーター役割）→ 決定 | ロールは住民とモデレーターの 2 つ（ADR-0020）。`moderation_actions.moderator_id` は `residents` の FK として保持し、モデレーターのロールを持つ住民だけが書ける。権限の規則表は `security.md` §4。ロールの保持（`staff_roles` テーブルか `residents` の列か）は実装で決める |
