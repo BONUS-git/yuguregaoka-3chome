@@ -643,7 +643,7 @@ stateDiagram-v2
 | FR-068 | §2 `blocks`・§3 suppressed 処理 |
 | FR-076〜082 | §2 `moderation_queue` / `reports` / `moderation_actions` |
 | FR-112 | §2 `letters`（`held`・`rule_version`・`matched_rule_id`・`decided_at`）・`moderation_actions.letter_id`・§4 手紙の状態遷移と保持（ADR-0040） |
-| FR-113 | §9（年齢の列は OQ-063・OQ-064 の答えまで置かない、ADR-0041） |
+| FR-113 | §9（年齢の列は OQ-064 の答えまで置かない、ADR-0041。年齢による違いは作らない、ADR-0047） |
 | FR-093, FR-097 | §5 退去処理（ADR-0013） |
 | FR-099 | §4 `mailbox_items.deleted_at` |
 | NFR-002 | §1 原則 5（個人情報最小限） |
@@ -661,7 +661,8 @@ stateDiagram-v2
 | OQ-003（クローズドな手紙のモデレーション）→ 決定 | 手紙はルール表だけで審査する。通報された手紙をモデレーターが見るたびに `moderation_actions` に `view_letter` を書く（ADR-0026。見てよいことは OQ-043 → 決定、ADR-0036）。照合の時点は OQ-052 で投函のときに変わり、手紙は `moderation_queue` に積まなくなった（ADR-0040） |
 | OQ-043（手紙で止める内容と、手紙の閲覧）→ 決定 | 通報された手紙はモデレーターが条件付きで 1 通だけ確かめてよい（2026-11-19、ADR-0036）。`moderation_actions.action` の `view_letter` は決定の記録として残す。表の変更はない |
 | OQ-052（手紙で止める内容・止めた手紙の閲覧と、年齢や設定で守り方を変えるか）→ 決定 | 2026-11-20、ADR-0040・ADR-0041。`letters` に `held`・`rule_version`・`matched_rule_id`・`decided_at` を足し、`delivery_run_id` を NULL 可にした。`moderation_queue` に手紙の行を入れない（CHECK を `content_kind <> 'letter'` に改めた）。`moderation_actions` に `letter_id` を足した。`blocked` の保持は 30 日 [assumed]（§4） |
-| OQ-063・OQ-064（年齢で何を変えるか・年齢の扱い） | 生年月日の列は置かない（ADR-0041 の D4）。年齢の列も、答えが出るまで `residents` に置かない（D5）。答えのあとに、年齢の列（年とともに進めるなら基準の日）を足す |
+| OQ-063（年齢で何を変えるか）→ 決定 | 2026-11-20、ADR-0047。年齢による違いは作らない。ルール表と権限の規則に年齢の条件を持たせないので、表に年齢の区切りや年齢ごとの規則の列は置かない |
+| OQ-064（年齢の扱い） | 生年月日の列は置かない（ADR-0041 の D4）。年齢の列も、答えが出るまで `residents` に置かない（D5。待つ条件は OQ-064 だけ、ADR-0047 の D5）。答えのあとに、年齢の列（年とともに進めるなら基準の日）を足す |
 | OQ-065（手紙の照合の細部） | 長く確かめられない `held` の期限は置かない。決まったら §4 のライフサイクルと J14 を直す |
 | OQ-051（新聞の中身）→ 決定 | 組ごとの版・興味・外のニュース・記事の文字（2026-11-20、ADR-0039）。§2 の新聞と興味の表 |
 | OQ-058（知り合いで埋まる組・一部埋まらない組）→ 決定 | 2026-11-20、ADR-0044。MVP では全住民を知り合い 0 の組として扱うので、作る `edition_key` は `common` / `interest:<key>` / `holiday` だけ。組 1・2 の版の種類 `acquaintance:<resident_id>` を §2 に書いた（作る時期は OQ-070）。組は保存せず、知り合いは既存の `address_book.registered_tenancy_id`・`tenancies.is_current`・`blocks` から J3 が求めるので、表を足さない。`images.original_url` を NULL 可にし、元の画像の保持を §4 に書いた |
