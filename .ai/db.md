@@ -65,6 +65,26 @@ DDL は書かない。主なカラムと一意制約のみを示す。
 から現在の住民を引いてその `last_login_at` を参照する。ADR-0002 の 5 つの `addresses.status`
 値（active / dormant / vacant_deleted / vacant_expired / vacant_forwarded）はそのまま保持する。
 
+#### `credentials` — 認証情報（ADR-0018・`security.md` §3）
+
+住民 1 人に 1 行。`residents` と分けるのは、退去で J7 が最初に消す（`security.md` §2.4 の退去の処理の 4）範囲と、鍵の入れ替えで暗号化し直す範囲を 1 つの表にまとめるため [assumed]。
+
+| カラム | 説明 |
+|--------|------|
+| `resident_id` UUID PK FK→residents | 住民 1 人に 1 行 |
+| `email_encrypted` bytea | 暗号化したメールアドレス（AES-256-GCM、ADR-0018。AAD は `resident_id`）。平文は持たない |
+| `email_key_version` int NOT NULL | `email_encrypted` を暗号化した鍵の版（ADR-0021）。`keys.reencrypt`（`kind: 'email'`）が版 `from_version` の行を選ぶ（`environment.md` §8.3） |
+| `email_hmac` bytea NOT NULL | 検索用の HMAC（ADR-0018）。メールアドレスは小文字にそろえてから計算する [assumed] |
+| `email_hmac_key_version` int NOT NULL | `email_hmac` を計算した HMAC の鍵の版。HMAC の鍵の入れ替え（`environment.md` §8.3）で、どの行を作り直し済みかを示す |
+| `password_hash` text NOT NULL | Argon2id のハッシュ（パラメータを含む文字列、`security.md` §3.2） |
+| `email_verified_at` timestamptz NULL | メールアドレスを確かめた日時。NULL = まだ |
+| `created_at` timestamptz | — |
+| `updated_at` timestamptz | — |
+
+- 一意: UNIQUE(`email_hmac_key_version`, `email_hmac`)。HMAC の鍵の入れ替えのあいだは、ログインと登録の重複の確かめで、鍵輪の新旧の両方の版の HMAC を (版, 値) の組で引く（`environment.md` §8.3）。
+- 索引: (`email_key_version`) と (`email_hmac_key_version`)。再暗号化と HMAC の作り直しが、古い版の残りの行を 1,000 件ずつ引くため。
+- 退去で行ごと消す（J7 の最初の手順、`security.md` §2.4・ADR-0013）。バックアップから戻したときは `erasure.replay` が消す（§6）。
+
 #### `addresses` — 架空の住所
 
 | カラム | 説明 |
@@ -101,7 +121,8 @@ DDL は書かない。主なカラムと一意制約のみを示す。
 |--------|------|
 | `id` UUID PK | — |
 | `sender_id` UUID FK→residents NULL | 送信者（退去済みは NULL に変更、§5 参照） |
-| `body_encrypted` bytea | 保存時暗号化済み本文（ADR-0006） |
+| `body_encrypted` bytea | 保存時暗号化済み本文（ADR-0006。AAD は手紙の `id`、ADR-0021） |
+| `body_key_version` int NOT NULL | `body_encrypted` を暗号化した鍵の版（ADR-0021）。`keys.reencrypt`（`kind: 'letter'`）が版 `from_version` の行を選ぶ（`environment.md` §8.3・`async.md` §2）。索引: (`body_key_version`) |
 | `delivery_run_id` text FK→delivery_runs NULL | 次の配達回 ID。`held`・`blocked` の手紙は NULL（配達回に入れない、ADR-0040） |
 | `state` text | pending / held / scheduled / delivered / blocked / suppressed / returned（`held` は送った人が確認を頼んだ確認待ち、`blocked` はモデレーターが却下した手紙、ADR-0040） |
 | `rule_version` text NULL | 投函のときの照合に使ったルール表の版（ADR-0040 の D2）。照合のない M2・M3 の手紙は NULL |
@@ -509,6 +530,7 @@ ADR-0002 は「空き家は新規住民の割り当て候補となる」と定�
 | データ種別 | テーブル | 作る | 保つ | 消す |
 |-----------|---------|------|------|------|
 | 住民 | `residents` | 新規登録時に作成 | アカウント削除まで | 削除申請で即時物理削除（ADR-0013）→ erasure_log に記録 |
+| 認証情報 | `credentials` | 新規登録時に `residents` と同じトランザクションで作成 | アカウント削除まで。鍵の入れ替えでは行を残したまま暗号化と HMAC を新しい版で作り直す（`environment.md` §8.3） | 退去で J7 が最初に行ごと削除（`security.md` §2.4、ADR-0013） |
 | 住所 | `addresses` | 住民登録時・新規割り当て時 | 居住中は保持。空き家後も保持し、段階 3 から割り当て候補に戻す（ADR-0023） | 管理者が廃棄するまで削除しない（住所のプールを維持） |
 | 居住記録 | `tenancies` | 住所割り当て時・転入時 | 歴史として保持（配達先解決に使う） | 住民削除から 1 年後に削除（ADR-0013） |
 | 手紙（本体） | `letters` | 送信時（`pending` 状態。確認を頼まれた手紙は `held`、ADR-0040。照合に当たって送った人が n を選んだ手紙は作らない） | 配達後も保持。送信者が削除されても `body_encrypted` は残す（受取人保護）。ただし送信者フラグを「退去済み」に更新。`held` はモデレーターが操作するまで保持（長く確かめられないときは OQ-065） | 受取人全員が郵便受けから削除したとき、または通報クローズから 1 年後（レポート対象分）（ADR-0013）。`blocked` は `decided_at` から 30 日後に J14 が本文と宛先ごと削除 [assumed]。送信者の退去で、その住民の `held`・`blocked` は即時削除（ADR-0040 の D6） |
@@ -627,7 +649,8 @@ stateDiagram-v2
 - バックアップは 30 日間保持する（ADR-0013）[assumed]。
 - バックアップからリストアした後は `erasure_log` を順番に再生し、
   削除済みデータがリストアで復元されていないか確認・再削除する。
-- バックアップの実装方法（マネージドサービスの機能 / pgdump 等）は `environment.md` で定義する。
+- バックアップはマネージドの PostgreSQL の自動のバックアップ（毎日の全体と、その間の時点に戻せる WAL）で取り、別の地域にも写す。復元の練習は検証環境で行う（`environment.md` §6.5、ADR-0052）[assumed]。
+- 古い版の鍵は、再暗号化が終わってもバックアップの保持の 30 日のあいだは復元のためだけに残す（`environment.md` §8.3）。
 
 ---
 

@@ -68,3 +68,4 @@
 - [0049 — 手紙は知り合いにだけ出せる。知り合いになるのは、互いに住所録に入れたとき（既定）と、掲示板で相手がオープンにしているとき。足されたことは相手に知らせない](0049-letters-only-to-acquaintances-mutual-add-or-board-open-requests-hidden.md)
 - [0050 — 架空の店と入居者募集の張り紙は段階 3 から作る（MVP には作らない）。架空の店には「入居者募集」の張り紙を出して架空と分かるようにし、発信させず新聞にも載せない。新聞には運営の入居者募集の広告を出す](0050-fictional-shops-stage-3-vacancy-poster-no-posting-newspaper-tenant-ads.md)
 - [0051 — 地図の知り合いの家の印は、自分の住所録のすべてのエントリに付ける。地図と新聞・手紙で「知り合い」の定義を分け、地図の印は `acquainted` で変えない](0051-town-map-acquaintance-marks-all-address-book-entries-definitions-split.md)
+- [0052 — 開発とテストは手元に入れた PostgreSQL で動かし、`check.sh` は使い捨ての DB を起こす。IaC は OpenTofu で設計だけ書き、事業者は選ばない](0052-local-dev-and-check-env-opentofu-iac-design-only.md)
