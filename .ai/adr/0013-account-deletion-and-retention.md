@@ -30,6 +30,7 @@ OQ-030「アカウント情報の保持期間・削除ポリシー」は `db.md`
 | 認証情報 | 即時消去（`security.md` と連携） |
 | 未配達の手紙 (`state = pending / scheduled`) | 即時キャンセル（`state = returned`） |
 | 配達済み手紙（受取人の郵便受けにあるもの） | そのまま保持。`letters.sender_id` を NULL に変更し API では「退去済み」と表示 |
+| 確認待ちの手紙・届けられなかった手紙（`state = held / blocked`、ADR-0040 で追記） | 即時に本文と宛先ごと削除（届いていないので、受取人のために残す理由がない） |
 | 掲示板投稿（掲載前） | 即時削除（`state = deleted`, `body` を消去） |
 | 掲示板投稿（掲載済み） | 即時 `deleted` に変更・`body` を消去。その投稿が含まれる新聞を組み直す |
 | 住所録（所有するもの） | 即時削除 |
@@ -56,6 +57,8 @@ OQ-030「アカウント情報の保持期間・削除ポリシー」は `db.md`
 | `newspaper_articles`（新聞の記事の文字、ADR-0039） | 紙面（`newspapers`・`newspaper_editions`）と同じ |
 | `external_news_items`（取り込んだ外のニュース、ADR-0039） | 取り込みから 30 日（OQ-060 の利用の条件で変わる） |
 | `moderation_queue` / `moderation_actions` | 1 年 |
+| 届けられなかった手紙（`letters.state = blocked`、本文と宛先、ADR-0040 で追記） | `blocked` にしてから 30 日 [assumed] |
+| 確認待ちの手紙（`letters.state = held`、ADR-0040 で追記） | モデレーターが操作するまで（長く確かめられないときの扱いは OQ-065） |
 | `reports`（通報） | クローズ日から 1 年 |
 | バックアップ | 30 日 |
 | `erasure_log` | 60 日 |
