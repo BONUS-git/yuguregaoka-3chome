@@ -54,3 +54,4 @@
 - [0035 — 新聞は全住民に定時に届け、通知も送る。手紙は午前・午後のランダムな時刻に届け、通知を新聞と手紙で分ける](0035-newspaper-for-all-letters-random-am-pm-separate-notifications.md)
 - [0036 — 通報された手紙は、モデレーターが条件付きで 1 通だけ確かめてよい。住民を守る制限は、住民が自分で外せる設定にしない](0036-reported-letters-viewable-by-moderators-protections-not-self-removable.md)
 - [0037 — 架空の街の地図は、全住民で共有する 1 枚の白黒の画像とする。印（知り合いの家・自分の住所・候補）とゲーム風の地図は今は作らない](0037-town-map-shared-monochrome-image.md)
+- [0038 — 商店には実在の企業・個人のお店を迎えることを目指す。コミュニティ（団体）は住民が趣味などで作り、作ることに制約を置く](0038-shops-real-businesses-communities-by-residents.md)
