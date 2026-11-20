@@ -4,7 +4,7 @@
 - 日付: 2026-11-19
 - チケット: YGO-006
 - 根拠: `.ai/brief.md`・`.ai/requirements.md`・`.ai/architecture.md`・`.ai/db.md`・`.ai/api.md`
-- 関連 ADR: 0002・0004・0005・0006・0007・0008・0010・0011・0012・0013・0014・0015・0016・0017・0025・0026・0035
+- 関連 ADR: 0002・0004・0005・0006・0007・0008・0010・0011・0012・0013・0014・0015・0016・0017・0025・0026・0035・0039
 
 ---
 
@@ -32,6 +32,7 @@
 6. **LLM は審査のラベルを返すだけ** [explicit]（ADR-0005）: `ok` / `review` / `block` の
    いずれかを返す。公開可否の最終判断はルール表との突合で決める。
    クローズドな手紙の本文は LLM に渡さず、ルール表だけで照合する [inferred]（OQ-003 → 決定、ADR-0026）。
+   新聞の LLM（J16）は記事の文字を作るだけで、公開してよいかは決めない。出力は保存し、組版（J3・J8）は保存した文字から決定的に行う（OQ-051 → 決定、ADR-0039）。
 
 7. **即時の配達や通知はしない** [explicit]（P-1）: 配達回の外で住民に物を届けない。
    新聞は定時（07:00 / 17:00）に全住民へ、手紙は午前（08:00〜12:00）・午後（18:00〜21:00）の時間帯の中の受取人ごとの時刻に届ける（OQ-042 → 決定、ADR-0035）。
@@ -49,8 +50,8 @@
 | J0 | `delivery.tick` | 定時（5 分ごと）[assumed] | なし | J1〜J6 を必要に応じて積む。公開済みの配達回の手紙の枠の時刻を過ぎたら、枠ごとに J15（`kind = letter`）を積む（ADR-0035） |
 | J1 | `delivery.close` | 01:00 / 14:00 JST 以降、J0 が判断 | `run_id` | 配達回を `running` にする。手紙を `pending` → `scheduled`。`moderation_queue` に投稿と手紙の行を入れる |
 | J2 | `moderation.review` | 02:00 / 15:00 JST 以降、J0 が判断 | `run_id` | ラベルと判定。投稿を `approved` / `rejected` にする。手紙はルール表だけで照合し、当たれば `blocked` にする（LLM は使わない、ADR-0026） |
-| J3 | `newspaper.typeset` | J2 完了か打ち切り後、J0 が判断（締め切りは 05:00 / 16:30）| `run_id` | 静的 HTML と `newspapers` の行。間に合わなければ休刊 |
-| J4 | `delivery.prepare` | `newspapers` の行ができた後、J0 が判断 | `run_id` | 見せる前の `mailbox_items`（新聞は全住民・手紙は宛先、行ごとに `visible_at`）。宛先ごとの振り分け |
+| J3 | `newspaper.typeset` | J16 完了か記事の打ち切り（04:30 / 16:15）[assumed] 後、J0 が判断（締め切りは 05:00 / 16:30）。M3・M4 は J2 完了か打ち切り後 | `run_id` | 版ごとの静的 HTML と、`newspapers`・`newspaper_editions` の行（ADR-0039）。間に合わなければ休刊 |
+| J4 | `delivery.prepare` | `newspapers` の行ができた後、J0 が判断 | `run_id` | 見せる前の `mailbox_items`（新聞は全住民に版を 1 つずつ・手紙は宛先、行ごとに `visible_at`）。宛先ごとの振り分け |
 | J5 | `delivery.publish` | 07:00 / 17:00 JST、J0 が判断 | `run_id` | 配達回を `done` に。手紙と投稿の最終状態を確定。新聞の通知（J15、`kind = newspaper`）を積む（休刊の回も） |
 | J6 | `delivery.carry_over` | 配達時刻から 15 分過ぎても公開できない場合、J0 が判断 [assumed] | `run_id` | 配達回を `skipped` に。中身を次の便へ移す |
 | J7 | `account.erase` | キュー（API が退去を受けたのと同じトランザクションで積む） | `resident_id` | ADR-0013 の表に従い消去 |
@@ -62,12 +63,14 @@
 | J13 | `image.process` | キュー（段階 2。J0 も滞留分を拾い直す） | `image_id` | 新聞写真風に加工した画像 |
 | J14 | `retention.purge` | 毎日（配達窓を外した時間帯）[assumed] | なし | ADR-0013 の保持期間を過ぎたものを削除 |
 | J15 | `notify.delivery` | キュー（新聞は J5 が公開と同じトランザクションで、手紙は J0 が枠の時刻を過ぎてから積む。`singletonKey` は §5） | `{run_id, kind, slot}` | 購読のある住民へ「新聞が配達されました！」か「手紙が配達されました！（N通）」を 1 回送る（ADR-0025・ADR-0035） |
+| J16 | `newspaper.write` | J2 と J17 が終わる（J17 は失敗か取り込みの打ち切りでもよい）か審査の打ち切り後、J0 が判断（M5 から） | `run_id` | 素材（承認済みの投稿・その回の J17 が取り込んだ外のニュース）ごとの見出しと記事の文字（`newspaper_articles`、ADR-0039 の D7） |
+| J17 | `news.fetch` | 01:00 / 14:00 JST 以降、取り込みの打ち切り（04:00 / 16:00）まで、J0 が判断（M5 から） | `run_id` | 取り込んだ外のニュース（`external_news_items`、`delivery_run_id = run_id`、ADR-0039 の D6）。本番のアダプタは OQ-060 のあと |
 | — | `erasure.replay` | 手動（リストアの後） | なし | 消したはずのデータを `erasure_log` を元に消し直す |
 
 **毎日のジョブのスケジュール（J9〜J11・J14）**: 配達回の窓（01:00〜12:30 JST と 14:00〜21:30 JST。手紙の時間帯の終わりと手紙の通知の期限を含む、ADR-0035）
 を避けて置く [assumed]。例: 12:30 JST、23:00 JST など。
 
-**段階**: J9〜J12 は段階 3（F-16）で作る（ADR-0023、`roadmap.md` §6）。MVP で作るのは J0〜J8・J14・J15・`erasure.replay`（J15 は M3、`roadmap.md` §4）。
+**段階**: J9〜J12 は段階 3（F-16）で作る（ADR-0023、`roadmap.md` §6）。MVP で作るのは J0〜J8・J14・J15・J16・J17・`erasure.replay`（J15 は M3、J16・J17 は M5、`roadmap.md` §4）。
 J13 は段階 2（F-11）。
 
 **今の段階で設計しない処理**（理由を添える）:
@@ -89,7 +92,9 @@ ADR-0004 の表を拡張する。
 |----------|------|------|------|
 | 締め切り開始 | 01:00 | 14:00 | ADR-0004 |
 | 審査開始 | 02:00 | 15:00 | ADR-0004 |
-| 審査の打ち切り | 04:00 | 16:00 | [assumed] |
+| 外のニュースの取り込み（J17、M5 から） | 01:00 | 14:00 | ADR-0039 |
+| 審査の打ち切り・外のニュースの取り込みの打ち切り（J17、M5 から） | 04:00 | 16:00 | [assumed]（取り込みの打ち切りは ADR-0039 の D6） |
+| 記事の打ち切り（J16、M5 から） | 04:30 | 16:15 | ADR-0039 の D8 [assumed] |
 | 組版の締め切り | 05:00 | 16:30 | ADR-0004 |
 | 公開（新聞の配達・新聞の通知）| 07:00 | 17:00 | ADR-0004・ADR-0035 |
 | 公開の打ち切り | 07:15 | 17:15 | [assumed] |
@@ -128,7 +133,9 @@ stateDiagram-v2
 |------|---------|--------|
 | 締め切り | その配達回に `letters.state = 'pending'` の行が残っていない | `letters.state` |
 | 審査 | `moderation_queue.processed_at` が NULL の行が残っていない | `moderation_queue.processed_at` |
-| 組版 | `newspapers` の行がある | `newspapers.delivery_run_id` |
+| 外のニュースの取り込み（M5 から） | その回の J17 のジョブが完了か失敗（再試行を使い切った）か、取り込みの打ち切り（04:00 / 16:00）を過ぎた。取り込めなくても組版は止めない | pg-boss のジョブ履歴・時刻 |
+| 記事の文字（M5 から） | 承認済みの投稿（`board_posts.delivery_run_id = run_id`）と、その回に取り込んだ外のニュース（`external_news_items.delivery_run_id = run_id`）のすべてに `newspaper_articles` の行がある。取り込みが済むまでは判定しない | `newspaper_articles`・`external_news_items.delivery_run_id` |
+| 組版 | `newspapers` の行がある（版の行は同じトランザクションで入る） | `newspapers.delivery_run_id` |
 | 準備 | 現状のカラムでは判断できない（§9 に変更提案を書く） | — |
 
 ### J0 の動き（見回りジョブ）
@@ -138,7 +145,8 @@ J0 は 5 分ごとに `delivery_runs` を `run_id` の昇順に調べる。
 1. 各配達回について次の工程を 1 つだけ特定する。
 2. `singletonKey = '<キュー名>:<run_id>'` で積む。同じキーのジョブがキューに残っていれば積まない。
 3. 前の配達回が `done` または `skipped` になるまで、後の配達回の J5（公開）を積まない。
-4. `done` の配達回のうち、手紙の通知の期限がまだ来ていないもの（最後の枠から 30 分以内）について、時刻を過ぎて 30 分以内の枠ごとに J15（`kind = letter`）を積む（ADR-0035 の D11）。
+4. M5 から、`running` の配達回に J17（外のニュースの取り込み）を取り込みの打ち切りまで積み、審査と取り込みが済んだあとに J16（記事の文字）を挟んでから J3 を積む（ADR-0039）。J16 は、J17 が完了・失敗するか取り込みの打ち切りを過ぎるまで積まない（素材の範囲がそこで決まる）。M3・M4 の J0 は今のまま（J16・J17 を積まない）。
+5. `done` の配達回のうち、手紙の通知の期限がまだ来ていないもの（最後の枠から 30 分以内）について、時刻を過ぎて 30 分以内の枠ごとに J15（`kind = letter`）を積む（ADR-0035 の D11）。
 
 ```
 J0 の判断ロジック（概略）:
@@ -146,11 +154,19 @@ J0 の判断ロジック（概略）:
     if run.status = 'pending' and now >= close_time(run):
       enqueue J1 with singletonKey
     elif run.status = 'running':
+      -- M5 から（ADR-0039）。fetch_settled = J17 が完了か失敗（再試行を使い切った）か、now >= fetch_cutoff(run)
+      -- fetch_cutoff は review_cutoff と同じ時刻（04:00 / 16:00）[assumed]
+      if not fetch_settled(run):
+        enqueue J17 with singletonKey               -- J2 とは別に積む
       if moderation not started and now >= review_start_time(run):
         enqueue J2 with singletonKey
       elif moderation done or now >= review_cutoff(run):
-        if newspapers row not exists and now < typeset_deadline(run):
-          enqueue J3 with singletonKey
+        if not fetch_settled(run):                  -- M5 から。素材の範囲が決まるまで J16 を積まない
+          pass                                      -- review_cutoff で fetch_settled になるので、ここで長く止まらない
+        elif articles not done and now < article_cutoff(run):   -- M5 から（ADR-0039）
+          enqueue J16 with singletonKey
+        elif newspapers row not exists and now < typeset_deadline(run):
+          enqueue J3 with singletonKey                -- M5 からは J16 完了か記事の打ち切りのあと
         elif newspapers row not exists and now >= typeset_deadline(run):
           enqueue J3 (holiday) with singletonKey
         elif newspapers row exists and prepare not done:
@@ -263,28 +279,38 @@ COMMIT;
 
 ### J3 — 組版（`newspaper.typeset`）
 
-**きっかけ**: J2 完了（`moderation_queue` に `processed_at = NULL` の行がない）または
-審査打ち切り（04:00 / 16:00 JST）後。J0 が判断し `singletonKey` で積む。
+**きっかけ**: M5 からは、J16 完了（素材のすべてに `newspaper_articles` の行がある）または記事の打ち切り（04:30 / 16:15 JST）[assumed] 後（ADR-0039）。
+M3・M4 は、J2 完了（`moderation_queue` に `processed_at = NULL` の行がない）または審査打ち切り（04:00 / 16:00 JST）後。J0 が判断し `singletonKey` で積む。
 
 **入力**: `run_id`
 
 **出力**:
-- 静的 HTML をオブジェクトストレージに保存
-- `newspapers` に行を挿入
+- 版ごとの静的 HTML をオブジェクトストレージに保存
+- `newspapers` の行と、すべての版の `newspaper_editions`・`newspaper_items` の行を 1 つのトランザクションで挿入（版がそろうか休刊かのどちらかになる）
 
-**入力データ**: `board_posts.status = 'approved'` かつ
-`board_posts.delivery_run_id = run_id` の投稿を `(created_at, id)` の順で並べる
+**入力データ**（ADR-0039 の D7）: `newspaper_articles` のその配達回の行。素材は `board_posts.status = 'approved'` かつ
+`board_posts.delivery_run_id = run_id` の投稿（`(created_at, id)` の順）と、`external_news_items.delivery_run_id = run_id` の外のニュース（`(fetched_at, id)` の順）。前の回に取り込んだ外のニュースは素材にしない。
+- 版は、共通の版（`common`）と、興味の一覧の `active` な興味ごとの版（`interest:<key>`）。知り合いの組の版は OQ-058 の答えのあと（暫定では作らない）
+- 共通の記事（`interest_category_id` が NULL）はすべての版に、興味の記事はその興味の版に載せる。結び付け方は OQ-062
+- 投稿の本文は `board_posts.body` からそのまま載せ（書き換えない）、LLM が書いた見出し・まとめ・外のニュースの記事には「AI が書いた文」の印を付ける（OQ-061 の暫定、ADR-0039 の D9）
+- 記事の文字はすべてエスケープして描く（HTML として扱わない）
+- 記事の行がない素材（J16 が打ち切りまでに作れなかったもの）には、組む前に `written_by = 'template'`（`prompt_version` は NULL）の行を `INSERT … ON CONFLICT (delivery_run_id, source_kind, source_id) DO NOTHING` で入れ、それから `newspaper_articles` を読み直して組む。
+  記事の打ち切りのあとは J16 が行を入れない（§4 J16）ので、J3 の再試行と J8 の組み直しは同じ行から組む。J16 が完了して打ち切りの前に J3 が動くときは、行のない素材はない
+- **LLM は呼ばない**。描く関数は保存した文字だけを入力にする
+- M3・M4（J16 がない段階）は、承認済みの投稿をそのまま決まった形で共通の版 1 つに組む
 
 **冪等性**:
-- 保存キーは `newspapers/<run_id>/<コンテンツのハッシュ>.html` [assumed]。
+- 保存キーは `newspapers/<run_id>/<edition_key>/<コンテンツのハッシュ>.html` [assumed]。
   同じ内容なら同じキーになるため、上書きしても安全
-- 手順は「描く → オブジェクトストレージに置く → `newspapers` に INSERT」の順
-- `UNIQUE(delivery_run_id)` があるため、紙面は 1 配達回に 1 つだけ
+- 手順は「すべての版を描く → オブジェクトストレージに置く → `newspapers` と版の行を 1 つのトランザクションで INSERT」の順
+- `UNIQUE(delivery_run_id)` と `UNIQUE(newspaper_id, edition_key)` があるため、紙面は 1 配達回に 1 つ、版は種類ごとに 1 つだけ
 - 遅れて動いた組版は一意制約に当たって何もせずに終わる（`ON CONFLICT DO NOTHING`）
+- 同じ `newspaper_articles` から描くので、やり直しでもそれぞれの版の HTML はバイト単位で同じ（`roadmap.md` A-05）
 
 **休刊の扱い**（ADR-0007）:
 - 組版の締め切り（05:00 / 16:30 JST）までに `newspapers` の行ができなければ、
-  J0 が `is_holiday = true` の行を `ON CONFLICT DO NOTHING` で入れて休刊にする
+  J0 が `is_holiday = true` の行と `holiday` の版の行を 1 つのトランザクションで `ON CONFLICT DO NOTHING` で入れて休刊にする
+- LLM の失敗・打ち切りでは休刊にしない（記事を決まった形で組む、ADR-0039 の D8）
 - 投稿が 0 件でも、空のときのテンプレートで組む [assumed]
 - 休刊の回でも、承認済みの投稿は次の配達回で掲示板として届ける [assumed]
 
@@ -306,8 +332,15 @@ COMMIT;
 - 宛先ごとの振り分け結果（通常・転送・差し戻し・抑止）を反映
 - 各行に `visible_at` を書く（ADR-0035 の D10）
 
-**新聞**（ADR-0035 の D1・D2、FR-106）:
-- その配達回の紙面（`newspapers` の行。休刊の行を含む）を、J4 の時点で住んでいる全住民（`tenancies.is_current = true`）に `kind = 'newspaper'` で 1 行ずつ作る。手紙があるかにかかわらない
+**新聞**（ADR-0035 の D1・D2、FR-106・FR-108、ADR-0039 の D2・D3）:
+- その配達回の紙面を、J4 の時点で住んでいる全住民（`tenancies.is_current = true`）に `kind = 'newspaper'` で 1 行ずつ作る。手紙があるかにかかわらない
+- `item_id` は、その住民に届ける版（`newspaper_editions.id`）。住民ごとに組を決め、版を 1 つ選ぶ:
+  1. 組: 暫定（OQ-058）では、全住民を知り合い 0 の組として扱う
+  2. 休刊の回は全住民に `holiday` の版
+  3. 興味（`resident_interests` のうち `active` な興味）がない住民には `common` の版
+  4. 興味が 1 つならその興味の版。複数なら `SHA-256(run_id + ":" + resident_id)` を整数として興味の数で割った余りで 1 つ選ぶ（興味は `sort_order, id` の順）
+- 興味は J4 の時点の値を使う。部分一意索引 UNIQUE(delivery_run_id, resident_id) WHERE kind = 'newspaper' があるので、やり直しのあいだに興味が変わっても新聞は 1 つだけ（最初に入った行が残る）
+- M3・M4（版が `common` 1 つだけの段階）は、全住民に共通の版（M3 は休刊の版）
 - `visible_at` は、その便の公開の時刻（朝便 07:00・夕便 17:00 JST）
 
 **手紙の `visible_at`**（ADR-0035 の D8・D9）:
@@ -435,6 +468,7 @@ J0 が判断し `singletonKey` で積む。
 4. 住所録（所有するもの）を削除する
 5. ブロック（blocker / blocked）を削除する
 6. 通知の購読（`push_subscriptions`）と送った記録（`delivery_notifications`）を削除する（ADR-0013・ADR-0025。退去の受付でセッションと一緒に消えていれば何もしない）
+   興味（`resident_interests`）を削除する（ADR-0039 の D5）。2・3 で消した投稿から作った記事（`newspaper_articles`）は J8 が消す
 7. `addresses.status` を `vacant_deleted` に変更する
 8. `residents` を物理削除し、`erasure_log` に記録する（最後に行う）
 
@@ -459,17 +493,19 @@ J7 は同一トランザクションで積む。
 
 **出力**: 紙面を差し替える
 
-**手順**:
+**手順**（版ごと、ADR-0039）:
 1. `newspapers` の行を `FOR UPDATE` で取る
-2. `newspaper_items` から削除対象の素材行を外す
-3. 残った素材で描き直す
-4. 描いた結果のコンテンツハッシュが前と同じなら何もしない
-5. ハッシュが変わった場合、オブジェクトストレージに上書き保存し `newspapers.storage_url` を更新
+2. 削除対象の素材が載った版（`newspaper_items` から引く）のすべてについて、`newspaper_items` から素材行を外す
+3. 削除対象の素材から作った `newspaper_articles` の行を消す
+4. それぞれの版を、残った `newspaper_articles` から描き直す（LLM は呼ばない）
+5. 描いた結果のコンテンツハッシュが前と同じなら何もしない
+6. ハッシュが変わった場合、オブジェクトストレージに上書き保存し `newspaper_editions.storage_url` を更新
 
 **冪等性**:
 - `FOR UPDATE` で 1 ジョブずつ直列化する
 - 同じ紙面に複数の J8 が積まれたとき、2 回目は `storage_url` がすでに更新済みの状態で描くため
   正しい結果になる
+- 記事の行はすでに消えていれば何もしない
 
 **その他**:
 - 古いファイル（前の `storage_url`）は J14 が消す
@@ -577,6 +613,7 @@ J0 も `state = 'pending'` の滞留分を拾い直す [assumed]。
 | `reports` | `closed_at < now() - interval '1 year'` |
 | `tenancies`（退去済み）| `ended_at < now() - interval '1 year'` かつ対応する resident が削除済み |
 | `erasure_log` | `erased_at < now() - interval '60 days'` |
+| `external_news_items` | `fetched_at < now() - interval '30 days'`（ADR-0013・ADR-0039 [assumed]。OQ-060 の利用の条件で変わる）。載った記事の `newspaper_articles` は紙面と同じだけ残すので、`source_id` の参照は外部キーにしない |
 | オブジェクトストレージ（古い組版 HTML）| J8 で差し替えた前のファイル |
 
 **冪等性**:
@@ -614,6 +651,63 @@ J0 も `state = 'pending'` の滞留分を拾い直す [assumed]。
 
 ---
 
+### J16 — 記事の文字（`newspaper.write`）（M5 から、ADR-0039 の D7・D8）
+
+**きっかけ**: J2 完了か審査の打ち切り（04:00 / 16:00 JST）後で、かつその回の J17 が完了・失敗したか取り込みの打ち切り（04:00 / 16:00 JST）を過ぎたあと。J0 が `singletonKey` で積む。記事の打ち切り（04:30 / 16:15 JST）[assumed] を過ぎたら積まない。
+
+**入力**: `run_id`
+
+**出力**: 素材（`board_posts.delivery_run_id = run_id` の承認済みの投稿と、`external_news_items.delivery_run_id = run_id` の外のニュース）ごとに、見出しと記事の文字を `newspaper_articles` に 1 行ずつ
+
+**LLM に渡すもの**（C12 の文章アダプタ。テストと M5 はモック）:
+- 渡す: 承認済みの掲示板の投稿の本文（J2 ですでに外部の LLM に渡している範囲、ADR-0031）・取り込んだ外のニュースの題と本文・版の興味の名前（`interest_categories.label`）
+- 渡さない: 手紙・住所・ID（`resident_id`・`author_id` を含む）・ニックネーム・住民ごとの興味。プロンプトは素材と興味の名前だけから組み、住民の表を読まない
+- 投稿の素材では、LLM が書くのは見出しとまとめだけ。投稿の本文は書き換えない（OQ-061 の暫定）
+
+**出力の検査**:
+- 長さの上限（見出し・本文それぞれ [assumed]、OQ-062 で決める）
+- 文字だけであること（HTML・マークアップを含めない。組版のときにエスケープする）
+- ルール表（`security.md` §5.1）の掲示板向けの項目に当てる
+- 外れたら、その素材の記事を決まった形（素材の題と本文そのまま、`written_by = 'template'`）にする
+
+**冪等性**:
+- 素材ごとに 1 回だけ呼ぶ。`newspaper_articles` に行があれば呼ばない（`INSERT … ON CONFLICT (delivery_run_id, source_kind, source_id) DO NOTHING`）。費用の二重払いを避ける
+- 行を入れるトランザクションの中で `now() < article_cutoff(run)`（記事の打ち切り 04:30 / 16:15 JST、DB の時計）を確かめ、打ち切りを過ぎていたら入れずに終える（J17 の取り込みの打ち切りと同じ形）。
+  すでに動いている J16（advisory lock を持ったまま・再試行中）でも、打ち切りのあとや J3 のあとに行は増えない。これで J3 が組んだあとに記事が変わらず、J3 の再試行・J8 の組み直しでも同じ版の HTML になる（FR-037・NFR-022・`roadmap.md` A-05）
+- J3・J8 は保存した行から組むので、組版のやり直しでは LLM を呼ばない
+- 1 つの素材の記事は版どうしで使い回す
+
+**失敗とやり直し**:
+- LLM が失敗したら、記事の打ち切りまで指数バックオフで再試行する
+- 打ち切りまでに作れなかった素材は、J3 が組む前に `written_by = 'template'` の行を入れる（§4 J3）。検査に外れた出力は、J16 が打ち切りの前に `template` の行を入れる。LLM のせいでは休刊にしない
+- J16 が止まっていても、J0 は記事の打ち切りのあとに J3 を積む
+
+**監視**: `written_by = 'template'` になった記事の割合（`security.md` §7.1）
+
+---
+
+### J17 — 外のニュースの取り込み（`news.fetch`）（M5 から、ADR-0039 の D6）
+
+**きっかけ**: 01:00 / 14:00 JST 以降（締め切りと同じ時刻）。J0 が `singletonKey` で積む。取り込みの打ち切り（04:00 / 16:00 JST）[assumed] を過ぎたら積まない。
+
+**入力**: `run_id`
+
+**出力**: `external_news_items` の行（`delivery_run_id = run_id`）
+- 行を入れるトランザクションの中で `now() < fetch_cutoff(run)` を確かめ、打ち切りを過ぎていたら入れずに終える。これで J16 を積んだあとに素材が増えない
+- 前の回に取り込んだ記事（同じ `source_key`・`external_id`）は入れ直さず、この回の素材にもしない。1 つの外のニュースが載るのは 1 回の配達だけ
+
+**本番のアダプタはない**: 配信元・利用の条件・費用は OQ-060（持ち越し）。それまで本番のアダプタは作らず、M5 とテストは偽の記事（`EXAMPLE_NEWS_DO_NOT_USE`）を返すアダプタで作る（C13）。
+
+**送り先と検査**:
+- 送り先は許可した一覧（設定）の中だけ。`https` だけで、リダイレクトに従わない。名前解決のあとのプライベート・ループバック・リンクローカルの宛先には送らない（ADR-0025 の D6 と同じ検査、`security.md` §7 の T-19）
+- 取り込んだ記事は文字だけにし（HTML を外す）、ルール表に当ててから保存する。当たった記事は保存しない
+
+**冪等性**:
+- `UNIQUE(source_key, external_id)` で `ON CONFLICT DO NOTHING`
+- 取り込めなくても（配信元の失敗・0 件）次の工程は止めない。外のニュースのない紙面になる
+
+---
+
 ## §5 pg-boss の設定 [assumed]
 
 worker が 2 台あっても実行は 1 回分になる。`singletonKey` と DB の条件による。
@@ -636,8 +730,10 @@ worker が 2 台あっても実行は 1 回分になる。`singletonKey` と DB 
 | J13 `image.process` | 3 | true | 3600 | — |
 | J14 `retention.purge` | 3 | true | 7200 | `'retention.purge:<date>'` |
 | J15 `notify.delivery` | 5 | true | 1800 | `'notify.delivery:<run_id>:newspaper'`・`'notify.delivery:<run_id>:letter:<HHMM>'` |
+| J16 `newspaper.write` | 5 | true | 1800 | `'newspaper.write:<run_id>'` |
+| J17 `news.fetch` | 3 | true | 1800 | `'news.fetch:<run_id>'` |
 
-**時間のかかる工程**（J2・J3・J4）: `pg_try_advisory_lock` で実行する worker を 1 台にする。
+**時間のかかる工程**（J2・J3・J4・J16）: `pg_try_advisory_lock` で実行する worker を 1 台にする。
 ロックが取れなかった worker は何もせずに終わる。
 
 ---
@@ -649,6 +745,8 @@ worker が 2 台あっても実行は 1 回分になる。`singletonKey` と DB 
 | 締め切りの遅れ | 配達回が `running` にならない。手紙は `pending` のまま。次の J0 で再試行 | 「次の便で届く」と見えるまま（表示は変わらない） | pg-boss のジョブ履歴 |
 | 審査が間に合わない | 打ち切り時刻に未審査の投稿と、判定できなかった手紙は次の便に持ち越し（ADR-0026） | 投稿が「掲載待ち」のまま継続。手紙は「次の便で届く」と見えるまま | `moderation_queue` の未処理行 |
 | 組版の失敗 | 締め切りまでに直せなければ休刊行を挿入 | その配達回は紙面は届かず、休刊の印と手紙が届く。新聞の通知は送る | `newspapers.is_holiday = true` |
+| 記事の文字（LLM）の失敗・打ち切り・検査に外れた出力 | その素材の記事を決まった形で組む。休刊にしない（ADR-0039 の D8） | 紙面は届く。その記事は素材の題と本文そのまま | `newspaper_articles.written_by = 'template'` |
+| 外のニュースの取り込みの失敗 | 外のニュースなしで組む | 外のニュースの記事がない紙面が届く | pg-boss のジョブ履歴 |
 | 準備が間に合わない | 公開の打ち切りまでに準備完了しなければ J6 で持ち越し | 配達なし（次の便で届く） | `delivery_runs.status = 'skipped'` |
 | 公開の失敗 | 再試行。打ち切りまでに成功しなければ J6 で持ち越し | 配達なし（次の便で届く） | pg-boss のジョブ履歴 |
 | worker が何便分も止まった | 再起動後、J0 が古い配達回から順に持ち越しを実行 | 複数便分が次の 1 便で届く（件数が多い） | 操作ログ |
@@ -669,6 +767,7 @@ NFR-027（可用性）・NFR-074（障害通知）に合わせる。
 | J2 が審査打ち切り前に処理できていない投稿数 | 0 以外 | 同上 |
 | J3 が 05:30 / 17:00 JST までに完了しない（休刊含む）| — | 同上 |
 | J5 が公開時刻から 10 分以上遅延 | — | 同上 |
+| J16 で `written_by = 'template'` になった記事の割合（ADR-0039） | 閾値は environment.md で定義 | 同上 |
 | 手紙の枠の J15 が枠の時刻から 10 分以上積まれない（ADR-0035） | — | 同上 |
 | J7 が 24 時間以内に完了しない | — | 同上 |
 | pg-boss のジョブが `failed` 状態に積み上がる | 閾値は environment.md で定義 | 同上 |
@@ -690,6 +789,12 @@ NFR-027（可用性）・NFR-074（障害通知）に合わせる。
 | モックの LLM が失敗 | LLM のモックが全件エラーを返したとき、打ち切り後に投稿が次の便に持ち越されること |
 | 通知の重複と期限 | J15 を 2 回動かしてもモックのプッシュ送信が受ける通知が増えないこと。公開の前・`skipped` の便・枠の時刻の前・それぞれの時刻から 30 分のあとには送らないこと。休刊の回にも新聞の通知を送ること（`roadmap.md` A-15） |
 | 手紙の時刻 | 手紙の `mailbox_items` は `visible_at`（午前 08:00〜11:50・午後 18:00〜20:50 の 10 分刻み）を過ぎるまで郵便受けに出ないこと。J4 を 2 回動かしても `visible_at` が変わらないこと。同じ配達回の同じ受取人の手紙が同じ時刻になること。新聞は手紙の有無にかかわらず全住民に 07:00 / 17:00 に出ること（ADR-0035、`roadmap.md` A-02） |
+| 新聞の LLM の失敗（ADR-0039） | モックの文章アダプタが失敗・打ち切り・長すぎる出力・HTML を含む出力・ルール表に当たる出力を返したとき、記事が決まった形で組まれ、休刊にならないこと（`roadmap.md` A-17 (4)） |
+| やり直しで LLM を呼ばない | J16 を 2 回動かしても `newspaper_articles` の行の数が変わらず、モックの呼び出しが増えないこと。J3・J8 には呼ばれたら失敗するモックを差し込み、それぞれの版の HTML がバイト単位で同じになること（`roadmap.md` A-03・A-05） |
+| 外のニュースは取り込んだ回だけ | 2 回の配達で偽の配信元が同じ記事を返しても、`external_news_items` は 1 行で、載るのは最初の回の紙面だけであること。取り込みの打ち切りのあとに J17 が動いても行が増えず、J17 が済むか打ち切りを過ぎるまで J0 が J16 を積まないこと（ADR-0039 の D6） |
+| 記事の打ち切りのあとの J16 | 記事の打ち切りのあと（J3 が `template` の行を入れて組んだあと）に、動き続けていた J16 がモックの LLM の出力を書こうとしても `newspaper_articles` の行が増えず変わらないこと。そのあとの J3 の再試行と J8 の組み直しで、それぞれの版の HTML がバイト単位で同じになること（ADR-0039 の D8、`roadmap.md` A-05） |
+| 版の決定性と新聞の部分一意索引 | J4 を 2 回動かしても、住民に届く版が同じで、新聞が 1 つだけであること。2 回のあいだに興味を変えても新聞が 2 つにならないこと（`roadmap.md` A-17 (2)） |
+| LLM に渡すもの | モックの文章アダプタが受け取る入力に、手紙の本文・住所・ID・ニックネーム・住民ごとの興味の目印の文字列が入らないこと（`roadmap.md` A-17 (3)） |
 
 ---
 
@@ -699,10 +804,14 @@ NFR-027（可用性）・NFR-074（障害通知）に合わせる。
 
 | 項目 | 参照 | 現在の仮の扱い |
 |------|------|--------------|
-| 外部の LLM サービス | OQ-008（決定）・OQ-047 | 秘書の暫定の選定で Anthropic API の `claude-haiku-5-5`（ADR-0031）。J2 から 1 件ずつ同期で呼び、Batch API は使わない（審査の打ち切りまでに終わる保証がない）。本番のアダプタは承認のあとに作り、テストではモックを使う（ADR-0005・NFR-065）。確定と費用の上限は OQ-047（持ち越し） |
+| 外部の LLM サービス | OQ-008（決定）・OQ-047 | 秘書の暫定の選定で Anthropic API の `claude-haiku-5-5`（ADR-0031）。J2 から 1 件ずつ同期で呼び、Batch API は使わない（審査の打ち切りまでに終わる保証がない）。本番のアダプタは承認のあとに作り、テストではモックを使う（ADR-0005・NFR-065）。確定と費用の上限は OQ-047（持ち越し）。J16 の新聞の LLM はこれとは別に OQ-062 で決め、費用の上限は OQ-047 と一緒に聞く（ADR-0039） |
 | 手紙で止める内容と、止めた手紙の閲覧（J2） | OQ-043（決定）・OQ-052・OQ-053 | 本番のルール表に手紙に当てる項目を置かない（テストは偽の規則）・止めた手紙は人が見ない（送った人には「届けられませんでした」とだけ見せる）。手紙を審査すること・LLM に渡さないことは決定（OQ-003、ADR-0026）。通報された手紙をモデレーターが確かめることも決定（OQ-043、ADR-0036。J2 は関わらない）。止める内容と止めた手紙の閲覧・年齢で変えるかは OQ-052（要回答）、違法な物の取引の守りは OQ-053（持ち越し、別のチケット） |
 | 通知の手段（J12） | OQ-039（決定）・OQ-049 | アウトボックス形式で保留（J12 は段階 3）。テスト環境はモックかローカルの SMTP（ADR-0033）。本番のメール送信サービスはマスターの事前承認を得て選び、進め方と費用の上限は OQ-049（持ち越し） |
-| 新聞の中身（J3） | OQ-051 | ADR-0007 のまま。全住民に同じ紙面を、承認済みの掲示板の投稿からテンプレートで組む（住民の興味は集めず、外のニュースは取り込まず、LLM を使わない）。新聞を全住民に届けることと通知は決定（OQ-042、ADR-0035） |
+| 知り合いの組（J4・J3） | OQ-051（決定）・OQ-058 | 新聞の中身は決定（2026-11-20、ADR-0039）。組 1・2 の決め方と中身は OQ-058（要回答）で、暫定は全住民を知り合い 0 の組として扱う（版は `common` と `interest:<key>` だけ） |
+| 検索からの興味 | OQ-059 | 検索からは集めない。住所録の検索語を DB・ログに残さない（要回答の暫定） |
+| 外のニュースの配信元（J17） | OQ-060 | 本番のアダプタは作らず、偽の記事のアダプタだけ（持ち越し）。保持は 30 日 [assumed] |
+| LLM の文の印・投稿の書き換え（J16・J3） | OQ-061 | 投稿の本文は書き換えずに載せ、LLM の文に「AI が書いた文」の印を付ける（要回答の暫定） |
+| 新聞の LLM のモデル・プロンプト（J16） | OQ-062 | モックの文章アダプタで作る（持ち越し、M5 の前に秘書が ADR で決める）。長さの上限と興味の一覧の中身もそこで決める |
 | 画像の加工（J13） | OQ-026 | 段階 2 として仮置き |
 | マッチング | FR-066・FR-069・OQ-050 | 段階 3 で、アルゴリズムの ADR を書いてから設計する。恋愛のカテゴリは設けない（OQ-001 → 決定、ADR-0024）。提案に街の外の連絡先を載せない（FR-101。禁止はマッチングの中だけ、OQ-041 → 決定、ADR-0034）。自由記述の欄の扱いと、成立後に最初の手紙を出す方法は OQ-050（持ち越し、アルゴリズムの ADR で決める） |
 | `delivery_runs` の保持期間 | OQ-030 / ADR-0013 | ADR-0013 は「30 日で消す」としているが、`mailbox_items` と `newspapers` が外部キーで参照しているため、外部キーの扱いを確定させる必要がある。`delivery_notifications` も外部キーで参照するが、J14 が配達回の `finished_at` で先に消すので削除を止めない（ADR-0025） |
@@ -775,9 +884,13 @@ NFR-027（可用性）・NFR-074（障害通知）に合わせる。
 | FR-097 | §4 J14（保持期間による削除）|
 | FR-102 | §4 J15（有効なセッションの購読だけに送る、ADR-0025）|
 | FR-105 | §3 時刻表と手紙の枠・§4 J4（手紙の `visible_at`、ADR-0035）|
-| FR-106 | §4 J4（新聞を全住民に）・J3（紙面の中身は §8 OQ-051）|
+| FR-106 | §4 J4（新聞を全住民に）・J3（紙面の中身は FR-108〜FR-111、ADR-0039）|
+| FR-108 | §4 J3（版ごとの組版）・J4（組分けと版の選び方、§8 OQ-058）|
+| FR-109 | §4 J4（J4 の時点の興味）・J7（興味の削除）|
+| FR-110 | §4 J17（外のニュースの取り込み、§8 OQ-060）・J14（保持）|
+| FR-111 | §4 J16（記事の文字）・J3・J8（保存した文字から組み、LLM を呼ばない、§8 OQ-061・OQ-062）|
 | NFR-021 | §1 冪等性・§4 J1・J4・J5 |
-| NFR-022 | §4 J3（組版の冪等性）|
+| NFR-022 | §4 J3（組版の冪等性。保存した記事の文字から組む、ADR-0039）・J16 |
 | NFR-023 | §4 J2（配達前モデレーション完了）|
 | NFR-024 | §4 各ジョブのライフサイクル |
 | NFR-027 | §7 監視 |

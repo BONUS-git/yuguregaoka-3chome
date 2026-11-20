@@ -1,6 +1,6 @@
 # 0013 — 退去処理とデータ保持期間
 
-- 状態: 採用
+- 状態: 採用（興味・新聞の記事・外のニュースの行を ADR-0039 で追加）
 - 日付: 2026-11-19
 
 ## 背景
@@ -35,6 +35,8 @@ OQ-030「アカウント情報の保持期間・削除ポリシー」は `db.md`
 | 住所録（所有するもの） | 即時削除 |
 | ブロック（blocker / blocked） | 即時削除 |
 | 通知の購読（`push_subscriptions`）・送った記録（`delivery_notifications`） | 即時削除（ADR-0025） |
+| 興味（`resident_interests`） | 即時削除（ADR-0039 の D5） |
+| その住民の投稿から作った記事（`newspaper_articles`） | 即時削除。その記事が載った版をすべて組み直す（ADR-0039） |
 | `tenancies`（居住記録） | アカウント削除から **1 年後**に削除 |
 | `addresses` | `status = vacant_deleted` に変更。住所レコード自体は削除しない |
 
@@ -51,6 +53,8 @@ OQ-030「アカウント情報の保持期間・削除ポリシー」は `db.md`
 | アクセスログ・操作ログ（DB 外） | 30 日 |
 | `delivery_runs` | 30 日 |
 | `delivery_notifications`（配達完了の通知の記録、ADR-0025） | 30 日 |
+| `newspaper_articles`（新聞の記事の文字、ADR-0039） | 紙面（`newspapers`・`newspaper_editions`）と同じ |
+| `external_news_items`（取り込んだ外のニュース、ADR-0039） | 取り込みから 30 日（OQ-060 の利用の条件で変わる） |
 | `moderation_queue` / `moderation_actions` | 1 年 |
 | `reports`（通報） | クローズ日から 1 年 |
 | バックアップ | 30 日 |
@@ -61,6 +65,7 @@ OQ-030「アカウント情報の保持期間・削除ポリシー」は `db.md`
 
 住民の掲示板投稿が削除されたとき、その投稿を素材として使った `newspapers` レコードを
 特定し、`newspaper_items` から削除したうえで紙面を再生成する（`newspapers.storage_url` を上書き）。
+（ADR-0039 で置き換え）紙面は版ごとになったので、その投稿が載った版（`newspaper_editions`）をすべて描き直し、版の `storage_url` を上書きする。その投稿から作った `newspaper_articles` の行も消す。
 休刊でない限り、空になった紙面は休刊として扱わない（他の素材は残す）。
 
 ## 理由
