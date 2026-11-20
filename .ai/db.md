@@ -236,8 +236,8 @@ J16 が素材ごとに 1 回作り、J3・J8 はこれから組む（LLM を呼�
 | `source_id` UUID | 素材（`board_posts.id` / `external_news_items.id`） |
 | `interest_category_id` UUID FK→interest_categories NULL | 結び付けた興味（共通の記事は NULL。結び付け方は OQ-062） |
 | `headline` text | 見出し |
-| `body` text | 記事の文字（文字だけ。HTML は持たず、組版でエスケープする）。投稿の素材では、LLM が書いたまとめだけを持ち、投稿の本文は `board_posts.body` からそのまま載せる（OQ-061 の暫定） |
-| `written_by` text | llm / template（LLM の失敗・検査に外れた・打ち切りのときは template、ADR-0039 の D8） |
+| `body` text | 記事の文字（文字だけ。HTML は持たず、組版でエスケープする）。投稿の素材では、LLM が書いたまとめだけを持ち、投稿の本文は `board_posts.body` からそのまま載せる（書き換えない。ADR-0046 の D4）。LLM が投稿のまとめを書くのは OQ-074（要回答）の暫定で、答えが「書かない」なら投稿の行は決まった形（`written_by = 'template'`、まとめなし）になる |
+| `written_by` text | llm / template（LLM の失敗・検査に外れた・打ち切りのときは template、ADR-0039 の D8）。紙面には出さない。規約が LLM の文であることを示すよう求めるとき（OQ-073）は、これで見分ける（ADR-0046 の D3） |
 | `prompt_version` text NULL | 使ったプロンプトの版（template は NULL） |
 | `rule_version` text | 出力の検査に使ったルール表の版 |
 | `created_at` timestamptz | — |
