@@ -51,9 +51,13 @@ DDL は書かない。主なカラムと一意制約のみを示す。
 | `id` UUID PK | 内部 ID（変更不可、ADR-0001） |
 | `nickname` text | 任意の表示名（FR-009） |
 | `bio` text | 自己紹介文（FR-008） |
+| `age_at_registration` smallint NOT NULL | 登録のときに住民が入れた年齢（FR-113、ADR-0048 の D1）。CHECK(`age_at_registration BETWEEN 0 AND 999`)。登録のあとは書き換えない（D2） |
+| `age_base_date` date NOT NULL | 年齢を進める基準の日。登録した日の JST の日付（ADR-0048 の D3）。今の年齢 = `age_at_registration` + この日から JST の日付で満了した年数（2/29 はうるう年でない年は 3/1 に上がる）。登録のあとは書き換えない |
 | `last_login_at` timestamptz | 最終ログイン日時（ADR-0002 ではアドレス側に置いていたが §3 参照） |
 | `created_at` timestamptz | 登録日時 |
 | `deleted_at` timestamptz | 論理削除フラグ代わりに使用（即時物理削除への橋渡し用） |
+
+年齢の 2 列は平文で持ち、退去で行ごと即時に消す（ADR-0048 の D8・ADR-0013）。年齢を変える UPDATE は C2 のどの経路にも書かない（ADR-0048 の D2）。
 
 **注**: ADR-0002 は `addresses.last_login_at` と書いているが、住民が引っ越しで住所を変えると
 その後のログイン記録が旧住所に紐づいてしまう。住民を認証する主体は `residents` であるため、
@@ -643,7 +647,7 @@ stateDiagram-v2
 | FR-068 | §2 `blocks`・§3 suppressed 処理 |
 | FR-076〜082 | §2 `moderation_queue` / `reports` / `moderation_actions` |
 | FR-112 | §2 `letters`（`held`・`rule_version`・`matched_rule_id`・`decided_at`）・`moderation_actions.letter_id`・§4 手紙の状態遷移と保持（ADR-0040） |
-| FR-113 | §9（年齢の列は OQ-064 の答えまで置かない、ADR-0041。年齢による違いは作らない、ADR-0047） |
+| FR-113 | §2 `residents.age_at_registration`・`age_base_date`（ADR-0048）・§9（年齢による違いは作らない、ADR-0047。誕生日は OQ-077） |
 | FR-093, FR-097 | §5 退去処理（ADR-0013） |
 | FR-099 | §4 `mailbox_items.deleted_at` |
 | NFR-002 | §1 原則 5（個人情報最小限） |
@@ -662,7 +666,8 @@ stateDiagram-v2
 | OQ-043（手紙で止める内容と、手紙の閲覧）→ 決定 | 通報された手紙はモデレーターが条件付きで 1 通だけ確かめてよい（2026-11-19、ADR-0036）。`moderation_actions.action` の `view_letter` は決定の記録として残す。表の変更はない |
 | OQ-052（手紙で止める内容・止めた手紙の閲覧と、年齢や設定で守り方を変えるか）→ 決定 | 2026-11-20、ADR-0040・ADR-0041。`letters` に `held`・`rule_version`・`matched_rule_id`・`decided_at` を足し、`delivery_run_id` を NULL 可にした。`moderation_queue` に手紙の行を入れない（CHECK を `content_kind <> 'letter'` に改めた）。`moderation_actions` に `letter_id` を足した。`blocked` の保持は 30 日 [assumed]（§4） |
 | OQ-063（年齢で何を変えるか）→ 決定 | 2026-11-20、ADR-0047。年齢による違いは作らない。ルール表と権限の規則に年齢の条件を持たせないので、表に年齢の区切りや年齢ごとの規則の列は置かない |
-| OQ-064（年齢の扱い） | 生年月日の列は置かない（ADR-0041 の D4）。年齢の列も、答えが出るまで `residents` に置かない（D5。待つ条件は OQ-064 だけ、ADR-0047 の D5）。答えのあとに、年齢の列（年とともに進めるなら基準の日）を足す |
+| OQ-064（年齢の扱い）→ 決定 | 2026-11-20、ADR-0048。`residents` に `age_at_registration`（CHECK 0〜999）と `age_base_date`（登録した日の JST の日付）を足した（§2）。今の年齢は読むときに計算し、列を書き換えるジョブは持たない。生年月日の列は置かない（ADR-0041 の D4）。ほかの住民に見せる条件は、既存の `mailbox_items`（`kind = 'letter'`・`visible_at`・`deleted_at IS NULL` の行だけ）・`letters.sender_id`・`letters.created_at`・`tenancies.is_current`・`started_at`・`blocks`（見る住民がブロックした行だけ）から C2 が求めるので、表を足さない。削除した手紙は数えないので、§4 の保持（受取人の削除操作で `mailbox_items` を消す、受取人全員の削除で `letters` を消す）は変わらない。見せてよいという事実を持つ表も置かない（ADR-0048 の D4・理由） |
+| OQ-077（誕生日を集めて新聞に載せるか） | 誕生日の列は置かない（ADR-0048 の D5 の暫定）。集めるなら `residents` に月日の列を足し、`age_base_date` の扱い（ADR-0048 の D3）を直す。新聞に載せるなら、新聞の表（§2）と J3・J4 の入力を直す |
 | OQ-065（手紙の照合の細部） | 長く確かめられない `held` の期限は置かない。決まったら §4 のライフサイクルと J14 を直す |
 | OQ-051（新聞の中身）→ 決定 | 組ごとの版・興味・外のニュース・記事の文字（2026-11-20、ADR-0039）。§2 の新聞と興味の表 |
 | OQ-058（知り合いで埋まる組・一部埋まらない組）→ 決定 | 2026-11-20、ADR-0044。MVP では全住民を知り合い 0 の組として扱うので、作る `edition_key` は `common` / `interest:<key>` / `holiday` だけ。組 1・2 の版の種類 `acquaintance:<resident_id>` を §2 に書いた（作る時期は OQ-070）。組は保存せず、知り合いは既存の `address_book.registered_tenancy_id`・`tenancies.is_current`・`blocks` から J3 が求めるので、表を足さない。`images.original_url` を NULL 可にし、元の画像の保持を §4 に書いた |
