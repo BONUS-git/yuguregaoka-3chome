@@ -56,3 +56,5 @@
 - [0037 — 架空の街の地図は、全住民で共有する 1 枚の白黒の画像とする。印（知り合いの家・自分の住所・候補）とゲーム風の地図は今は作らない](0037-town-map-shared-monochrome-image.md)
 - [0038 — 商店には実在の企業・個人のお店を迎えることを目指す。コミュニティ（団体）は住民が趣味などで作り、作ることに制約を置く](0038-shops-real-businesses-communities-by-residents.md)
 - [0039 — 新聞は一人 1 枚にせず、知り合いの数で分けた組ごとの版にする。知り合いのない組は興味で分ける。記事の文字は LLM が作り、組版はサーバーで決定的に行う](0039-newspaper-editions-by-group-and-interest-llm-text-server-typesetting.md)
+- [0040 — 手紙は送るときにルール表に当てる。当たったら送った人に確認を頼むかを選んでもらい、頼んだ手紙をモデレーターが確かめる](0040-letters-checked-at-send-sender-confirms-moderator-reviews.md)
+- [0041 — 年齢で守り方を変える。年齢は住民が設定した値をそのまま使い、確かめない。何を変えるかが決まるまで、年齢による違いと年齢の項目は作らない](0041-age-self-declared-protections-vary-by-age.md)
