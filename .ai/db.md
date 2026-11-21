@@ -97,12 +97,12 @@ DDL は書かない。主なカラムと一意制約のみを示す。
 | `created_at` timestamptz | — |
 | `vacated_at` timestamptz | 空き家化した日時 |
 
-`addresses` の行は、住所を初めて割り当てたときに作る（使われたことのない住所には行がない。街のすべての住所は C3 の住所のプールの静的な定義が持つ `[assumed]`、ADR-0059 の D15）。
+`addresses` の行は、住所を初めて割り当てたときに作る（使われたことのない住所には行がない。街のすべての住所は C3 の住所のプールの静的な定義が持つ `[assumed]`、ADR-0064 の D15）。
 
-**入居の読み方**（FR-115、ADR-0059 の D13。OQ-079 → 決定、2026-11-21）: 地図の入居の一覧（`GET /api/v1/addresses/occupancy`、`api.md` §7 F-19）は、家ごとに次のとおり読む。
+**入居の読み方**（FR-115、ADR-0064 の D13。OQ-079 → 決定、2026-11-21）: 地図の入居の一覧（`GET /api/v1/addresses/occupancy`、`api.md` §7 F-19）は、家ごとに次のとおり読む。
 入居（`occupied = true`）は `status` が `active` か `dormant`（休眠は空き家にしない）。空き家（`false`）は、`addresses` に行がない住所と、`status` が `vacant_deleted`・`vacant_expired`・`vacant_forwarded` の住所。
 問い合わせは `SELECT address_text, status IN ('active', 'dormant') AS occupied FROM addresses` の 1 回で、C3 がプールの定義の住所の集合と突き合わせ、行のない住所を `false` にして番・号の順に並べる。
-要求を受けたときの状態を読み（ADR-0059 の D14）、スナップショットの表・集計の列・件数は持たない。表・列・索引は足さない `[assumed]`（`address_text` の UNIQUE の索引で足り、行の数は住所のプールの大きさまで）。
+要求を受けたときの状態を読み（ADR-0064 の D14）、スナップショットの表・集計の列・件数は持たない。表・列・索引は足さない `[assumed]`（`address_text` の UNIQUE の索引で足り、行の数は住所のプールの大きさまで）。
 
 #### `tenancies` — 居住記録
 
@@ -691,8 +691,8 @@ stateDiagram-v2
 |----------|------------|
 | FR-001〜004 | §2 `residents` / `addresses`。内部 ID と住所の分離（ADR-0001） |
 | FR-005 | §3 転送ルール（tenancies を使った配達先解決） |
-| FR-006, FR-007, FR-071 | §4 住所のライフサイクル・状態遷移（ADR-0060）。休眠（`dormant`）は入居と読み、空き家に遷移しない（§2 `addresses` の入居の読み方、ADR-0059 の D13・ADR-0060 の D3。休眠を空き家にするかと閾値は OQ-088） |
-| FR-115 | §2 `addresses` の入居の読み方と入居の一覧の問い合わせ（表・列・索引は足さない、ADR-0059 の D13〜D15） |
+| FR-006, FR-007, FR-071 | §4 住所のライフサイクル・状態遷移（ADR-0060）。休眠（`dormant`）は入居と読み、空き家に遷移しない（§2 `addresses` の入居の読み方、ADR-0064 の D13・ADR-0060 の D3。休眠を空き家にするかと閾値は OQ-088） |
+| FR-115 | §2 `addresses` の入居の読み方と入居の一覧の問い合わせ（表・列・索引は足さない、ADR-0064 の D13〜D15） |
 | FR-011〜014 | §2 `letters` / `mailbox_items` |
 | FR-017 | 既読フラグなし（§1 原則 4）|
 | FR-021〜030 | §2 `delivery_runs`・§4 配達回ライフサイクル（ADR-0004） |
@@ -738,12 +738,12 @@ stateDiagram-v2
 | OQ-065（手紙の照合の細部） | 長く確かめられない `held` の期限は置かない。決まったら §4 のライフサイクルと J14 を直す |
 | OQ-051（新聞の中身）→ 決定 | 組ごとの版・興味・外のニュース・記事の文字（2026-11-20、ADR-0039）。§2 の新聞と興味の表 |
 | OQ-058（知り合いで埋まる組・一部埋まらない組）→ 決定 | 2026-11-20、ADR-0044。MVP では全住民を知り合い 0 の組として扱うので、作る `edition_key` は `common` / `interest:<key>` / `holiday` だけ。組 1・2 の版の種類 `acquaintance:<resident_id>` を §2 に書いた（作る時期は OQ-070）。組は保存せず、知り合いは既存の `address_book.registered_tenancy_id`・`tenancies.is_current`・`blocks` から J3 が求めるので、表を足さない。`images.original_url` を NULL 可にし、元の画像の保持を §4 に書いた |
-| OQ-071（地図の印を付けるエントリ）→ 決定 | 2026-11-20、ADR-0051。印は本人の住所録のすべてのエントリの `address_book.address_text` に付ける（OQ-054 の答え「2:1」、ADR-0059 の D1 (c)・ADR-0049 の D8）。地図の印には `acquainted`（§2 `address_book` の知り合いの求め方）を使わない。表と列の変更はない |
+| OQ-071（地図の印を付けるエントリ）→ 決定 | 2026-11-20、ADR-0051。印は本人の住所録のすべてのエントリの `address_book.address_text` に付ける（OQ-054 の答え「2:1」、ADR-0064 の D1 (c)・ADR-0049 の D8）。地図の印には `acquainted`（§2 `address_book` の知り合いの求め方）を使わない。表と列の変更はない |
 | OQ-059（検索などから興味を集めること）→ 決定 | 2026-11-20、ADR-0045。`interest_categories.keywords` と `inferred_interests` を足した（段階 2）。`resident_interests.source` は `registration` / `settings` のまま。検索語を保存する列・表は作らない。保持は §4 |
 | OQ-072（推し量ることを住民が止められるか）→ 決定 | 2026-11-21、ADR-0053。止められない。止めたことを持つ列・表は置かない（`residents` にも `inferred_interests` にも足さない）。表と列の変更はない。検索と `inferred_interests` への書き込みの連動は S2-3 の設計で整理してここに書く |
-| OQ-054（地図の印）→ 決定 | 2026-11-20、ADR-0059。表の変更はない。住所と位置の対応は C1 の静的な配置の定義と計算で求め、DB に位置・座標・地図の表を持たない（ADR-0058 の D3）。知り合いの家の印は `address_book.address_text`（登録した時点の住所、ADR-0003）を使う |
+| OQ-054（地図の印）→ 決定 | 2026-11-20、ADR-0064。表の変更はない。住所と位置の対応は C1 の静的な配置の定義と計算で求め、DB に位置・座標・地図の表を持たない（ADR-0063 の D3）。知り合いの家の印は `address_book.address_text`（登録した時点の住所、ADR-0003）を使う |
 | OQ-066（手紙は知り合いにだけ・知り合いの登録）→ 決定 | 2026-11-20、ADR-0049。知り合いのための表と列は足さない。知り合いは `address_book.registered_tenancy_id` と `tenancies.is_current` から `blocks` を見ずに求める（§2）。住所録の追加の 1 日 20 件は、消しても減らない `address_book_daily_counts`（住民と JST の暦日ごと）で数え、住所を変えた `PATCH` も数える（§2、ADR-0049 の D4） |
-| OQ-079（地図の空き家・入居の表示の範囲）→ 決定 | 2026-11-21、ADR-0059・ADR-0060。入居は `addresses.status` の `active`・`dormant`、空き家は行のない住所と `vacant_*`。`addresses` を要求のときに読むだけで、表・列・索引は足さない（§2 `addresses` の入居の読み方） |
+| OQ-079（地図の空き家・入居の表示の範囲）→ 決定 | 2026-11-21、ADR-0064・ADR-0060。入居は `addresses.status` の `active`・`dormant`、空き家は行のない住所と `vacant_*`。`addresses` を要求のときに読むだけで、表・列・索引は足さない（§2 `addresses` の入居の読み方） |
 | OQ-088（休眠を空き家にする判定と閾値・転送中の旧住所の表示） | 仮置きなし（持ち越し、段階 3 の F-16 の前に聞く）。休眠は暫定の 12 か月で `dormant` にし、`vacant_expired` への遷移は持たない（§4 の状態遷移、ADR-0060 の D2・D3）。答えで、§2 の入居の読み方と §4 の `dormant` の遷移が変わりうる。表は変わらない見込み |
 | OQ-081（掲示板の経路の中身） | 列・表は足さない（作らない暫定）。答えで、オープンにしたことを持つ列（`board_posts` か `residents`）か表と、掲示板の経路の知り合いの求め方が加わりうる |
 | OQ-082（マッチング・商店・団体との手紙、転送のときの知り合い） | 仮置きなし（どれも MVP の外）。転送中の相手を知り合いとみなすなら、§3 の振り分けと知り合いの求め方（`tenancies` の転送の行）を直す |

@@ -74,8 +74,10 @@
 - [0055 — 新聞は一人 1 枚にせず組ごとの版にする。知り合いのない組は興味で分け、ニュースは街の中と外から取る。記事の文字は LLM が作り、組版はサーバーで決定的に行う。投稿の記事は見出しだけで、本文の欄を持たない](0055-newspaper-editions-llm-text-server-typesetting-post-articles-headline-only.md)
 - [0056 — 手紙の照合を絶対NGと疑いに分け、疑いだけ確認に回す](0056-letters-reject-tier-and-review-tier.md)
 - [0057 — 年齢による違いは作らず、全員に同じ基準を当てる](0057-no-age-differences-same-rules-for-all.md)
-- [0058 — 地図は静的な画像、入居の 2 値だけ API で返す](0058-town-map-static-image-occupancy-route-only.md)
-- [0059 — 地図の印と、空き家・入居を全員に見せる表示](0059-town-map-marks-and-public-occupancy.md)
+- [0058 — 地図は静的な画像、入居の 2 値だけ API で返す](0058-town-map-static-image-occupancy-route-only.md)（ADR-0063 で置き換え）
+- [0059 — 地図の印と、空き家・入居を全員に見せる表示](0059-town-map-marks-and-public-occupancy.md)（ADR-0064 で置き換え）
 - [0060 — 休眠は入居のまま。休眠からの空き家化は決めない](0060-dormant-stays-occupied-no-expiry-until-oq-088.md)
 - [0061 — 地図は全住民で共有する 1 枚の白黒の画像](0061-town-map-shared-monochrome-base-image.md)
 - [0062 — 休眠と再割り当ては段階 3、長期不在の退去は OQ-088 次第](0062-stage-3-dormancy-reuse-expiry-by-oq-088.md)
+- [0063 — 地図は静的な画像で候補の印は押せる、API は入居だけ](0063-town-map-static-image-candidate-marks-selectable.md)
+- [0064 — 地図の候補の印を押して選べ、空き家・入居を全員に見せる](0064-town-map-candidate-marks-selectable-public-occupancy.md)
