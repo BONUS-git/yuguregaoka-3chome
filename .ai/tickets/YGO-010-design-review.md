@@ -1,5 +1,5 @@
 # YGO-010 設計の 10 文書のレビュー（.ai/reviews/0001-design-review.md）
-状態: open
+状態: done
 
 ## 目的
 目標 g-7fdbeaee の条件 1（設計の 10 の文書をすべて読んだレビューが `.ai/reviews/` にある（重大・中・軽微の区別つき））を満たします。
