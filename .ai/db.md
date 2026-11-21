@@ -726,7 +726,7 @@ stateDiagram-v2
 | OQ-058（知り合いで埋まる組・一部埋まらない組）→ 決定 | 2026-11-20、ADR-0044。MVP では全住民を知り合い 0 の組として扱うので、作る `edition_key` は `common` / `interest:<key>` / `holiday` だけ。組 1・2 の版の種類 `acquaintance:<resident_id>` を §2 に書いた（作る時期は OQ-070）。組は保存せず、知り合いは既存の `address_book.registered_tenancy_id`・`tenancies.is_current`・`blocks` から J3 が求めるので、表を足さない。`images.original_url` を NULL 可にし、元の画像の保持を §4 に書いた |
 | OQ-071（地図の印を付けるエントリ）→ 決定 | 2026-11-20、ADR-0051。印は本人の住所録のすべてのエントリの `address_book.address_text` に付ける（OQ-054 の答え「2:1」、ADR-0042 の D1 (c)・ADR-0049 の D8）。地図の印には `acquainted`（§2 `address_book` の知り合いの求め方）を使わない。表と列の変更はない |
 | OQ-059（検索などから興味を集めること）→ 決定 | 2026-11-20、ADR-0045。`interest_categories.keywords` と `inferred_interests` を足した（段階 2）。`resident_interests.source` は `registration` / `settings` のまま。検索語を保存する列・表は作らない。保持は §4 |
-| OQ-072（推し量ることを住民が止められるか） | 止める設定の列は置かない（ADR-0045 の D7 の暫定）。止められるなら、`residents` の列か新しい表に止めたことを持つ |
+| OQ-072（推し量ることを住民が止められるか）→ 決定 | 2026-11-21、ADR-0053。止められない。止めたことを持つ列・表は置かない（`residents` にも `inferred_interests` にも足さない）。表と列の変更はない。検索と `inferred_interests` への書き込みの連動は S2-3 の設計で整理してここに書く |
 | OQ-054（地図の印）→ 決定 | 2026-11-20、ADR-0042。表の変更はない。住所と位置の対応は C1 の静的な配置の定義と計算で求め、DB に位置・座標・地図の表を持たない（ADR-0028 の D3）。知り合いの家の印は `address_book.address_text`（登録した時点の住所、ADR-0003）を使う |
 | OQ-066（手紙は知り合いにだけ・知り合いの登録）→ 決定 | 2026-11-20、ADR-0049。知り合いのための表と列は足さない。知り合いは `address_book.registered_tenancy_id` と `tenancies.is_current` から `blocks` を見ずに求める（§2）。住所録の追加の 1 日 20 件は、消しても減らない `address_book_daily_counts`（住民と JST の暦日ごと）で数え、住所を変えた `PATCH` も数える（§2、ADR-0049 の D4） |
 | OQ-079（地図の空き家・入居の表示の範囲） | 空き家・入居の表示は作らないので、表と問い合わせを足さない。答えのあとに、`addresses.status`（ADR-0002 の 5 つの値）と `tenancies.is_current` のどれを「空き家」と読むかと、表示に使う問い合わせを決める |
