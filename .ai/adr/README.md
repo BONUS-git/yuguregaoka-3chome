@@ -65,7 +65,7 @@
 - [0046 — 新聞の LLM の文に「AI が書いた文」の印を付けない（規約は確かめる）。住民の掲示板の投稿の本文は書き換えずにそのまま載せ、LLM が書くのは生成部分だけにし、LLM の文を住民本人の文に見せない](0046-newspaper-no-ai-label-posts-verbatim-llm-text-not-shown-as-residents.md)（ADR-0054 で置き換え）
 - [0047 — 年齢による違いは作らない。手紙と掲示板で止める基準・使える機能は全員に同じにし、詐欺と事件の防止も全員に同じ共通のルールで行う。年齢の区切りは置かない](0047-no-age-based-differences-common-rules-for-all.md)（ADR-0057 で置き換え）
 - [0048 — 年齢は登録で必須にし、あとから変えられない。年は登録の日から 1 年ごとに進む。ほかの住民には、本人から手紙を受け取った住民にだけ見せる](0048-age-required-immutable-advances-yearly-shown-to-letter-recipients.md)
-- [0049 — 手紙は知り合いにだけ出せる。知り合いになるのは、互いに住所録に入れたとき（既定）と、掲示板で相手がオープンにしているとき。足されたことは相手に知らせない](0049-letters-only-to-acquaintances-mutual-add-or-board-open-requests-hidden.md)
+- [0049 — 手紙は知り合いにだけ出せる。知り合いになるのは、互いに住所録に入れたとき（既定）と、掲示板で相手がオープンにしているとき。足されたことは相手に知らせない](0049-letters-only-to-acquaintances-mutual-add-or-board-open-requests-hidden.md)（ADR-0065 で置き換え）
 - [0050 — 架空の店と入居者募集の張り紙は段階 3 から作る（MVP には作らない）。架空の店には「入居者募集」の張り紙を出して架空と分かるようにし、発信させず新聞にも載せない。新聞には運営の入居者募集の広告を出す](0050-fictional-shops-stage-3-vacancy-poster-no-posting-newspaper-tenant-ads.md)
 - [0051 — 地図の知り合いの家の印は、自分の住所録のすべてのエントリに付ける。地図と新聞・手紙で「知り合い」の定義を分け、地図の印は `acquainted` で変えない](0051-town-map-acquaintance-marks-all-address-book-entries-definitions-split.md)
 - [0052 — 開発とテストは手元に入れた PostgreSQL で動かし、`check.sh` は使い捨ての DB を起こす。IaC は OpenTofu で設計だけ書き、事業者は選ばない](0052-local-dev-and-check-env-opentofu-iac-design-only.md)
@@ -81,3 +81,5 @@
 - [0062 — 休眠と再割り当ては段階 3、長期不在の退去は OQ-088 次第](0062-stage-3-dormancy-reuse-expiry-by-oq-088.md)
 - [0063 — 地図は静的な画像で候補の印は押せる、API は入居だけ](0063-town-map-static-image-candidate-marks-selectable.md)
 - [0064 — 地図の候補の印を押して選べ、空き家・入居を全員に見せる](0064-town-map-candidate-marks-selectable-public-occupancy.md)
+- [0065 — 手紙は知り合いにだけ。掲示板は投稿ごとにオープンにする](0065-letters-acquaintances-only-board-open-per-post.md)
+- [0066 — 相互にならない住所録の追加は自動で止める](0066-address-book-adds-stopped-when-not-mutual.md)
