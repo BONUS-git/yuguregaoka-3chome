@@ -614,7 +614,7 @@ J0 も `state = 'pending'` の滞留分を拾い直す [assumed]。
 | `erasure_log` | `erased_at < now() - interval '60 days'` |
 | `external_news_items` | `fetched_at < now() - interval '30 days'`（ADR-0013・ADR-0039 [assumed]。OQ-060 の利用の条件で変わる）。載った記事の `newspaper_articles` は紙面と同じだけ残すので、`source_id` の参照は外部キーにしない |
 | `inferred_interests`（段階 2）| `last_matched_at < now() - interval '30 days'`（ADR-0013・ADR-0045 の D5 [assumed]） |
-| `address_book_daily_counts` | `jst_date` が今日（JST）より前（ADR-0049 の D4。1 日の上限の数えは、その日が過ぎれば要らない） |
+| `address_book_daily_counts` | `jst_date` が今日（JST）より 7 日以上前（ADR-0066 の D5。相互にならない追加の判定に、今日を含む直近 7 日の数えを使う。1 日の上限（ADR-0065 の D4）は今日の行だけを見る） |
 | オブジェクトストレージ（古い組版 HTML）| J8 で差し替えた前のファイル |
 | オブジェクトストレージ（元の画像、段階 2）と `images.original_url` | `original_url IS NOT NULL` かつ `created_at < now() - interval '24 hours'`（ADR-0044 の D5 [assumed]）。J14 は毎日 1 回なので、取りこぼしは最長でアップロードから約 48 時間残る（それより短い間隔の掃除のジョブは足さない）。元の画像を消して `original_url` を NULL にし、加工が済んでいなければ `state = 'failed'` にする。J13 の取りこぼしに備えるもの |
 
