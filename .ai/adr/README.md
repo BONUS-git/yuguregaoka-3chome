@@ -55,14 +55,14 @@
 - [0036 — 通報された手紙は、モデレーターが条件付きで 1 通だけ確かめてよい。住民を守る制限は、住民が自分で外せる設定にしない](0036-reported-letters-viewable-by-moderators-protections-not-self-removable.md)
 - [0037 — 架空の街の地図は、全住民で共有する 1 枚の白黒の画像とする。印（知り合いの家・自分の住所・候補）とゲーム風の地図は今は作らない](0037-town-map-shared-monochrome-image.md)（印は ADR-0042 で置き換え）
 - [0038 — 商店には実在の企業・個人のお店を迎えることを目指す。コミュニティ（団体）は住民が趣味などで作り、作ることに制約を置く](0038-shops-real-businesses-communities-by-residents.md)（商店の迎え方は ADR-0043 で決めた）
-- [0039 — 新聞は一人 1 枚にせず、知り合いの数で分けた組ごとの版にする。知り合いのない組は興味で分ける。記事の文字は LLM が作り、組版はサーバーで決定的に行う](0039-newspaper-editions-by-group-and-interest-llm-text-server-typesetting.md)（MVP の組・知り合いの組と D1 の版の数の一部は ADR-0044 で、検索から興味を集めること（D4 の暫定）は ADR-0045 で、D9 は ADR-0046 で置き換え。D6 に入居者募集の広告を足した（ADR-0050））
+- [0039 — 新聞は一人 1 枚にせず、知り合いの数で分けた組ごとの版にする。知り合いのない組は興味で分ける。記事の文字は LLM が作り、組版はサーバーで決定的に行う](0039-newspaper-editions-by-group-and-interest-llm-text-server-typesetting.md)（ADR-0055 で置き換え）
 - [0040 — 手紙は送るときにルール表に当てる。当たったら送った人に確認を頼むかを選んでもらい、頼んだ手紙をモデレーターが確かめる](0040-letters-checked-at-send-sender-confirms-moderator-reviews.md)
 - [0041 — 年齢で守り方を変える。年齢は住民が設定した値をそのまま使い、確かめない。何を変えるかが決まるまで、年齢による違いと年齢の項目は作らない](0041-age-self-declared-protections-vary-by-age.md)（D1 は ADR-0047、D5 は ADR-0048 で置き換え）
 - [0042 — 地図に印を付ける。自分の家と登録のときの候補は M1、知り合い（自分の住所録に入れた住民）の家は M2（手紙の知り合いの定義は ADR-0049。印を付けるエントリは ADR-0051）。土台の画像は全住民で同じまま、印は C1 が重ねる。空き家・入居の表示は OQ-079 の答えまで作らない](0042-town-map-marks-own-home-candidates-acquaintances.md)（D11 は ADR-0049 で書き直し。印を付けるエントリは ADR-0051 で決めた）
 - [0043 — 商店とは契約を結び利用料を取る考え（MVP ではメモだけ）。架空の店を置いてよく、空いた区画には金額を載せない入居者募集の張り紙を出す。発信はお店の担当者が行い、出せるものは広さと料金のランクで変える（折込チラシが最高）。商店は実在の情報を出してよい](0043-shops-contract-fee-memo-fictional-shops-vacancy-posters-staff-post.md)（D2 の示し方と D7 は ADR-0050 で決めた）
 - [0044 — MVP は全住民を知り合い 0 の組とする。新聞の知り合いは互いに住所録に入れた住民で、載せるのは知り合いの掲示板の投稿（手紙は載せない）。組 1・2 は住民ごとに組み、足りない分は興味の版か共通の版の記事で埋める。アップロードした画像は加工し、元の画像は持たない](0044-newspaper-acquaintance-groups-mutual-board-posts-per-resident-images-no-original.md)
 - [0045 — 興味は、自分に届いた過去の新聞の検索から推し量って集める。検索語は残さず、当たった興味だけを持つ。住民には明るく開いた文で知らせ、個別の同意は取らない。推し量った興味を本人が見て消す仕組みは設けない](0045-interests-from-past-newspaper-search-notice-no-consent-no-view.md)（住民が止められないことは ADR-0053 で決めた）
-- [0046 — 新聞の LLM の文に「AI が書いた文」の印を付けない（規約は確かめる）。住民の掲示板の投稿の本文は書き換えずにそのまま載せ、LLM が書くのは生成部分だけにし、LLM の文を住民本人の文に見せない](0046-newspaper-no-ai-label-posts-verbatim-llm-text-not-shown-as-residents.md)
+- [0046 — 新聞の LLM の文に「AI が書いた文」の印を付けない（規約は確かめる）。住民の掲示板の投稿の本文は書き換えずにそのまま載せ、LLM が書くのは生成部分だけにし、LLM の文を住民本人の文に見せない](0046-newspaper-no-ai-label-posts-verbatim-llm-text-not-shown-as-residents.md)（ADR-0054 で置き換え）
 - [0047 — 年齢による違いは作らない。手紙と掲示板で止める基準・使える機能は全員に同じにし、詐欺と事件の防止も全員に同じ共通のルールで行う。年齢の区切りは置かない](0047-no-age-based-differences-common-rules-for-all.md)（D5 は ADR-0048 で置き換え）
 - [0048 — 年齢は登録で必須にし、あとから変えられない。年は登録の日から 1 年ごとに進む。ほかの住民には、本人から手紙を受け取った住民にだけ見せる](0048-age-required-immutable-advances-yearly-shown-to-letter-recipients.md)
 - [0049 — 手紙は知り合いにだけ出せる。知り合いになるのは、互いに住所録に入れたとき（既定）と、掲示板で相手がオープンにしているとき。足されたことは相手に知らせない](0049-letters-only-to-acquaintances-mutual-add-or-board-open-requests-hidden.md)
@@ -70,3 +70,5 @@
 - [0051 — 地図の知り合いの家の印は、自分の住所録のすべてのエントリに付ける。地図と新聞・手紙で「知り合い」の定義を分け、地図の印は `acquainted` で変えない](0051-town-map-acquaintance-marks-all-address-book-entries-definitions-split.md)
 - [0052 — 開発とテストは手元に入れた PostgreSQL で動かし、`check.sh` は使い捨ての DB を起こす。IaC は OpenTofu で設計だけ書き、事業者は選ばない](0052-local-dev-and-check-env-opentofu-iac-design-only.md)
 - [0053 — 過去の新聞の検索から興味を推し量ることを、住民は止められない。止める手段を作らず、知らせて推し量ることを検索の処理に組み込む](0053-inferred-interests-from-search-cannot-be-stopped.md)
+- [0054 — 新聞の LLM の文に印を付けず、投稿の記事は見出しだけ書く](0054-newspaper-post-articles-llm-headline-only-no-summary.md)
+- [0055 — 新聞は一人 1 枚にせず組ごとの版にする。知り合いのない組は興味で分け、ニュースは街の中と外から取る。記事の文字は LLM が作り、組版はサーバーで決定的に行う。投稿の記事は見出しだけで、本文の欄を持たない](0055-newspaper-editions-llm-text-server-typesetting-post-articles-headline-only.md)
