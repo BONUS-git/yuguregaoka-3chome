@@ -84,3 +84,4 @@
 - [0065 — 手紙は知り合いにだけ。掲示板は投稿ごとにオープンにする](0065-letters-acquaintances-only-board-open-per-post.md)
 - [0066 — 相互にならない住所録の追加は自動で止める](0066-address-book-adds-stopped-when-not-mutual.md)
 - [0067 — 商店のアカウントは運用者の CLI だけで作る](0067-shop-accounts-created-by-operator-cli-only.md)
+- [0068 — 使い終わった道具は片付ける](0068-clean-up-tools-after-use.md)
