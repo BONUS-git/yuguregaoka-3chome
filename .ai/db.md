@@ -53,17 +53,17 @@ DDL は書かない。主なカラムと一意制約のみを示す。
 | `bio` text | 自己紹介文（FR-008） |
 | `age_at_registration` smallint NOT NULL | 登録のときに住民が入れた年齢（FR-113、ADR-0048 の D1）。CHECK(`age_at_registration BETWEEN 0 AND 999`)。登録のあとは書き換えない（D2） |
 | `age_base_date` date NOT NULL | 年齢を進める基準の日。登録した日の JST の日付（ADR-0048 の D3）。今の年齢 = `age_at_registration` + この日から JST の日付で満了した年数（2/29 はうるう年でない年は 3/1 に上がる）。登録のあとは書き換えない |
-| `last_login_at` timestamptz | 最終ログイン日時（ADR-0002 ではアドレス側に置いていたが §3 参照） |
+| `last_login_at` timestamptz | 最終ログイン日時（住民の側に置く。下の注） |
 | `created_at` timestamptz | 登録日時 |
 | `deleted_at` timestamptz | 論理削除フラグ代わりに使用（即時物理削除への橋渡し用） |
 
 年齢の 2 列は平文で持ち、退去で行ごと即時に消す（ADR-0048 の D8・ADR-0013）。年齢を変える UPDATE は C2 のどの経路にも書かない（ADR-0048 の D2）。
 
-**注**: ADR-0002 は `addresses.last_login_at` と書いているが、住民が引っ越しで住所を変えると
+**注**: `last_login_at` を `addresses` に置くと、住民が引っ越しで住所を変えたとき
 その後のログイン記録が旧住所に紐づいてしまう。住民を認証する主体は `residents` であるため、
-`last_login_at` は `residents` 側に置く。`addresses` の空き家判定は §3 の居住記録（`tenancies`）
-から現在の住民を引いてその `last_login_at` を参照する。ADR-0002 の 5 つの `addresses.status`
-値（active / dormant / vacant_deleted / vacant_expired / vacant_forwarded）はそのまま保持する。
+`last_login_at` は `residents` 側に置く。`addresses` の休眠の判定（J10）は §3 の居住記録（`tenancies`）
+から現在の住民を引いてその `last_login_at` を参照する。`addresses.status` の 5 つの
+値（active / dormant / vacant_deleted / vacant_expired / vacant_forwarded）は ADR-0060 のとおり持つ。
 
 #### `credentials` — 認証情報（ADR-0018・`security.md` §3）
 
@@ -91,11 +91,18 @@ DDL は書かない。主なカラムと一意制約のみを示す。
 |--------|------|
 | `id` UUID PK | — |
 | `address_text` text UNIQUE | 住所文字列（例: 夕暮ヶ丘三丁目 2-5）（FR-002, FR-003） |
-| `status` text | active / dormant / vacant_deleted / vacant_expired / vacant_forwarded（ADR-0002） |
-| `forwarding_expires_at` timestamptz | 住所転送の有効期限（引っ越しから 6 か月、ADR-0002） |
-| `dormancy_notified_at` timestamptz | 休眠通知送付日時（ADR-0002） |
+| `status` text | active / dormant / vacant_deleted / vacant_expired / vacant_forwarded（ADR-0060。`vacant_expired` は OQ-088 の答えまで遷移がなく、使われない） |
+| `forwarding_expires_at` timestamptz | 住所転送の有効期限（引っ越しから 6 か月、ADR-0060 の D4） |
+| `dormancy_notified_at` timestamptz | 休眠通知送付日時（ADR-0060 の D2） |
 | `created_at` timestamptz | — |
 | `vacated_at` timestamptz | 空き家化した日時 |
+
+`addresses` の行は、住所を初めて割り当てたときに作る（使われたことのない住所には行がない。街のすべての住所は C3 の住所のプールの静的な定義が持つ `[assumed]`、ADR-0059 の D15）。
+
+**入居の読み方**（FR-115、ADR-0059 の D13。OQ-079 → 決定、2026-11-21）: 地図の入居の一覧（`GET /api/v1/addresses/occupancy`、`api.md` §7 F-19）は、家ごとに次のとおり読む。
+入居（`occupied = true`）は `status` が `active` か `dormant`（休眠は空き家にしない）。空き家（`false`）は、`addresses` に行がない住所と、`status` が `vacant_deleted`・`vacant_expired`・`vacant_forwarded` の住所。
+問い合わせは `SELECT address_text, status IN ('active', 'dormant') AS occupied FROM addresses` の 1 回で、C3 がプールの定義の住所の集合と突き合わせ、行のない住所を `false` にして番・号の順に並べる。
+要求を受けたときの状態を読み（ADR-0059 の D14）、スナップショットの表・集計の列・件数は持たない。表・列・索引は足さない `[assumed]`（`address_text` の UNIQUE の索引で足り、行の数は住所のプールの大きさまで）。
 
 #### `tenancies` — 居住記録
 
@@ -499,7 +506,7 @@ DB 内には重要な操作の監査レコードのみ保持する（`moderation
 
 ### 問題
 
-ADR-0002 は「空き家は新規住民の割り当て候補となる」と定め、ADR-0003 は「住所録は自動更新しない」と定めている。これを組み合わせると、**住所録の旧住所に手紙を書いたとき、その住所には既に別の住民が住んでいる可能性がある**。
+ADR-0060 は「空き家は新規住民の割り当て候補となる」と定め（D5）、ADR-0003 は「住所録は自動更新しない」と定めている。これを組み合わせると、**住所録の旧住所に手紙を書いたとき、その住所には既に別の住民が住んでいる可能性がある**。
 
 ### 解決策：居住記録（`tenancies`）の導入
 
@@ -513,7 +520,7 @@ ADR-0002 は「空き家は新規住民の割り当て候補となる」と定�
 | 状況 | 処理 |
 |------|------|
 | tenancy が現在も有効（`is_current = true`） | 通常配達 |
-| 旧住民が引っ越しており転送期間 6 か月以内（ADR-0002） | 新住所へ転送（FR-005） |
+| 旧住民が引っ越しており転送期間 6 か月以内（ADR-0060 の D4） | 新住所へ転送（FR-005） |
 | 転送期間が切れているか、住所が vacant | 差し戻し（`state = returned`） |
 | 受取人が送信者をブロックしている（FR-068） | 配達せず `state = suppressed`（差し戻しもしない。ブロックを明かさないため） |
 
@@ -533,7 +540,7 @@ ADR-0002 は「空き家は新規住民の割り当て候補となる」と定�
 |-----------|---------|------|------|------|
 | 住民 | `residents` | 新規登録時に作成 | アカウント削除まで | 削除申請で即時物理削除（ADR-0013）→ erasure_log に記録 |
 | 認証情報 | `credentials` | 新規登録時に `residents` と同じトランザクションで作成 | アカウント削除まで。鍵の入れ替えでは行を残したまま暗号化と HMAC を新しい版で作り直す（`environment.md` §8.3） | 退去で J7 が最初に行ごと削除（`security.md` §2.4、ADR-0013） |
-| 住所 | `addresses` | 住民登録時・新規割り当て時 | 居住中は保持。空き家後も保持し、段階 3 から割り当て候補に戻す（ADR-0023） | 管理者が廃棄するまで削除しない（住所のプールを維持） |
+| 住所 | `addresses` | 住民登録時・新規割り当て時 | 居住中は保持。空き家後も保持し、段階 3 から割り当て候補に戻す（ADR-0062） | 管理者が廃棄するまで削除しない（住所のプールを維持） |
 | 居住記録 | `tenancies` | 住所割り当て時・転入時 | 歴史として保持（配達先解決に使う） | 住民削除から 1 年後に削除（ADR-0013） |
 | 手紙（本体） | `letters` | 送信時（`pending` 状態。確認を頼まれた手紙は `held`、ADR-0056。照合に当たって送った人が n を選んだ手紙は作らない） | 配達後も保持。送信者が削除されても `body_encrypted` は残す（受取人保護）。ただし送信者フラグを「退去済み」に更新。`held` はモデレーターが操作するまで保持（長く確かめられないときは OQ-065） | 受取人全員が郵便受けから削除したとき、または通報クローズから 1 年後（レポート対象分）（ADR-0013）。`blocked` は `decided_at` から 30 日後に J14 が本文と宛先ごと削除 [assumed]。送信者の退去で、その住民の `held`・`blocked` は即時削除（ADR-0056 の D6） |
 | 手紙（宛先） | `letter_recipients` | 送信時 | 手紙本体と同期 | 手紙削除時 |
@@ -603,18 +610,19 @@ stateDiagram-v2
 ```mermaid
 stateDiagram-v2
     [*] --> active : 住民割り当て
-    active --> dormant : 12 か月ログインなし＋通知送付（ADR-0002）
-    dormant --> active : 住民が応答・ログイン
-    dormant --> vacant_expired : さらに 30 日応答なし（ADR-0002）
-    active --> vacant_deleted : 住民がアカウント削除（ADR-0002）
-    active --> vacant_forwarded : 引っ越し（住所転送期間 6 か月後、ADR-0002）
-    vacant_expired --> active : 新規住民の割り当て
+    active --> dormant : 12 か月ログインなし＋通知送付（暫定、ADR-0060 の D2）
+    dormant --> active : 住民がログイン
+    active --> vacant_deleted : 住民がアカウント削除（ADR-0060 の D1）
+    active --> vacant_forwarded : 引っ越し（住所転送期間 6 か月後、ADR-0060 の D4）
     vacant_deleted --> active : 新規住民の割り当て
     vacant_forwarded --> active : 新規住民の割り当て
 ```
 
-**段階**（ADR-0023）: MVP で起きる遷移は `[*] → active`（使われたことのない住所の割り当て）と
-`active → vacant_deleted`（アカウント削除）だけ。`dormant` に関わる遷移・`vacant_expired`・
+**休眠は入居**（ADR-0060 の D2・D3）: `dormant` から空き家（`vacant_expired`）への遷移は持たない。休眠を空き家にするかとその閾値は OQ-088（持ち越し）の答えまで決めず、遷移もジョブも作らない。
+`vacant_expired` の値は `status` に残し（§2）、なったときは空き家と読む。答えまで、この値の住所は出ない。
+
+**段階**（ADR-0062）: MVP で起きる遷移は `[*] → active`（使われたことのない住所の割り当て）と
+`active → vacant_deleted`（アカウント削除）だけ。`dormant` に関わる遷移・
 `vacant_forwarded`・空き家から `active` への再割り当ては段階 3（F-16）で入れる。
 
 ---
@@ -638,12 +646,12 @@ stateDiagram-v2
 
    **住所録の追加の数え**: `address_book_daily_counts` は `residents` の削除で即時に消える（外部キーの CASCADE、ADR-0049 の D4）。
 
-4. **住所**: `addresses.status` を `vacant_deleted` に変更する（ADR-0002）。
+4. **住所**: `addresses.status` を `vacant_deleted` に変更する（ADR-0060 の D1）。
 
    **通知**: 通知の購読（`push_subscriptions`）と送った記録（`delivery_notifications`）は即時削除する（ADR-0013・ADR-0025）。
 
-5. **長期不在による空き家化**: `vacant_expired` になった住所の元住民は、
-   さらに 12 か月が経過した時点で退去済みとして扱い、上記 1〜4 を適用する（ADR-0013）[assumed]。
+5. **長期不在による空き家化**: 今は起きない（休眠は入居で、`vacant_expired` への遷移を持たない。ADR-0060 の D3、OQ-088）。
+   OQ-088 の答えで遷移を作るときは、`vacant_expired` になった住所の元住民を、さらに 12 か月が経過した時点で退去済みとして扱い、上記 1〜4 を適用する（ADR-0013）[assumed]。
 
 ---
 
@@ -683,7 +691,8 @@ stateDiagram-v2
 |----------|------------|
 | FR-001〜004 | §2 `residents` / `addresses`。内部 ID と住所の分離（ADR-0001） |
 | FR-005 | §3 転送ルール（tenancies を使った配達先解決） |
-| FR-006, FR-007 | §4 住所のライフサイクル・状態遷移（ADR-0002） |
+| FR-006, FR-007, FR-071 | §4 住所のライフサイクル・状態遷移（ADR-0060）。休眠（`dormant`）は入居と読み、空き家に遷移しない（§2 `addresses` の入居の読み方、ADR-0059 の D13・ADR-0060 の D3。休眠を空き家にするかと閾値は OQ-088） |
+| FR-115 | §2 `addresses` の入居の読み方と入居の一覧の問い合わせ（表・列・索引は足さない、ADR-0059 の D13〜D15） |
 | FR-011〜014 | §2 `letters` / `mailbox_items` |
 | FR-017 | 既読フラグなし（§1 原則 4）|
 | FR-021〜030 | §2 `delivery_runs`・§4 配達回ライフサイクル（ADR-0004） |
@@ -729,12 +738,13 @@ stateDiagram-v2
 | OQ-065（手紙の照合の細部） | 長く確かめられない `held` の期限は置かない。決まったら §4 のライフサイクルと J14 を直す |
 | OQ-051（新聞の中身）→ 決定 | 組ごとの版・興味・外のニュース・記事の文字（2026-11-20、ADR-0039）。§2 の新聞と興味の表 |
 | OQ-058（知り合いで埋まる組・一部埋まらない組）→ 決定 | 2026-11-20、ADR-0044。MVP では全住民を知り合い 0 の組として扱うので、作る `edition_key` は `common` / `interest:<key>` / `holiday` だけ。組 1・2 の版の種類 `acquaintance:<resident_id>` を §2 に書いた（作る時期は OQ-070）。組は保存せず、知り合いは既存の `address_book.registered_tenancy_id`・`tenancies.is_current`・`blocks` から J3 が求めるので、表を足さない。`images.original_url` を NULL 可にし、元の画像の保持を §4 に書いた |
-| OQ-071（地図の印を付けるエントリ）→ 決定 | 2026-11-20、ADR-0051。印は本人の住所録のすべてのエントリの `address_book.address_text` に付ける（OQ-054 の答え「2:1」、ADR-0042 の D1 (c)・ADR-0049 の D8）。地図の印には `acquainted`（§2 `address_book` の知り合いの求め方）を使わない。表と列の変更はない |
+| OQ-071（地図の印を付けるエントリ）→ 決定 | 2026-11-20、ADR-0051。印は本人の住所録のすべてのエントリの `address_book.address_text` に付ける（OQ-054 の答え「2:1」、ADR-0059 の D1 (c)・ADR-0049 の D8）。地図の印には `acquainted`（§2 `address_book` の知り合いの求め方）を使わない。表と列の変更はない |
 | OQ-059（検索などから興味を集めること）→ 決定 | 2026-11-20、ADR-0045。`interest_categories.keywords` と `inferred_interests` を足した（段階 2）。`resident_interests.source` は `registration` / `settings` のまま。検索語を保存する列・表は作らない。保持は §4 |
 | OQ-072（推し量ることを住民が止められるか）→ 決定 | 2026-11-21、ADR-0053。止められない。止めたことを持つ列・表は置かない（`residents` にも `inferred_interests` にも足さない）。表と列の変更はない。検索と `inferred_interests` への書き込みの連動は S2-3 の設計で整理してここに書く |
-| OQ-054（地図の印）→ 決定 | 2026-11-20、ADR-0042。表の変更はない。住所と位置の対応は C1 の静的な配置の定義と計算で求め、DB に位置・座標・地図の表を持たない（ADR-0028 の D3）。知り合いの家の印は `address_book.address_text`（登録した時点の住所、ADR-0003）を使う |
+| OQ-054（地図の印）→ 決定 | 2026-11-20、ADR-0059。表の変更はない。住所と位置の対応は C1 の静的な配置の定義と計算で求め、DB に位置・座標・地図の表を持たない（ADR-0058 の D3）。知り合いの家の印は `address_book.address_text`（登録した時点の住所、ADR-0003）を使う |
 | OQ-066（手紙は知り合いにだけ・知り合いの登録）→ 決定 | 2026-11-20、ADR-0049。知り合いのための表と列は足さない。知り合いは `address_book.registered_tenancy_id` と `tenancies.is_current` から `blocks` を見ずに求める（§2）。住所録の追加の 1 日 20 件は、消しても減らない `address_book_daily_counts`（住民と JST の暦日ごと）で数え、住所を変えた `PATCH` も数える（§2、ADR-0049 の D4） |
-| OQ-079（地図の空き家・入居の表示の範囲） | 空き家・入居の表示は作らないので、表と問い合わせを足さない。答えのあとに、`addresses.status`（ADR-0002 の 5 つの値）と `tenancies.is_current` のどれを「空き家」と読むかと、表示に使う問い合わせを決める |
+| OQ-079（地図の空き家・入居の表示の範囲）→ 決定 | 2026-11-21、ADR-0059・ADR-0060。入居は `addresses.status` の `active`・`dormant`、空き家は行のない住所と `vacant_*`。`addresses` を要求のときに読むだけで、表・列・索引は足さない（§2 `addresses` の入居の読み方） |
+| OQ-088（休眠を空き家にする判定と閾値・転送中の旧住所の表示） | 仮置きなし（持ち越し、段階 3 の F-16 の前に聞く）。休眠は暫定の 12 か月で `dormant` にし、`vacant_expired` への遷移は持たない（§4 の状態遷移、ADR-0060 の D2・D3）。答えで、§2 の入居の読み方と §4 の `dormant` の遷移が変わりうる。表は変わらない見込み |
 | OQ-081（掲示板の経路の中身） | 列・表は足さない（作らない暫定）。答えで、オープンにしたことを持つ列（`board_posts` か `residents`）か表と、掲示板の経路の知り合いの求め方が加わりうる |
 | OQ-082（マッチング・商店・団体との手紙、転送のときの知り合い） | 仮置きなし（どれも MVP の外）。転送中の相手を知り合いとみなすなら、§3 の振り分けと知り合いの求め方（`tenancies` の転送の行）を直す |
 | OQ-060（外のニュースの配信元・利用の条件） | `external_news_items` の保持は 30 日 [assumed]。条件で保持期間と `url` の扱いが変わる |

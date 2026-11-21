@@ -57,7 +57,7 @@
 | J6 | `delivery.carry_over` | 配達時刻から 15 分過ぎても公開できない場合、J0 が判断 [assumed] | `run_id` | 配達回を `skipped` に。中身を次の便へ移す |
 | J7 | `account.erase` | キュー（API が退去を受けたのと同じトランザクションで積む） | `resident_id` | ADR-0013 の表に従い消去 |
 | J8 | `newspaper.retypeset` | キュー（J7 から・投稿削除から） | `newspaper_id` | 紙面の差し替え |
-| J9 | `account.expire` | 毎日（段階 3、配達窓を外した時間帯）[assumed] | なし | `vacant_expired` から 12 か月たった住民の J7 を積む |
+| J9 | `account.expire` | 毎日（段階 3、配達窓を外した時間帯）[assumed]。OQ-088 の答えで `vacant_expired` への遷移を作るときだけ作る（ADR-0060 の D3） | なし | `vacant_expired` から 12 か月たった住民の J7 を積む |
 | J10 | `address.dormancy` | 毎日（段階 3、配達窓を外した時間帯）[assumed] | なし | `active` → `dormant` への遷移と休眠通知の積み込み |
 | J11 | `address.forwarding_expire` | 毎日（段階 3、配達窓を外した時間帯）[assumed] | なし | 転送期限切れの旧住所を `vacant_forwarded` に |
 | J12 | `notify.dormancy` | キュー（段階 3、J10 が積む） | `address_id` | 休眠通知を 1 通送る（テスト環境はモックかローカルの SMTP、本番のサービスはマスターの事前承認を得て選ぶ。ADR-0033） |
@@ -69,10 +69,10 @@
 | — | `erasure.replay` | 手動（リストアの後） | なし | 消したはずのデータを `erasure_log` を元に消し直す |
 | — | `keys.reencrypt` | 手動（運用者の CLI。鍵の新しい版を全プロセスに配り、暗号化の版を切り替えたあと。配達の窓が閉じた直後に始める [assumed]） | `{kind: 'letter' \| 'email', from_version}` | 版 `from_version` で暗号化した手紙の本文（AAD は同じ手紙の ID）かメールアドレスの暗号化した値を、1,000 件ずつのトランザクションで今の版に暗号化し直す。残った行から続けられる（冪等）。平文を DB・ログ・ペイロードに書かない（ADR-0021・ADR-0052 の D8、手順は `environment.md` §8.3） |
 
-**毎日のジョブのスケジュール（J9〜J11・J14）**: 配達回の窓（01:00〜12:30 JST と 14:00〜21:30 JST。手紙の時間帯の終わりと手紙の通知の期限を含む、ADR-0035）
+**毎日のジョブのスケジュール（J9〜J11・J14。J9 は作るときだけ）**: 配達回の窓（01:00〜12:30 JST と 14:00〜21:30 JST。手紙の時間帯の終わりと手紙の通知の期限を含む、ADR-0035）
 を避けて置く [assumed]。例: 12:30 JST、23:00 JST など。
 
-**段階**: J9〜J12 は段階 3（F-16）で作る（ADR-0023、`roadmap.md` §6）。MVP で作るのは J0〜J8・J14・J15・J16・J17・`erasure.replay`・`keys.reencrypt`（J15 は M3、J16・J17 は M5、`keys.reencrypt` は M6、`roadmap.md` §4）。
+**段階**: J10〜J12 は段階 3（F-16）で作る。J9 は OQ-088 の答えで `vacant_expired` への遷移を作るときだけ、その遷移と同じ変更で作る（ADR-0062 の D1・D2、ADR-0060 の D3、`roadmap.md` §6）。MVP で作るのは J0〜J8・J14・J15・J16・J17・`erasure.replay`・`keys.reencrypt`（J15 は M3、J16・J17 は M5、`keys.reencrypt` は M6、`roadmap.md` §4）。
 J13 は段階 2（F-11）。
 
 **今の段階で設計しない処理**（理由を添える）:
@@ -350,7 +350,7 @@ M3・M4 は、J2 完了（`moderation_queue` に `processed_at = NULL` の行が
 
 **宛先の振り分け**（db.md §3 の表）:
 - `tenancies.is_current = true` → 通常配達（そのまま `mailbox_items` を作る）
-- 転送期間 6 か月以内（ADR-0002）→ 新住所の住民に `mailbox_items` を作る
+- 転送期間 6 か月以内（ADR-0060 の D4）→ 新住所の住民に `mailbox_items` を作る
 - 転送期限切れ・空き家 → `letters.state = 'returned'` にして `mailbox_items` を作らない
 - 受取人が送信者をブロック → `letters.state = 'suppressed'` にして `mailbox_items` を作らない
 
@@ -508,6 +508,8 @@ J7 は同一トランザクションで積む。
 
 ### J9 — 長期不在の退去（`account.expire`）
 
+**作るか**: `vacant_expired` への遷移がない間（ADR-0060 の D3）は、積む相手がいない。OQ-088 の答えで休眠から空き家にする遷移を作るときに、このジョブも作る（ADR-0062 の D2）。
+
 **きっかけ**: 毎日（配達窓を外した時間帯）[assumed]
 
 **入力**: なし
@@ -528,9 +530,9 @@ J7 は同一トランザクションで積む。
 **入力**: なし
 
 **出力**:
-- `active` かつ 12 か月ログインなしの住民の住所を `dormant` に遷移
-- `dormant` かつ 30 日応答なし（`dormancy_notified_at` から 30 日）の住所を `vacant_expired` に遷移
+- `active` かつ 12 か月ログインなし（暫定、ADR-0060 の D2）の住民の住所を `dormant` に遷移
 - `dormant` への遷移時に J12 を積む
+- `dormant` の住所は空き家にしない（`vacant_expired` に遷移しない。休眠を空き家にするかとその閾値は OQ-088 の答えまで決めない、ADR-0060 の D3）
 
 **冪等性**:
 - 条件付きの UPDATE（`WHERE status='active' AND last_login_at < now()-interval '12 months'`）
@@ -879,7 +881,7 @@ worker が止まると J0 は書けないので、J0 の心拍がないことは
 | FR-036 | §4 J3（コンテンツのハッシュによる保存）|
 | FR-037 | §4 J3（決定的な組版、ADR-0007）|
 | FR-049 | §4 J7（退去処理）|
-| FR-071 | §4 J9（長期不在）|
+| FR-071 | §4 J7（退去による空き家）・J10（休眠は空き家にしない）。J9（長期不在）は OQ-088 の答えで作るときだけ |
 | FR-072 | §4 J10（休眠の判定）|
 | FR-073 | §4 J11（転送の期限）|
 | FR-075 | §4 J11 |
