@@ -23,8 +23,9 @@ YGO-009 で `environment.md`（開発・検証環境の構築計画。スタッ�
    `staging`・`production` で偽の鍵（`EXAMPLE_` で始まる値）を見つけたら、プロセスは起動に失敗する。
 2. **D2 開発は手元に入れた PostgreSQL で動かす**: コンテナの実行環境と Compose を要らないものにする。PostgreSQL は OS に入れたサーバーの道具（`initdb`・`pg_ctl`）で、
    レポジトリの中の無視するディレクトリにデータを置き、ループバックと Unix ソケットだけで待ち受ける。web と worker はふつうのプロセスとして別々に起こす（ADR-0008）。
-3. **D3 `check.sh` は使い捨ての PostgreSQL を起こす**: コードができたら、一時ディレクトリに `initdb` し、TCP で待ち受けず Unix ソケットだけで起こし、終わったら必ず消す。
-   PostgreSQL の道具がなければ、飛ばさずに失敗する。道具は `check.sh` を動かす機械（手元・CI・秘書のジョブの環境）にあらかじめ入れておき、`prepare.sh`（M0 で作る）は npm の依存だけを入れる。テストの設定はテストの準備のコードが偽の値で渡し、`.env.test` は使わない。CI は `prepare.sh` と `check.sh` だけを動かす（`environment.md` §4・§5）。
+3. **D3 `check.sh` は使い捨ての PostgreSQL を起こす**: コードができたら、一時ディレクトリに `initdb` し、TCP で待ち受けず Unix ソケットだけで起こし、終わったら必ず消す（片付けの範囲は ADR-0068）。
+   PostgreSQL の道具がなければ、飛ばさずに失敗する。道具は `check.sh` を動かす機械（手元・CI・秘書のジョブの環境）にあらかじめ入れておく。CI と秘書のジョブの環境にはマスターが入れる（OQ-086 → 決定）。
+   `prepare.sh`（M0 で作る）は npm の依存を入れ、IaC のコードを書いたあとは `tofu init -backend=false` も行う。OS の道具は入れない。テストの設定はテストの準備のコードが偽の値で渡し、`.env.test` は使わない。CI は `prepare.sh` と `check.sh` だけを動かす（`environment.md` §4・§5）。
 4. **D4 IaC の道具は OpenTofu**: 宣言の IaC で、事業者ごとのプロバイダを差し替えられる。モジュールは network・identity・database・object_storage・keys・secrets・web・worker・monitoring に分け、
    `envs/staging`・`envs/production` から呼ぶ（`environment.md` §7）。
 5. **D5 事業者は選ばず、IaC のコードはまだ書かない**: 本番の事業者（クラウド・鍵管理・秘密管理・ログ）は、費用と契約にかかわるので、デプロイの準備のときにマスターに聞く（OQ-085、持ち越し）。
@@ -67,7 +68,6 @@ YGO-009 で `environment.md`（開発・検証環境の構築計画。スタッ�
 ## 決めていないこと
 
 - 本番の事業者・検証環境を作るか・費用の上限・アラートを知らせる先・ドメイン: OQ-085（持ち越し。デプロイの準備の前にマスターに聞き、そのとき要回答にする）。
-- CI と秘書のジョブの環境に PostgreSQL のサーバーの道具を入れること（D3 の前提）: 環境は秘書が変えられない（NFR-091）ので、OQ-086（要回答）でマスターに頼む。M0 で DB のテストを `check.sh` に足す前に答えをもらう。
 - サーバーの大きさ・閾値・バックアップの日数などの値は `[assumed]`。デプロイの準備で見直す。
 
 ## 影響
@@ -79,5 +79,5 @@ YGO-009 で `environment.md`（開発・検証環境の構築計画。スタッ�
 - `security.md` §6.2（保管の方法）・§6.3（手順は `environment.md` §8.3）・§8（OQ-085）。
 - `roadmap.md`: `environment.md` を YGO-009 に結びつける（§1・§3・§4・§9）。M6 に `keys.reencrypt` を足す。§7 に OQ-085、§11。
 - `requirements.md`: NFR-058・NFR-073・NFR-074・NFR-079 の根拠の箇所。
-- `open-questions.md`: OQ-085（持ち越し）と OQ-086（要回答）を足す。
+- `open-questions.md`: OQ-085（持ち越し）と OQ-086（決定、2026-11-21）を足す。
 - ADR-0006・ADR-0008・ADR-0010・ADR-0012・ADR-0021・ADR-0025 が `environment.md` に任せた細部は、この ADR と `environment.md` で決めた（各 ADR の本文は変えない）。

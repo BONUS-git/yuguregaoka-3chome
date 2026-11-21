@@ -172,7 +172,7 @@ flowchart TB
 | 組版 | TSX → 静的 HTML（スナップショットテストで冪等性確認）[explicit] | ADR-0011 |
 | 記事の文字 | 外部 LLM（モデルは OQ-062、テストはモック）。保存した文字から組む | ADR-0039 |
 | 画像加工 | libvips 系ライブラリ（段階 2、`[assumed]`） | — |
-| テスト | Vitest。`check.sh` が使い捨ての PostgreSQL（Unix ソケットだけ）を起こして動かす（コードができてから、`environment.md` §4）[assumed] | ADR-0052 |
+| テスト | Vitest。`check.sh` が使い捨ての PostgreSQL（Unix ソケットだけ）を起こして動かす（コードができてから、`environment.md` §4）。終わったら起こしたものを片付ける（ADR-0068）[assumed] | ADR-0052・ADR-0068 |
 | 開発環境 | 手元に入れた PostgreSQL と、web・worker・Vite の開発サーバーのふつうのプロセス。コンテナは要らない（`environment.md` §3）[assumed] | ADR-0052 |
 | ホスティング（想定） | コンテナ（web 2・worker 1〜2）・マネージド PostgreSQL・オブジェクトストレージ・鍵管理・秘密管理（大きさは `environment.md` §6）。IaC は OpenTofu で設計だけ（`environment.md` §7）。事業者は選ばない（OQ-085、持ち越し）。費用は量と式だけ（`environment.md` §9）。**デプロイはしない** [explicit]（NFR-071） | ADR-0052 |
 
