@@ -249,7 +249,7 @@ UNIQUE(newspaper_id, edition_key) — 1 つの配達回で同じ版は 1 つだ�
 | `source_id` UUID | 素材レコードの ID |
 | `newspaper_article_id` UUID FK→newspaper_articles NULL | 載せた記事の文字（画像は NULL） |
 
-#### `newspaper_articles` — 記事の文字（ADR-0039 の D7）
+#### `newspaper_articles` — 記事の文字（ADR-0055 の D7）
 
 J16 が素材ごとに 1 回作り、J3・J8 はこれから組む（LLM を呼び直さない）。
 
@@ -260,16 +260,18 @@ J16 が素材ごとに 1 回作り、J3・J8 はこれから組む（LLM を呼�
 | `source_kind` text | board_post / external_news |
 | `source_id` UUID | 素材（`board_posts.id` / `external_news_items.id`） |
 | `interest_category_id` UUID FK→interest_categories NULL | 結び付けた興味（共通の記事は NULL。結び付け方は OQ-062） |
-| `headline` text | 見出し |
-| `body` text | 記事の文字（文字だけ。HTML は持たず、組版でエスケープする）。投稿の素材では、LLM が書いたまとめだけを持ち、投稿の本文は `board_posts.body` からそのまま載せる（書き換えない。ADR-0046 の D4）。LLM が投稿のまとめを書くのは OQ-074（要回答）の暫定で、答えが「書かない」なら投稿の行は決まった形（`written_by = 'template'`、まとめなし）になる |
-| `written_by` text | llm / template（LLM の失敗・検査に外れた・打ち切りのときは template、ADR-0039 の D8）。紙面には出さない。規約が LLM の文であることを示すよう求めるとき（OQ-073）は、これで見分ける（ADR-0046 の D3） |
+| `headline` text | 見出し。投稿の素材でも LLM が書く（ADR-0054 の D5）。決まった形（`written_by = 'template'`）では、外のニュースは素材の題、投稿は決まった文「掲示板から」[assumed]（`board_posts` に題がないため。ADR-0054 の D10） |
+| `body` text NULL | 記事の文字（文字だけ。HTML は持たず、組版でエスケープする）。外のニュースでは必ず持つ。投稿の素材では NULL（まとめを書かない。LLM の行も template の行も。ADR-0054 の D9、OQ-074 → 決定）。投稿の本文は `board_posts.body` からそのまま載せる（書き換えない。ADR-0054 の D4） |
+| `written_by` text | llm / template（LLM の失敗・検査に外れた・打ち切りのときは template、ADR-0055 の D8）。紙面には出さない。規約が LLM の文であることを示すよう求めるとき（OQ-073）は、これで見分ける（ADR-0054 の D3） |
 | `prompt_version` text NULL | 使ったプロンプトの版（template は NULL） |
 | `rule_version` text | 出力の検査に使ったルール表の版 |
 | `created_at` timestamptz | — |
 
 UNIQUE(delivery_run_id, source_kind, source_id) — 1 つの素材の記事は 1 回の配達につき 1 つ。版どうしで使い回す。
 
-行を入れる人と時刻（ADR-0039 の D8）:
+CHECK ((source_kind = 'board_post') = (body IS NULL)) — 投稿の記事はまとめを持たず、外のニュースの記事は本文を持つ（ADR-0054 の D11）。
+
+行を入れる人と時刻（ADR-0055 の D8）:
 - J16 は、記事の打ち切り（04:30 / 16:15 JST）[assumed] より前にしか行を入れない（入れるトランザクションの中で DB の時計で確かめる。J17 の取り込みの打ち切りと同じ形）
 - J3 は組む前に、行のない素材に `written_by = 'template'` の行を `ON CONFLICT DO NOTHING` で入れ、それから組む
 - これで J3 が組んだあとに行が増えず、J3 の再試行・J8 の組み直しは同じ行から同じ HTML を組む（FR-037・NFR-022）。行を消すのは、素材の投稿の削除・投稿者の退去のとき（§4）だけ
@@ -662,7 +664,7 @@ stateDiagram-v2
 |------|-------|
 | 配達の重複防止 | `mailbox_items` の UNIQUE(delivery_run_id, resident_id, kind, item_id)（ADR-0010） |
 | 組版の重複防止 | `newspapers` の UNIQUE(delivery_run_id) と `newspaper_editions` の UNIQUE(newspaper_id, edition_key)（ADR-0039） |
-| 記事の文字の重複防止 | `newspaper_articles` の UNIQUE(delivery_run_id, source_kind, source_id)。あれば LLM を呼ばない（ADR-0039 の D7） |
+| 記事の文字の重複防止 | `newspaper_articles` の UNIQUE(delivery_run_id, source_kind, source_id)。あれば LLM を呼ばない（ADR-0055 の D7） |
 | 外のニュースの重複防止 | `external_news_items` の UNIQUE(source_key, external_id)。素材はその回の `delivery_run_id` の行だけなので、同じ記事がほかの回に載らない（ADR-0039 の D6） |
 | 新聞は 1 回の配達につき 1 つ | `mailbox_items` の部分一意索引 UNIQUE(delivery_run_id, resident_id) WHERE kind = 'newspaper'（ADR-0039） |
 | 版の選び方の再現 | 興味が複数ある住民の版は `SHA-256(run_id:resident_id)` から決めるので、J4 をやり直しても同じ版（ADR-0039 の D3） |
