@@ -17,7 +17,7 @@
 
 ## 一覧
 
-- [0001 — 内部 ID と住所を分ける](0001-internal-id-separate-from-address.md)
+- [0001 — 内部 ID と住所を分ける](0001-internal-id-separate-from-address.md)（ADR-0082 で置き換え）
 - [0002 — ログインしないだけでは空き家にしない](0002-vacancy-requires-explicit-deletion.md)（ADR-0060 で置き換え）
 - [0003 — 住所録には相手の新しい住所を自動で表示しない](0003-no-auto-update-address-book-on-move.md)
 - [0004 — 配達スケジュール・冪等性・文字数上限](0004-delivery-schedule-and-limits.md)
@@ -79,8 +79,8 @@
 - [0060 — 休眠は入居のまま。休眠からの空き家化は決めない](0060-dormant-stays-occupied-no-expiry-until-oq-088.md)
 - [0061 — 地図は全住民で共有する 1 枚の白黒の画像](0061-town-map-shared-monochrome-base-image.md)
 - [0062 — 休眠と再割り当ては段階 3、長期不在の退去は OQ-088 次第](0062-stage-3-dormancy-reuse-expiry-by-oq-088.md)
-- [0063 — 地図は静的な画像で候補の印は押せる、API は入居だけ](0063-town-map-static-image-candidate-marks-selectable.md)
-- [0064 — 地図の候補の印を押して選べ、空き家・入居を全員に見せる](0064-town-map-candidate-marks-selectable-public-occupancy.md)
+- [0063 — 地図は静的な画像で候補の印は押せる、API は入居だけ](0063-town-map-static-image-candidate-marks-selectable.md)（ADR-0083 で置き換え）
+- [0064 — 地図の候補の印を押して選べ、空き家・入居を全員に見せる](0064-town-map-candidate-marks-selectable-public-occupancy.md)（ADR-0084 で置き換え）
 - [0065 — 手紙は知り合いにだけ。掲示板は投稿ごとにオープンにする](0065-letters-acquaintances-only-board-open-per-post.md)
 - [0066 — 相互にならない住所録の追加は自動で止める](0066-address-book-adds-stopped-when-not-mutual.md)
 - [0067 — 商店のアカウントは運用者の CLI だけで作る](0067-shop-accounts-created-by-operator-cli-only.md)
@@ -98,3 +98,6 @@
 - [0079 — 退去で認証情報とセッションを最初に消す](0079-account-erase-credentials-and-sessions-first.md)
 - [0080 — ログインはメールとパスワード、認証の経路は /api/v1](0080-authentication-email-password-api-v1.md)
 - [0081 — セッションはサーバー側、再認証とセッションの API](0081-server-side-sessions-reauth-api.md)
+- [0082 — 内部 ID と住所を分け、住所は候補か空き家から選ぶ](0082-internal-id-address-from-candidates-or-vacant.md)
+- [0083 — 地図は静的な画像で候補と空き家の印は押せる、API は入居だけ](0083-town-map-static-image-candidate-and-vacant-marks-selectable.md)
+- [0084 — 地図の候補と空き家の印を押して選べ、空き家・入居を全員に見せる](0084-town-map-candidate-and-vacant-marks-selectable-public-occupancy.md)
