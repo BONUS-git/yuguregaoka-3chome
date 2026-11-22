@@ -4,7 +4,7 @@
 - 日付: 2026-11-19
 - 根拠: `.ai/brief.md`・`.ai/requirements.md`・`.ai/features.md`・`.ai/architecture.md`
 - チケット: YGO-004
-- 関連 ADR: 0001〜0012, 0039, 0069, 0070, 0072, 0076, 0077
+- 関連 ADR: 0001〜0012, 0039, 0069, 0070, 0072, 0076, 0077, 0078
 
 ---
 
@@ -475,9 +475,9 @@ UNIQUE(blocker_id, blocked_id)
 | カラム | 説明 |
 |--------|------|
 | `id` UUID PK | — |
-| `reporter_id` UUID FK→residents NULL | 通報者 |
+| `reporter_id` UUID FK→residents NULL | 通報者。手紙の通報では、その手紙を受け取った住民（ADR-0078 の D8）。モデレーターの当事者の判定に使う |
 | `content_kind` text | letter / board_post |
-| `content_id` UUID | 通報対象レコードの ID |
+| `content_id` UUID | 通報対象レコードの ID。`letter` は `letters.id`、`board_post` は `board_posts.id`。手紙の通報の要求は郵便受けの行の ID（`mailbox_item_id`）で受け、API がその行から引いた `letters.id` を書く。行は、郵便受けの行が通報者のもの・`kind = 'letter'`・`visible_at <= now()`・`deleted_at IS NULL` で、手紙が `delivered` のときだけ作る（api.md §7 F-08、ADR-0078 の D8〜D10）。郵便受けの行の ID は保存しない |
 | `reason` text | 通報理由 |
 | `status` text | open / closed / dismissed |
 | `created_at` timestamptz | — |
@@ -508,7 +508,7 @@ CHECK(`content_kind <> 'letter'`) — 手紙をこのキュー（LLM の経路�
 | `report_id` UUID FK→reports NULL | 通報への操作のとき |
 | `letter_id` UUID NULL | 確認待ちの手紙（`held`）への操作のとき（ADR-0069 の D5）。`blocked` の手紙は 30 日で消えるが記録は 1 年残すので、外部キーにしない |
 | `moderator_id` UUID FK→residents | 操作したモデレーター（権限は ADR-0020・security.md §4） |
-| `action` text | approve / reject / dismiss / view_letter（手紙の本文を見た記録。見るたびに 1 行。通報された手紙は ADR-0072 の D4 (c)（OQ-043 → 決定、ADR-0036）、確認待ちの手紙は ADR-0069 の D5）。`letter_id` の行は view_letter / approve / reject だけ。住民への処置（停止・警告など）の値は置かない（ADR-0032。内容は OQ-048） |
+| `action` text | approve / reject / dismiss / view_letter（手紙の本文を見た記録。見るたびに 1 行。通報された手紙は ADR-0072 の D4 (c)（OQ-043 → 決定、ADR-0078）、確認待ちの手紙は ADR-0069 の D5）。`letter_id` の行は view_letter / approve / reject だけ。住民への処置（停止・警告など）の値は置かない（ADR-0032。内容は OQ-048） |
 | `note` text NULL | 操作メモ |
 | `created_at` timestamptz | — |
 
@@ -796,8 +796,8 @@ stateDiagram-v2
 
 | OQ | 本文書での仮の扱い |
 |----|-----------------|
-| OQ-003（クローズドな手紙のモデレーション）→ 決定 | 手紙はルール表だけで審査する。通報された手紙をモデレーターが見るたびに `moderation_actions` に `view_letter` を書く（ADR-0072。見てよいことは OQ-043 → 決定、ADR-0036）。照合の時点は OQ-052 で投函のときに変わり、手紙は `moderation_queue` に積まなくなった（ADR-0069） |
-| OQ-043（手紙で止める内容と、手紙の閲覧）→ 決定 | 通報された手紙はモデレーターが条件付きで 1 通だけ確かめてよい（2026-11-19、ADR-0036）。`moderation_actions.action` の `view_letter` は決定の記録として残す。表の変更はない |
+| OQ-003（クローズドな手紙のモデレーション）→ 決定 | 手紙はルール表だけで審査する。通報された手紙をモデレーターが見るたびに `moderation_actions` に `view_letter` を書く（ADR-0072。見てよいことは OQ-043 → 決定、ADR-0078）。照合の時点は OQ-052 で投函のときに変わり、手紙は `moderation_queue` に積まなくなった（ADR-0069） |
+| OQ-043（手紙で止める内容と、手紙の閲覧）→ 決定 | 通報された手紙はモデレーターが条件付きで 1 通だけ確かめてよい（2026-11-19、ADR-0078）。`moderation_actions.action` の `view_letter` は決定の記録として残す。表の変更はない |
 | OQ-052（手紙で止める内容・止めた手紙の閲覧と、年齢や設定で守り方を変えるか）→ 決定 | 2026-11-20、ADR-0069・ADR-0041。`letters` に `held`・`rule_version`・`matched_rule_id`・`decided_at` を足し、`delivery_run_id` を NULL 可にした。`moderation_queue` に手紙の行を入れない（CHECK を `content_kind <> 'letter'` に改めた）。`moderation_actions` に `letter_id` を足した。`blocked` の保持は 30 日 [assumed]（§4） |
 | OQ-063（年齢で何を変えるか）→ 決定 | 2026-11-20、ADR-0057。年齢による違いは作らない。ルール表と権限の規則に年齢の条件を持たせないので、表に年齢の区切りや年齢ごとの規則の列は置かない |
 | OQ-064（年齢の扱い）→ 決定 | 2026-11-20、ADR-0073（ADR-0048 を置き換え）。`residents` に `age_at_registration`（CHECK 0〜999）と `age_base_date`（登録した日の JST の日付）を足した（§2）。今の年齢は読むときに計算し、列を書き換えるジョブは持たない。生年月日の列は置かない（ADR-0041 の D4）。ほかの住民に見せる条件は、既存の `mailbox_items`（`kind = 'letter'`・`visible_at`・`deleted_at IS NULL` の行だけ）・`letters.sender_id`・`letters.created_at`・`tenancies.is_current`・`started_at`・`blocks`（見る住民がブロックした行だけ）から C2 が求めるので、表を足さない。削除した手紙は数えないので、§4 の保持（受取人の削除操作で `mailbox_items` を消す、受取人全員の削除で `letters` を消す）は変わらない。見せてよいという事実を持つ表も置かない（ADR-0073 の D4・理由） |
