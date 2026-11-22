@@ -34,8 +34,8 @@
 - [0015 — API・DB・バッチの責務の境界](0015-api-db-batch-boundary.md)
 - [0016 — 配達回は時刻の関門と見回りのジョブで進める](0016-delivery-run-pipeline-and-tick.md)
 - [0017 — 配達は準備と公開の 2 段に分ける](0017-delivery-prepare-then-publish.md)
-- [0018 — ログインはメールとパスワード。メールは暗号化して持ち検索用に HMAC を持つ](0018-authentication-email-password.md)
-- [0019 — セッションはサーバー側に持つ。複数デバイスを許す。重要な操作では再認証する](0019-server-side-sessions-and-reauth.md)
+- [0018 — ログインはメールとパスワード。メールは暗号化して持ち検索用に HMAC を持つ](0018-authentication-email-password.md)（ADR-0080 で置き換え）
+- [0019 — セッションはサーバー側に持つ。複数デバイスを許す。重要な操作では再認証する](0019-server-side-sessions-and-reauth.md)（ADR-0081 で置き換え）
 - [0020 — ロールは住民とモデレーターの 2 つ。権限の規則表は 1 か所に持ち LLM は判定に関わらない](0020-staff-roles-and-permission-table.md)
 - [0021 — 手紙の暗号鍵に版を付けて入れ替える。AAD に手紙の ID を含める](0021-encryption-key-versioning.md)
 - [0022 — 段階は features.md の 3 つのまま。MVP は作る順に M0〜M6 に分け、各段階は受け入れ条件・見直し・マスターの確認で閉じる](0022-roadmap-stages-and-gates.md)
@@ -96,3 +96,5 @@
 - [0077 — 退去処理と保持期間（確定した手紙も消す）](0077-letters-purged-after-settling-or-recipient-deletion.md)（ADR-0079 で置き換え）
 - [0078 — 手紙の通報は受取人だけ、確かめは条件付きで 1 通](0078-letter-reports-by-recipients-only.md)
 - [0079 — 退去で認証情報とセッションを最初に消す](0079-account-erase-credentials-and-sessions-first.md)
+- [0080 — ログインはメールとパスワード、認証の経路は /api/v1](0080-authentication-email-password-api-v1.md)
+- [0081 — セッションはサーバー側、再認証とセッションの API](0081-server-side-sessions-reauth-api.md)

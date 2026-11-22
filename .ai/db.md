@@ -4,7 +4,7 @@
 - 日付: 2026-11-19
 - 根拠: `.ai/brief.md`・`.ai/requirements.md`・`.ai/features.md`・`.ai/architecture.md`
 - チケット: YGO-004
-- 関連 ADR: 0001〜0012, 0039, 0069, 0070, 0072, 0076, 0078, 0079
+- 関連 ADR: 0001〜0012, 0039, 0069, 0070, 0072, 0076, 0078, 0079, 0080, 0081
 
 ---
 
@@ -24,7 +24,7 @@
    排除（P-1, P-2）に従い、いいね数・フォロワー数・スコア・既読状態は一切保存しない。
 
 5. **実世界の個人情報は最小限** [inferred]（NFR-002）: 住民の実名・実住所・顔写真を
-   システム内部で保持しない。認証はメールアドレス＋パスワード（ADR-0018）、セッションはサーバー側に持ち複数の端末で持てる（ADR-0019）。
+   システム内部で保持しない。認証はメールアドレス＋パスワード（ADR-0080）、セッションはサーバー側に持ち複数の端末で持てる（ADR-0081）。
    メールアドレスとパスワードのハッシュ・セッションの保持方針は `security.md` §3 に従う（OQ-028・OQ-036 は決定）。
 
 6. **ジョブのペイロードは ID のみ** [inferred]（ADR-0010）: ジョブキューに積むペイロードには
@@ -70,7 +70,7 @@ DDL は書かない。主なカラムと一意制約のみを示す。
 から現在の住民を引いてその `last_login_at` を参照する。`addresses.status` の 5 つの
 値（active / dormant / vacant_deleted / vacant_expired / vacant_forwarded）は ADR-0060 のとおり持つ。
 
-#### `credentials` — 認証情報（ADR-0018・`security.md` §3）
+#### `credentials` — 認証情報（ADR-0080・`security.md` §3）
 
 住民 1 人に 1 行。退去では J7 の手順 0 が、その住民の `sessions` の行を消したあとにこの行を消し、`erasure_log` に記録する（`security.md` §2.4 の退去の処理の 4、ADR-0079 の D8。`residents` を外部キーで指すので、`residents` を消す前に消す）。
 `residents` と分けるのは、退去で J7 が最初に消す範囲と、鍵の入れ替えで暗号化し直す範囲を 1 つの表にまとめるため [assumed]。
@@ -78,9 +78,9 @@ DDL は書かない。主なカラムと一意制約のみを示す。
 | カラム | 説明 |
 |--------|------|
 | `resident_id` UUID PK FK→residents | 住民 1 人に 1 行 |
-| `email_encrypted` bytea | 暗号化したメールアドレス（AES-256-GCM、ADR-0018。AAD は `resident_id`）。平文は持たない |
+| `email_encrypted` bytea | 暗号化したメールアドレス（AES-256-GCM、ADR-0080。AAD は `resident_id`）。平文は持たない |
 | `email_key_version` int NOT NULL | `email_encrypted` を暗号化した鍵の版（ADR-0021）。`keys.reencrypt`（`kind: 'email'`）が版 `from_version` の行を選ぶ（`environment.md` §8.3） |
-| `email_hmac` bytea NOT NULL | 検索用の HMAC（ADR-0018）。メールアドレスは小文字にそろえてから計算する [assumed] |
+| `email_hmac` bytea NOT NULL | 検索用の HMAC（ADR-0080）。メールアドレスは小文字にそろえてから計算する [assumed] |
 | `email_hmac_key_version` int NOT NULL | `email_hmac` を計算した HMAC の鍵の版。HMAC の鍵の入れ替え（`environment.md` §8.3）で、どの行を作り直し済みかを示す |
 | `password_hash` text NOT NULL | Argon2id のハッシュ（パラメータを含む文字列、`security.md` §3.2） |
 | `email_verified_at` timestamptz NULL | メールアドレスを確かめた日時。NULL = まだ |
@@ -201,7 +201,7 @@ UNIQUE(delivery_run_id, resident_id) WHERE kind = 'newspaper' — 1 回の配達
 
 ### 通知
 
-配達完了の通知（ADR-0076、FR-028・FR-102）。`sessions` は security.md §9 の提案のテーブル（ADR-0019）。退去では、受付（API）でその住民のセッションをすべて無効にし（`invalidated_at`）、同じトランザクションでその購読と送った記録を消す。J7 の手順 0 が、購読と送った記録の残り → `sessions` の行すべて → `credentials` の行の順に消す（ADR-0079 の D7・D8）。
+配達完了の通知（ADR-0076、FR-028・FR-102）。`sessions` は security.md §9 の提案のテーブル（ADR-0081）。退去では、受付（API）でその住民のセッションをすべて無効にし（`invalidated_at`）、同じトランザクションでその購読と送った記録を消す。J7 の手順 0 が、購読と送った記録の残り → `sessions` の行すべて → `credentials` の行の順に消す（ADR-0079 の D7・D8）。
 
 #### `push_subscriptions` — 通知の購読（端末ごと）
 
@@ -209,7 +209,7 @@ UNIQUE(delivery_run_id, resident_id) WHERE kind = 'newspaper' — 1 回の配達
 |--------|------|
 | `id` UUID PK | — |
 | `resident_id` UUID FK→residents | 購読した住民 |
-| `session_id` FK→sessions UNIQUE | 購読を作ったセッション（1 セッションに 1 購読）。セッションを無効にするとき、この行を同じトランザクションで消す（ADR-0019） |
+| `session_id` FK→sessions UNIQUE | 購読を作ったセッション（1 セッションに 1 購読）。セッションの行を消すとき（ログアウト・取り消し・パスワードの再設定と変更・強制ログアウト・二要素認証の解除・期限切れの J14）と、退去の受付でセッションを無効にするとき（`invalidated_at`）、この行を同じトランザクションで消す（ADR-0081 の D4） |
 | `endpoint` text | プッシュサービスの送り先（ADR-0076 の D6 で検査した値）。ログに出さない（security.md §2.5） |
 | `p256dh` text | 中身の暗号化に使う端末の公開鍵 |
 | `auth` text | 中身の暗号化に使う認証の秘密 |
@@ -593,7 +593,7 @@ ADR-0060 は「空き家は新規住民の割り当て候補となる」と定�
 |-----------|---------|------|------|------|
 | 住民 | `residents` | 新規登録時に作成 | アカウント削除まで | 削除申請で即時物理削除（ADR-0079）→ erasure_log に記録 |
 | 認証情報 | `credentials` | 新規登録時に `residents` と同じトランザクションで作成 | アカウント削除まで。鍵の入れ替えでは行を残したまま暗号化と HMAC を新しい版で作り直す（`environment.md` §8.3） | 退去で J7 の手順 0 が、`sessions` の行のあとに行ごと削除し、`erasure_log` に記録（`security.md` §2.4、ADR-0079 の D8） |
-| セッション | `sessions` | ログイン時（API） | 有効期限（`expires_at`）が切れるか、ログアウトするまで。退去の受付では `invalidated_at` を付けて無効にする（ADR-0079 の D7） | ログアウトでは API が削除。有効期限切れでは J14 が `expires_at < now()` の行を、それを指す `push_subscriptions` と `delivery_notifications` を同じトランザクションで先に消してから削除する [assumed]（security.md §2.1、async.md J14、ADR-0079 の保持期間）。退去で J7 の手順 0 が、無効にした行も含めてその住民の行をすべて削除し、`erasure_log` に記録（ADR-0079 の D8）。表の定義は security.md §9 の提案 |
+| セッション | `sessions` | ログイン時（API） | 有効期限（`expires_at`）が切れるか、ログアウトするまで。再認証（`reauthenticated_at`）と二要素認証を済ませた時刻はこの行に書く（ADR-0081 の D5・D6）。退去の受付では `invalidated_at` を付けて無効にする（`invalidated_at` を付けるのは退去の受付だけ、ADR-0079 の D7・ADR-0081 の D4） | ログアウト・セッションの取り消し・パスワードの再設定の完了（その住民のすべて）・パスワードの変更（今のセッションのほかすべて）では API が削除し、強制ログアウトと二要素認証の解除では運用者の CLI がその住民の行をすべて削除する（それを指す `push_subscriptions` と `delivery_notifications` も同じトランザクションで先に消す、ADR-0081 の D4・D6）。有効期限切れでは J14 が `expires_at < now()` の行を、それを指す `push_subscriptions` と `delivery_notifications` を同じトランザクションで先に消してから削除する [assumed]（security.md §2.1、async.md J14、ADR-0079 の保持期間）。退去で J7 の手順 0 が、無効にした行も含めてその住民の行をすべて削除し、`erasure_log` に記録（ADR-0079 の D8）。表の定義は security.md §9 の提案 |
 | 住所 | `addresses` | 住民登録時・新規割り当て時 | 居住中は保持。空き家後も保持し、段階 3 から割り当て候補に戻す（ADR-0062） | 管理者が廃棄するまで削除しない（住所のプールを維持） |
 | 居住記録 | `tenancies` | 住所割り当て時・転入時 | 歴史として保持（配達先解決に使う） | 住民削除から 1 年後に削除（ADR-0079） |
 | 手紙（本体） | `letters` | 送信時（`pending` 状態。確認を頼まれた手紙は `held`、ADR-0069。照合に当たって送った人が n を選んだ手紙は作らない） | 配達後も保持。送信者が削除されても `body_encrypted` は残す（受取人保護）。ただし送信者フラグを「退去済み」に更新。`held` はモデレーターが操作するまで保持（長く確かめられないときは OQ-065） | J14 が本文と宛先ごと削除する（ADR-0079 の D2〜D4）[assumed]。`delivered` は、`settled_at` から 30 日を過ぎ、受取人全員が郵便受けから削除した（`kind = 'letter'` のその手紙の `mailbox_items` に `deleted_at IS NULL` の行が 1 つもない）あとの次の J14。`returned`・`suppressed` は `settled_at` から 30 日後。`blocked` は `decided_at` から 30 日後（ADR-0069 の D6）。`reports`（`content_kind = 'letter'`）の行がある手紙は消さず、通報がクローズから 1 年で消えたあとの J14 で同じ条件を当てる。`erasure_log` には記録しない。どの削除も、送った人の送信済みに出す期間（確定から 30 日、api.md §7 F-04・ADR-0079 の D5）のあと。送信者の退去で、その住民の届いていない手紙（`pending`・`scheduled`・`held`・`blocked`・`returned`・`suppressed`）は J7 が即時削除（§5） |
