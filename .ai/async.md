@@ -53,8 +53,8 @@
 | J2 | `moderation.review` | 02:00 / 15:00 JST 以降、J0 が判断 | `run_id` | ラベルと判定。投稿を `approved` / `rejected` にする。手紙は扱わない（投函のときに API が照合する、ADR-0069） |
 | J3 | `newspaper.typeset` | J16 完了か記事の打ち切り（04:30 / 16:15）[assumed] 後、J0 が判断（締め切りは 05:00 / 16:30）。M3・M4 は J2 完了か打ち切り後 | `run_id` | 版ごとの静的 HTML と、`newspapers`・`newspaper_editions` の行（ADR-0039）。間に合わなければ休刊 |
 | J4 | `delivery.prepare` | `newspapers` の行ができた後、J0 が判断 | `run_id` | 見せる前の `mailbox_items`（新聞は全住民に版を 1 つずつ・手紙は宛先、行ごとに `visible_at`）。宛先ごとの振り分け |
-| J5 | `delivery.publish` | 07:00 / 17:00 JST、J0 が判断 | `run_id` | 配達回を `done` に。手紙と投稿の最終状態を確定。新聞の通知（J15、`kind = newspaper`）を積む（休刊の回も） |
-| J6 | `delivery.carry_over` | 配達時刻から 15 分過ぎても公開できない場合、J0 が判断 [assumed] | `run_id` | 配達回を `skipped` に。中身を次の便へ移す |
+| J5 | `delivery.publish` | 07:00 / 17:00 JST、J0 が判断 | `run_id` | 配達回を `done` に（`finished_at` を書く）。手紙と投稿の最終状態を確定。新聞の通知（J15、`kind = newspaper`）を積む（休刊の回も） |
+| J6 | `delivery.carry_over` | 配達時刻から 15 分過ぎても公開できない場合、J0 が判断 [assumed] | `run_id` | 配達回を `skipped` に（`finished_at` を書く）。中身を次の便へ移す |
 | J7 | `account.erase` | キュー（API が退去を受けたのと同じトランザクションで積む） | `resident_id` | ADR-0085 の表に従い消去 |
 | J8 | `newspaper.retypeset` | キュー（J7 から・投稿削除から） | `newspaper_id` | 紙面の差し替え |
 | J9 | `account.expire` | 毎日（段階 3、配達窓を外した時間帯）[assumed]。OQ-088 の答えで `vacant_expired` への遷移を作るときだけ作る（ADR-0060 の D3） | なし | `vacant_expired` から 12 か月たった住民の J7 を積む |
@@ -129,6 +129,8 @@ stateDiagram-v2
     running --> failed : 持ち越し先を作れない
 ```
 
+`delivery_runs.started_at` は J1 が `running` にする UPDATE で書く。`delivery_runs.finished_at` を書くのは、J5 が `done` にする UPDATE と J6 が `skipped` にする UPDATE だけで、`pending`・`running`・`failed` の間は NULL [assumed]（`db.md` §2 の CHECK）。
+
 ### 工程が済んだかどうかの見分け方
 
 | 工程 | 見分け方 | カラム |
@@ -194,7 +196,7 @@ J0 の判断ロジック（概略）:
 **入力**: `run_id`（例: `2026-11-19-morning`）
 
 **出力**:
-- `delivery_runs.status` を `pending` → `running` に更新
+- `delivery_runs.status` を `pending` → `running` に更新し、同じ UPDATE で `started_at` を書く
 - 対象配達回の手紙を `state = 'scheduled'` に更新
 - 対象配達回の掲示板投稿を `moderation_queue` に登録
 - 手紙は `moderation_queue` に登録しない。手紙は投函のときに API が照合済みで、配達の前に照合し直さない（ADR-0069 の D2・D3。DB の CHECK 制約 `content_kind <> 'letter'`）。
@@ -378,7 +380,7 @@ M3・M4 は、J2 完了（`moderation_queue` に `processed_at = NULL` の行が
 **入力**: `run_id`
 
 **出力**:
-- `delivery_runs.status` を `running` → `done` に更新
+- `delivery_runs.status` を `running` → `done` に更新し、同じ UPDATE で `finished_at`（公開の時刻）を書く
 - `letters` と宛先の最終状態を更新
 - `board_posts.status` を `published` に更新
 
@@ -397,13 +399,13 @@ M3・M4 は、J2 完了（`moderation_queue` に `processed_at = NULL` の行が
    （1 の時点でこの配達回の `mailbox_items` があった手紙は `delivered`、J4 が `returned`・`suppressed` にした手紙はその状態のまま）だけで、
    1 で移した手紙は対象にしない。確定させた手紙のすべてに同じ値の `settled_at = now()` を書く（ADR-0085 の D1。`settled_at` を書くのはこの手順だけ）。`delivered` にした宛先の `letter_recipients.delivered_at` には、受取人の `mailbox_items.visible_at`（枠の時刻）を書く（ADR-0035）
 4. `board_posts.status` を `published` に・`published_at` を記録する
-5. `delivery_runs.status` を `done` にする
+5. `delivery_runs.status` を `done` にし、同じ UPDATE で `finished_at = now()` を書く [assumed]。`now()` はトランザクションの始まりの時刻なので、手順 3 の `settled_at` と同じ値になる。この値が公開の時刻で、J15 の新聞の通知の期限（30 分）と、J14 の通知の記録（`delivery_notifications`）の保持（30 日）の起点になる
 6. 紙面が休刊（`newspapers.is_holiday = true`）かにかかわらず、新聞の通知の J15 を `{run_id, kind: 'newspaper'}`・`singletonKey = notify.delivery:<run_id>:newspaper` で積む（ADR-0076・ADR-0035 の D11）。
    手紙の通知は J5 では積まない（枠の時刻のあとに J0 が積む）
 
 **冪等性**:
-- `UPDATE delivery_runs SET status='done' WHERE run_id=$1 AND status='running'`
-  2 回目に動いたとき `status = 'running'` でないので何もしない（J15 も積み直さない）
+- `UPDATE delivery_runs SET status='done', finished_at=now() WHERE run_id=$1 AND status='running'`
+  2 回目に動いたとき `status = 'running'` でないので何もしない（`finished_at` も変わらず、J15 も積み直さない）
 - 準備されなかった手紙の移動は `UPDATE letters SET delivery_run_id=<次の便> WHERE delivery_run_id=$1 AND state='scheduled' AND NOT EXISTS (この手紙のこの配達回の mailbox_items の行)`。
   公開と同じトランザクションなので、失敗すれば移動も戻り、やり直しで同じ手紙を移す。移したあとの 2 回目は対象が 0 行になる
 
@@ -422,7 +424,7 @@ J0 が判断し `singletonKey` で積む。
 **入力**: `run_id`
 
 **出力**:
-- 配達回を `skipped` に
+- 配達回を `skipped` にし、同じ UPDATE で `finished_at`（持ち越した時刻）を書く
 - 手紙と投稿を次の受付中の配達回に移す
 - 見せる前の `mailbox_items` を削除
 
@@ -433,11 +435,11 @@ J0 が判断し `singletonKey` で積む。
    移した手紙を照合し直さず、`moderation_queue` の行も入れない（手紙は投函のときに照合済み、ADR-0069 の D3）
 3. `board_posts.delivery_run_id` を次の便に変更（`status = 'awaiting_review'` のままにする）
 4. この配達回の `mailbox_items`（まだ公開前のもの）を削除する
-5. `delivery_runs.status` を `skipped` にする
+5. `delivery_runs.status` を `skipped` にし、同じ UPDATE で `finished_at = now()` を書く [assumed]。これが `skipped` の回の起点（持ち越した時刻）になる。J15 は `skipped` の回に通知を送らないので、この回を指す通知の記録（`delivery_notifications`）はない
 
 **冪等性**:
-- `UPDATE delivery_runs SET status='skipped' WHERE run_id=$1 AND status='running'`
-  2 回目は何もしない
+- `UPDATE delivery_runs SET status='skipped', finished_at=now() WHERE run_id=$1 AND status='running'`
+  2 回目は `status = 'running'` でないので何もしない（`finished_at` も変わらない）
 
 **その他の扱い**:
 - スキップした配達回の紙面は配らない。バックナンバーにも出さない（ADR-0007）[inferred]
@@ -448,7 +450,7 @@ J0 が判断し `singletonKey` で積む。
 
 **失敗とやり直し**:
 - トランザクションなので全体が冪等に再実行できる
-- `delivery_runs.status = 'failed'` になるのは、持ち越し先を作れない（DB の制約違反等）場合のみ
+- `delivery_runs.status = 'failed'` になるのは、持ち越し先を作れない（DB の制約違反等）場合のみ。`failed` の回は `finished_at` が NULL のまま
 
 ---
 
@@ -629,7 +631,7 @@ J0 も `state = 'pending'` の滞留分を拾い直す [assumed]。
 
 | テーブル | 条件 |
 |----------|------|
-| `delivery_notifications` | 指している配達回の `delivery_runs.finished_at < now() - interval '30 days'`（ADR-0076）。`created_at` ではなく配達回の `finished_at` で決めるので、同じ配達回を指す通知の記録はすべて同じ回で消える |
+| `delivery_notifications` | 指している配達回の `delivery_runs.finished_at < now() - interval '30 days'`（ADR-0076）。`created_at` ではなく配達回の `finished_at` で決めるので、同じ配達回を指す通知の記録はすべて同じ回で消える。起点は J5 が `done` と同じ UPDATE で書いた公開の時刻（§4 J5 の手順 5）。通知の記録は `done` の回だけを指すので、起点が NULL の記録はない |
 | `letters`（`state = 'blocked'`）と、その `letter_recipients` | `decided_at < now() - interval '30 days'`（ADR-0085 の D2・ADR-0069 の D6 [assumed]）。`erasure_log` に記録しない（ADR-0085 の D6）。`moderation_actions.letter_id` は外部キーにしないので、操作の記録は 1 年残る。`held` の手紙は消さない（長く確かめられないときの扱いは OQ-065） |
 | `letters`（`state IN ('returned', 'suppressed')`）と、その `letter_recipients` | `settled_at < now() - interval '30 days'`（ADR-0085 の D2 [assumed]）。`reports` に `content_kind = 'letter'`・`content_id` がその手紙の行があれば消さない（D4）。`erasure_log` に記録しない（D6） |
 | `letters`（`state = 'delivered'`）と、その `letter_recipients`・`mailbox_items`（`kind = 'letter'`・`item_id` がその手紙の行） | `settled_at < now() - interval '30 days'`（送信済みに出す期間を過ぎた、ADR-0085 の D5 [assumed]）で、かつその手紙の `mailbox_items` に `deleted_at IS NULL` の行が 1 つもない（受取人全員が削除した。受取人の退去で行が消えたものを含む、ADR-0085 の D3）。3 つの表を同じトランザクションで消す。`reports` の行があれば消さない（D4）。`erasure_log` に記録しない（D6） |
@@ -665,7 +667,7 @@ J0 も `state = 'pending'` の滞留分を拾い直す [assumed]。
 | 送る条件 | `delivery_runs.status = 'done'` の配達回（休刊の回を含む）。`skipped` の便では送らない | `delivery_runs.status = 'done'` の配達回で、枠の時刻を過ぎたとき。`skipped` の便では送らない（持ち越した手紙は移し先の便で数える） |
 | 送る住民 | その配達回の `mailbox_items` に `kind = 'newspaper'` の行がある住民（J4 の時点の全住民） | その配達回の `mailbox_items` に `kind = 'letter'` で `visible_at = slot` の行がある住民。0 通の住民には送らない |
 | 中身 | 「新聞が配達されました！」。件数なし | 「手紙が配達されました！（N通）」。N はその住民のその配達回の手紙の `mailbox_items` の数 |
-| 期限 | 公開（`delivery_runs.finished_at`）から 30 分 | 枠の時刻から 30 分 |
+| 期限 | 公開（J5 が書いた `delivery_runs.finished_at`、§4 J5 の手順 5）から 30 分 | 枠の時刻から 30 分 |
 
 どちらも差出人・本文・住所は載せない（ADR-0035 の D4）。Web Push の TTL はどちらも 30 分。
 
@@ -821,10 +823,10 @@ worker が止まると J0 は書けないので、J0 の心拍がないことは
 | API の `FOR SHARE` と締め切りの競合 | 締め切り処理の最中に API が `pending` の手紙を書こうとしたとき、次の便に振り分けられること |
 | 途中停止と再開 | ジョブの実行を途中で止め（プロセス kill）、再起動したとき残りの処理が正しく完了すること |
 | 休刊 | 組版の締め切りまでに J3 が完了しないとき `is_holiday = true` の行が入ること |
-| 持ち越し | 公開の打ち切りまでに J5 が完了しないとき `delivery_runs.status = 'skipped'` になり、次の便に移ること |
+| 持ち越し | 公開の打ち切りまでに J5 が完了しないとき `delivery_runs.status = 'skipped'` になり、次の便に移ること。その回の `finished_at` に J6 の時刻が入ること |
 | 公開と退去の競合 | J5 の実行中に J7 が動いたとき、退去済み住民の `mailbox_items` が削除されること |
 | モックの LLM が失敗 | LLM のモックが全件エラーを返したとき、打ち切り後に投稿が次の便に持ち越されること |
-| 通知の重複と期限 | J15 を 2 回動かしてもモックのプッシュ送信が受ける通知が増えないこと。公開の前・`skipped` の便・枠の時刻の前・それぞれの時刻から 30 分のあとには送らないこと。休刊の回にも新聞の通知を送ること（`roadmap.md` A-15） |
+| 通知の重複と期限 | J15 を 2 回動かしてもモックのプッシュ送信が受ける通知が増えないこと。公開の前・`skipped` の便・枠の時刻の前・それぞれの時刻から 30 分のあとには送らないこと。休刊の回にも新聞の通知を送ること。新聞の 30 分は J5 が書いた `finished_at` から数え、その値が同じ回の手紙の `settled_at` と同じこと。J5・J6 を 2 回動かしても `finished_at` が変わらないこと（`roadmap.md` A-15） |
 | 手紙の時刻 | 手紙の `mailbox_items` は `visible_at`（午前 08:00〜11:50・午後 18:00〜20:50 の 10 分刻み）を過ぎるまで郵便受けに出ないこと。J4 を 2 回動かしても `visible_at` が変わらないこと。同じ配達回の同じ受取人の手紙が同じ時刻になること。新聞は手紙の有無にかかわらず全住民に 07:00 / 17:00 に出ること（ADR-0035、`roadmap.md` A-02） |
 | 新聞の LLM の失敗（ADR-0039） | モックの文章アダプタが失敗・打ち切り・長すぎる出力・HTML を含む出力・ルール表に当たる出力を返したとき、記事が決まった形で組まれ、休刊にならないこと（`roadmap.md` A-17 (4)） |
 | やり直しで LLM を呼ばない | J16 を 2 回動かしても `newspaper_articles` の行の数が変わらず、モックの呼び出しが増えないこと。J3・J8 には呼ばれたら失敗するモックを差し込み、それぞれの版の HTML がバイト単位で同じになること（`roadmap.md` A-03・A-05） |
