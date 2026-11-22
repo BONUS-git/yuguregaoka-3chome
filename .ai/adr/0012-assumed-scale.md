@@ -42,6 +42,6 @@ PostgreSQL 1 台と worker 1〜2 台で 1 配達回の処理が完了できる�
 
 ## 影響
 
-- OQ-029 の扱いを「持ち越し」→「決定（ADR-0012）」に変更する（`open-questions.md` を別チケットで更新）
+- `open-questions.md` の OQ-029 を決定（ADR-0012）にする
 - `environment.md` でコンテナのスペックと PostgreSQL のサイズをこの数値を基準に設計する
 - 規模が実際に変わった場合（例: 10 万人超）はこの ADR を置き換える新しい ADR を作成する

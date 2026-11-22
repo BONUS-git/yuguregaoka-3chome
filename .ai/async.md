@@ -104,7 +104,7 @@ ADR-0004 の表を拡張する。
 | 手紙の時間帯の終わり（送った人に「配達済み」と見せる時刻）| 12:00 | 21:00 | ADR-0035 の D10 |
 | 手紙の通知の期限の最後 | 12:20 | 21:20 | ADR-0035 の D11（最後の枠から 30 分） |
 
-審査の打ち切りと公開の打ち切りの時刻は仮置き。確認が取れたら ADR-0004 を更新する。
+審査の打ち切りと公開の打ち切りの時刻は仮置き。確定したら ADR-0004 を置き換える ADR に書く。
 
 **手紙の枠**（ADR-0035 の D9）: 枠は 10 分刻みで、朝便は 24 枠（08:00〜11:50）、夕便は 18 枠（18:00〜20:50）。
 受取人の枠の番号は `SHA-256(run_id + ":" + resident_id)` を整数として枠の数で割った余り。同じ配達回の、同じ受取人の手紙はすべて同じ枠になる。
@@ -138,7 +138,7 @@ stateDiagram-v2
 | 外のニュースの取り込み（M5 から） | その回の J17 のジョブが完了か失敗（再試行を使い切った）か、取り込みの打ち切り（04:00 / 16:00）を過ぎた。取り込めなくても組版は止めない | pg-boss のジョブ履歴・時刻 |
 | 記事の文字（M5 から） | 承認済みの投稿（`board_posts.delivery_run_id = run_id`）と、その回に取り込んだ外のニュース（`external_news_items.delivery_run_id = run_id`）のすべてに `newspaper_articles` の行がある。取り込みが済むまでは判定しない | `newspaper_articles`・`external_news_items.delivery_run_id` |
 | 組版 | `newspapers` の行がある（版の行は同じトランザクションで入る） | `newspapers.delivery_run_id` |
-| 準備 | 現状のカラムでは判断できない（§9 に変更提案を書く） | — |
+| 準備 | 判断する列がまだない（`delivery_runs.prepared_at`。`reviews/0001-design-review.md` の R-010 で足す） | — |
 
 ### J0 の動き（見回りジョブ）
 
@@ -204,7 +204,7 @@ J0 の判断ロジック（概略）:
 - `delivery_runs` の行は `INSERT … ON CONFLICT DO NOTHING` で作る（API が作ってなければここで作る）
 - `UPDATE delivery_runs SET status='running' WHERE run_id=$1 AND status='pending'`（1 行だけ動く）
 - 手紙の更新は `UPDATE … WHERE delivery_run_id=$1 AND state='pending'`
-- `moderation_queue` への挿入は `ON CONFLICT DO NOTHING`（§9 に UNIQUE 制約の追加を提案）
+- `moderation_queue` への挿入は `ON CONFLICT DO NOTHING`（重複を弾く UNIQUE 制約はまだない。`reviews/0001-design-review.md` の R-013 で決める）
 - 1,000 件ずつのトランザクションに分けて処理し、途中で止まっても再開できる
 
 **ADR-0015 §2 の締め切りのロック手順**:
@@ -366,8 +366,7 @@ M3・M4 は、J2 完了（`moderation_queue` に `processed_at = NULL` の行が
 
 **失敗とやり直し**:
 - 失敗したら `ON CONFLICT DO NOTHING` で安全に再実行できる
-- 準備完了かどうかは現状のカラムでは判断できないため、§9 に `delivery_runs.prepared_at` の
-  追加を提案する（J0 が「準備完了」を判断するときに使う）
+- 準備完了かどうかを判断する列（`delivery_runs.prepared_at`。J0 が「準備完了」を判断するときに使う）はまだない。`reviews/0001-design-review.md` の R-010 で足す
 
 ---
 
@@ -445,6 +444,7 @@ J0 が判断し `singletonKey` で積む。
 - 移した手紙は `scheduled`（`returned`・`suppressed` から戻したものを含む）。照合し直さない（ADR-0069）
 - `held`・`blocked` の手紙は移さない（`state = 'scheduled'` のものだけを移す。どちらも配達回に入っていない）
 - 何便分も止まっていたときは、古い配達回から順に持ち越す
+- 持ち越し先の `run_id` は `delivery_runs` に持たない `[assumed]`。持ち越し先は「次の受付中の配達回」で、移した手紙と投稿の `delivery_run_id` がその回を指すので、追跡はそれで足りる
 
 **失敗とやり直し**:
 - トランザクションなので全体が冪等に再実行できる
@@ -843,40 +843,12 @@ worker が止まると J0 は書けないので、J0 の心拍がないことは
 | 新聞の LLM のモデル・プロンプト（J16） | OQ-062 | モックの文章アダプタで作る（持ち越し、M5 の前に秘書が ADR で決める）。長さの上限と興味の一覧の中身もそこで決める |
 | 画像の加工（J13） | OQ-026 | 段階 2 として仮置き |
 | マッチング | FR-066・FR-069・OQ-050 | 段階 3 で、アルゴリズムの ADR を書いてから設計する。恋愛のカテゴリは設けない（OQ-001 → 決定、ADR-0024）。提案に街の外の連絡先を載せない（FR-101。禁止は全ての書き込みに及ぶ、OQ-041・OQ-087 → 決定、ADR-0071）。自由記述の欄を設けるなら絵文字と絶対NGを当てる（ADR-0070）。自由記述の欄の扱いと、成立後に最初の手紙を出す方法は OQ-050（持ち越し、アルゴリズムの ADR で決める） |
-| 宛先の一部だけが差し戻しになったときの `letters.state` | — | 全宛先が確定するまで状態を保留。設計は別チケットで |
+| 宛先の一部だけが差し戻しになったときの `letters.state` | — | 全宛先が確定するまで状態を保留。設計は R-015（`reviews/0001`）で決める |
 | `mailbox_items.kind = 'board_post'` の使い道 | — | 掲示板の投稿を郵便受けに入れるかどうかが未確定 |
 
 ---
 
-## §9 他の文書への変更提案（別チケット）
-
-**db.md**:
-1. `delivery_runs` に `prepared_at`（J4 の完了時刻）を追加する。J0 が「準備完了」を
-   判断するために必要（§3 の工程判断）
-2. `delivery_runs` に `carried_over_to`（持ち越し先の `run_id`）を追加する。
-   どの便に持ち越したかを追跡するため
-3. `letter_recipients` に振り分け結果（`routing_kind: forwarded / returned / suppressed / normal`）
-   と実際に届けた住民の `resident_id` を追加する
-4. `moderation_queue` に `UNIQUE(content_kind, content_id, delivery_run_id)` を追加する。
-   J1 の `ON CONFLICT DO NOTHING` を安全にするため
-
-**api.md**:
-1. 郵便受けとバックナンバーは `delivery_runs.status = 'done'` の配達回だけを返すと
-   明記する（現在は「配達済み」とのみ書いてある）。郵便受けは、さらに `mailbox_items.visible_at` を過ぎた項目だけを返す（ADR-0035。api.md §7 F-03 に書いた）
-2. `image.process` を、API が画像アップロードと同じトランザクションで積むジョブの一覧に
-   追加する（段階 2）
-
-**architecture.md §4**:
-- 審査が終わってから組版を始める、と工程の順番を明記する（現在は「02:00〜05:00 組版」と
-  書いてあり審査との順序が不明確）
-
-**ADR-0010**:
-- worker が 2 台あって cron が両方で起動しても安全（`singletonKey` と DB の条件による）と
-  明記する
-
----
-
-## §10 FR / NFR との対応表
+## §9 FR / NFR との対応表
 
 | FR / NFR | 対応する設計 |
 |----------|------------|
