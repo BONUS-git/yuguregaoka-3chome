@@ -4,7 +4,7 @@
 - 日付: 2026-11-19
 - 根拠: brief・requirements・features・architecture・db
 - チケット: YGO-005
-- 関連 ADR: 0001〜0012・0014・0015・0041・0069・0070・0071・0072・0076・0077・0078
+- 関連 ADR: 0001〜0012・0014・0015・0041・0069・0070・0071・0072・0076・0078・0079
 
 ---
 
@@ -51,9 +51,9 @@ db.md §4 の状態遷移に合わせる。
 
 | 対象 | API が動かす | worker が動かす |
 |---|---|---|
-| `letters` | `pending`、`held`（確認を頼まれた手紙）、モデレーターの操作による `held` → `pending` / `blocked`（ADR-0069） | `scheduled`、`delivered`、`suppressed`、`returned`。J7 による退去した送り手の届いていない手紙（`pending`・`scheduled`・`held`・`blocked`・`returned`・`suppressed`）の削除。J14 による `blocked`（`decided_at` から 30 日）・`returned`・`suppressed`（`settled_at` から 30 日）と、`settled_at` から 30 日を過ぎて受取人全員が削除した `delivered` の削除（ADR-0077） |
+| `letters` | `pending`、`held`（確認を頼まれた手紙）、モデレーターの操作による `held` → `pending` / `blocked`（ADR-0069） | `scheduled`、`delivered`、`suppressed`、`returned`。J7 による退去した送り手の届いていない手紙（`pending`・`scheduled`・`held`・`blocked`・`returned`・`suppressed`）の削除。J14 による `blocked`（`decided_at` から 30 日）・`returned`・`suppressed`（`settled_at` から 30 日）と、`settled_at` から 30 日を過ぎて受取人全員が削除した `delivered` の削除（ADR-0079） |
 | `board_posts` | `awaiting_review`、本人または管理者による `deleted` | `approved`、`rejected`、`published` |
-| `mailbox_items` | `deleted_at`（FR-099） | 作成。J14 が手紙を消すときの、その手紙の行の削除（ADR-0077 の D3）。J7 による、退去した受取人の行の削除（ADR-0077 の退去の表） |
+| `mailbox_items` | `deleted_at`（FR-099） | 作成。J14 が手紙を消すときの、その手紙の行の削除（ADR-0079 の D3）。J7 による、退去した受取人の行の削除（ADR-0079 の退去の表） |
 | `delivery_runs` | `pending` の行の作成のみ | それ以降のすべての遷移 |
 | `newspapers`、`newspaper_editions`、`newspaper_items`、`newspaper_articles`、`external_news_items`、`moderation_queue` | — | すべて |
 | `resident_interests` | 本人の登録・設定による作成と削除（ADR-0039） | 退去（J7）での削除 |
@@ -97,9 +97,9 @@ db.md §4 の状態遷移に合わせる。
 検索語（`GET /api/v1/address-book?q=`・段階 2 の `GET /api/v1/newspapers?q=`）は絵文字だけを確かめ（400）、`reject` の段には当てない。
 
 **退去（DELETE /me）**
-1. API: `residents.deleted_at` を設定、セッションを無効化、`account.erase` ジョブを同一トランザクションで積む
+1. API: 1 つのトランザクションで、`residents.deleted_at` を設定し、その住民の有効なセッションをすべて無効にし（`sessions.invalidated_at`）、その通知の購読を消し、`account.erase` ジョブを積む（ADR-0079 の D7）。セッションと認証情報の行はここでは消さない
 2. API: `202` を返す
-3. worker: `account.erase` ジョブを受け取り、ADR-0077 の表に従い消去・組み直しを行う
+3. worker: `account.erase` ジョブを受け取り、最初の手順で通知の購読の残り・セッションの行すべて・認証情報（`credentials`）の行をこの順に消して `erasure_log` に記録し（ADR-0079 の D8）、そのあと ADR-0079 の表に従い消去・組み直しを行う
 
 ### §2.5 コードの置き場所
 
@@ -184,7 +184,7 @@ db.md §4 の状態遷移に合わせる。
 | `GET` | `/api/v1/profiles/{address}` | 住所・ニックネーム・自己紹介だけを返す。空き家も存在しない住所も 404。今の年齢（`age`）は、下の見せる条件を満たすときだけ返し、満たさないときは項目そのものを返さない（`null` も返さない）（ADR-0073 の D4）。誕生日（`birthday`）は、見る住民が誰でも返さない（本人の誕生日は `GET /me` だけが返す。ADR-0073 の D4） | 200, 404 | FR-008, FR-113, FR-127, ADR-0073 |
 
 年齢の見せる条件（ADR-0073 の D4。OQ-064 → 決定、2026-11-20）: 見る住民がプロフィールの住民本人でないとき、次をすべて満たすときだけ `age` を返す。
-(a) 見る住民の `mailbox_items`（`kind = 'letter'`、`visible_at` を過ぎたもの、`deleted_at IS NULL` の行だけ）に、プロフィールの住民が送った手紙が 1 通以上ある。見る住民が郵便受けから削除した手紙は数えない（FR-099・ADR-0077）。
+(a) 見る住民の `mailbox_items`（`kind = 'letter'`、`visible_at` を過ぎたもの、`deleted_at IS NULL` の行だけ）に、プロフィールの住民が送った手紙が 1 通以上ある。見る住民が郵便受けから削除した手紙は数えない（FR-099・ADR-0079）。
 (b) その手紙の `created_at` が、プロフィールの住民の今の居住記録（`tenancies.is_current`）の `started_at` 以後である（引っ越す前の手紙では見せない、ADR-0003）。
 (c) 見る住民が、プロフィールの住民をブロックしていない。
 プロフィールの住民が見る住民をブロックしても、`age` の有無は変えない（ブロックを気づかせない、security.md T-06・ADR-0015）。
@@ -201,7 +201,7 @@ db.md §4 の状態遷移に合わせる。
 | `DELETE` | `/api/v1/sessions/current` | ログアウト | 204 | — |
 | `GET` | `/api/v1/me` | 自分のプロフィールを返す。今の年齢（`age`、誕生日に JST の日付で進めたもの）と誕生日（`birthday`、`MM-DD`）を含む（ADR-0073 の D3・D4） | 200 | FR-008, FR-113, FR-127, ADR-0073 |
 | `PATCH` | `/api/v1/me` | ニックネーム・自己紹介を更新する。`age` と `birthday` は受け取らず、要求にどちらかがあれば 400（`validation_failed`）で、何も変えない（ADR-0073 の D2）。絵文字を含めば 400（`validation_failed`）、`reject` の段に当たれば 422（`content_rejected`）で、どちらも何も変えない（ADR-0070、§2.4） | 200, 400, 422, 429 | FR-009, FR-113, FR-124, FR-126, FR-127, ADR-0073, ADR-0070 |
-| `DELETE` | `/api/v1/me` | 退去を受け付ける（§2.4 参照） | 202 | FR-093, ADR-0077 |
+| `DELETE` | `/api/v1/me` | 退去を受け付ける（§2.4 参照） | 202 | FR-093, ADR-0079 |
 | `GET` | `/api/v1/interest-categories` | 興味の一覧（`active` なものの `key`・`label`）だけを返す。認証なしで呼べる。興味ごとの住民の数などの件数は返さない | 200 | FR-109, ADR-0039 |
 | `GET` | `/api/v1/me/interests` | 自分が選んだ興味を返す（本人だけ。登録のときに選んだか設定かも返さない）。過去の新聞の検索から推し量った興味（`inferred_interests`）は返さない（ADR-0045 の D8） | 200 | FR-109, ADR-0039, ADR-0045 |
 | `PUT` | `/api/v1/me/interests` | 自分が選んだ興味を置き換える（一覧の `key` を 0〜5 個、`source = 'settings'`）。一覧にない値・`active` でない値・上限を超えた数は 400（`validation_failed`）。変更は次の配達回の J4 から効く。推し量った興味には触れない | 204, 400 | FR-109, ADR-0039, ADR-0045 |
@@ -241,7 +241,7 @@ db.md §4 の状態遷移に合わせる。
 それまでは「投函済み」と見せ、宛先ごとの時刻（`letter_recipients.delivered_at`）は返さない（ADR-0035 の D10）。  
 `suppressed` は「配達済み」として見せる。`held`（送った人が確認を頼んだ手紙）は「確認中」、`blocked`（モデレーターが却下した手紙）は「届けられませんでした」と見せ、
 どちらも当たった規則・理由は返さない（ADR-0072 の D5・ADR-0069 の D4・D5）。  
-**送信済みに出す期間**（ADR-0077 の D5）[assumed]: 確定した手紙（`delivered`・`suppressed`・`returned`・`blocked`）は、状態にかかわらず確定の時刻（`settled_at`、`blocked` は `decided_at`）から 30 日まで `GET /api/v1/letters/sent` と `/sent/{id}` に返す。30 日を過ぎた手紙は、行が残っていても（受取人が持っている `delivered`・通報された手紙）一覧に出さず、`/sent/{id}` は 404 `not_found`。確定していない手紙（`pending`・`scheduled`・`held`）は返し続ける。
+**送信済みに出す期間**（ADR-0079 の D5）[assumed]: 確定した手紙（`delivered`・`suppressed`・`returned`・`blocked`）は、状態にかかわらず確定の時刻（`settled_at`、`blocked` は `decided_at`）から 30 日まで `GET /api/v1/letters/sent` と `/sent/{id}` に返す。30 日を過ぎた手紙は、行が残っていても（受取人が持っている `delivered`・通報された手紙）一覧に出さず、`/sent/{id}` は 404 `not_found`。確定していない手紙（`pending`・`scheduled`・`held`）は返し続ける。
 J14 が手紙を消す（db.md §4）のは、どれもこの 30 日のあとなので、送った人からは消したかどうかも消した時期も見えず、`suppressed` の手紙も `delivered` の手紙と同じ時期に送信済みから消える（security.md T-06）。
 
 **本文の絵文字**（ADR-0069 の D13・ADR-0070 の D2。OQ-076・OQ-087 → 決定）:
@@ -472,7 +472,7 @@ OQ-066 の答え（2026-11-20、ADR-0065）で、知り合いには相手の同�
 ## §9 未確定事項
 
 - **締め切り直前の書き込みの扱いの詳細**: 競合状態の正確な手順は async.md に引き継ぐ。
-- **掲載済み投稿を本人が削除したときの組み直し**: ADR-0077 と同じ組み直しジョブを使う予定 [assumed]。
+- **掲載済み投稿を本人が削除したときの組み直し**: ADR-0079 と同じ組み直しジョブを使う予定 [assumed]。
 - **投函の取り消し API を作るか**: 範囲外。別チケットで検討する。
 - **`returned`・`blocked` を送った人にどう知らせるか**: 決定。`returned` は「差し戻し」、`held` は「確認中」、`blocked` は「届けられませんでした」と見せ、当たった規則は見せない（ADR-0072 の D5・ADR-0069、§7 F-04）。
 - **クローズドな手紙の審査**: OQ-003 は決定（対象とする・LLM には渡さない・厳格なアクセス制御、ADR-0072・§7 F-08）。

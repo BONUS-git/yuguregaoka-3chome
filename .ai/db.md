@@ -4,7 +4,7 @@
 - 日付: 2026-11-19
 - 根拠: `.ai/brief.md`・`.ai/requirements.md`・`.ai/features.md`・`.ai/architecture.md`
 - チケット: YGO-004
-- 関連 ADR: 0001〜0012, 0039, 0069, 0070, 0072, 0076, 0077, 0078
+- 関連 ADR: 0001〜0012, 0039, 0069, 0070, 0072, 0076, 0078, 0079
 
 ---
 
@@ -62,7 +62,7 @@ DDL は書かない。主なカラムと一意制約のみを示す。
 | `created_at` timestamptz | 登録日時 |
 | `deleted_at` timestamptz | 論理削除フラグ代わりに使用（即時物理削除への橋渡し用） |
 
-年齢と誕生日の 4 列は平文で持ち、退去で行ごと即時に消す（ADR-0073 の D8・ADR-0077）。年齢と誕生日を変える UPDATE は C2 のどの経路にも書かない（ADR-0073 の D2）。
+年齢と誕生日の 4 列は平文で持ち、退去で行ごと即時に消す（ADR-0073 の D8・ADR-0079）。年齢と誕生日を変える UPDATE は C2 のどの経路にも書かない（ADR-0073 の D2）。
 
 **注**: `last_login_at` を `addresses` に置くと、住民が引っ越しで住所を変えたとき
 その後のログイン記録が旧住所に紐づいてしまう。住民を認証する主体は `residents` であるため、
@@ -72,7 +72,8 @@ DDL は書かない。主なカラムと一意制約のみを示す。
 
 #### `credentials` — 認証情報（ADR-0018・`security.md` §3）
 
-住民 1 人に 1 行。`residents` と分けるのは、退去で J7 が最初に消す（`security.md` §2.4 の退去の処理の 4）範囲と、鍵の入れ替えで暗号化し直す範囲を 1 つの表にまとめるため [assumed]。
+住民 1 人に 1 行。退去では J7 の手順 0 が、その住民の `sessions` の行を消したあとにこの行を消し、`erasure_log` に記録する（`security.md` §2.4 の退去の処理の 4、ADR-0079 の D8。`residents` を外部キーで指すので、`residents` を消す前に消す）。
+`residents` と分けるのは、退去で J7 が最初に消す範囲と、鍵の入れ替えで暗号化し直す範囲を 1 つの表にまとめるため [assumed]。
 
 | カラム | 説明 |
 |--------|------|
@@ -88,7 +89,7 @@ DDL は書かない。主なカラムと一意制約のみを示す。
 
 - 一意: UNIQUE(`email_hmac_key_version`, `email_hmac`)。HMAC の鍵の入れ替えのあいだは、ログインと登録の重複の確かめで、鍵輪の新旧の両方の版の HMAC を (版, 値) の組で引く（`environment.md` §8.3）。
 - 索引: (`email_key_version`) と (`email_hmac_key_version`)。再暗号化と HMAC の作り直しが、古い版の残りの行を 1,000 件ずつ引くため。
-- 退去で行ごと消す（J7 の最初の手順、`security.md` §2.4・ADR-0077）。バックアップから戻したときは `erasure.replay` が消す（§6）。
+- 退去で行ごと消す（J7 の最初の手順、`security.md` §2.4・ADR-0079）。バックアップから戻したときは `erasure.replay` が消す（§6）。
 
 #### `addresses` — 架空の住所
 
@@ -140,7 +141,7 @@ DDL は書かない。主なカラムと一意制約のみを示す。
 | `rule_version` text NULL | 投函のときの照合に使ったルール表の版（ADR-0069 の D2）。照合のない M2・M3 の手紙は NULL |
 | `matched_rule_id` text NULL | 当たった規則の ID（`held`・`blocked` のときだけ）。本文の抜き書きは持たない |
 | `decided_at` timestamptz NULL | モデレーターが `held` の手紙を操作した日時。`blocked` の 30 日の保持（J14）の起点 |
-| `settled_at` timestamptz NULL | 手紙を `delivered`・`suppressed`・`returned` にした時刻（ADR-0077 の D1）。書くのは J5 の手順 3 だけで、同じ配達回で確定させた手紙に同じ値を書く。J4 は `returned`・`suppressed` にしても書かず、その回を J6 が持ち越せば手紙は `scheduled` に戻って NULL のまま次の便に移る（async.md J6 の手順 2）。送った人の送信済みに出す 30 日（api.md §7 F-04、ADR-0077 の D5）と、`returned`・`suppressed`・`delivered` の J14 の 30 日の起点 [assumed] |
+| `settled_at` timestamptz NULL | 手紙を `delivered`・`suppressed`・`returned` にした時刻（ADR-0079 の D1）。書くのは J5 の手順 3 だけで、同じ配達回で確定させた手紙に同じ値を書く。J4 は `returned`・`suppressed` にしても書かず、その回を J6 が持ち越せば手紙は `scheduled` に戻って NULL のまま次の便に移る（async.md J6 の手順 2）。送った人の送信済みに出す 30 日（api.md §7 F-04、ADR-0079 の D5）と、`returned`・`suppressed`・`delivered` の J14 の 30 日の起点 [assumed] |
 | `created_at` timestamptz | — |
 
 UNIQUE 制約なし。複数宛先は `letter_recipients` で管理する。
@@ -169,7 +170,7 @@ CHECK(board_post_id IS NULL OR route = 'board_post')
 | カラム | 説明 |
 |--------|------|
 | `id` UUID PK | — |
-| `resident_id` UUID FK→residents | 受取人。CASCADE なしの外部キーで、受取人の退去では J7 が `residents` を消す前にその住民の行をすべて消す（ADR-0077 の退去の表） |
+| `resident_id` UUID FK→residents | 受取人。CASCADE なしの外部キーで、受取人の退去では J7 が `residents` を消す前にその住民の行をすべて消す（ADR-0079 の退去の表） |
 | `delivery_run_id` text FK→delivery_runs | 配達回 ID |
 | `kind` text | letter / newspaper / board_post |
 | `item_id` UUID | 対応するレコードの ID（letters.id / newspaper_editions.id / board_posts.id）。`kind = newspaper` のときは、その住民に届けた版（ADR-0039 の D1） |
@@ -194,13 +195,13 @@ UNIQUE(delivery_run_id, resident_id) WHERE kind = 'newspaper' — 1 回の配達
 | `started_at` timestamptz NULL | — |
 | `finished_at` timestamptz NULL | — |
 
-行は消さない（J14 も J7 も消さない、ADR-0077）。1 日 2 行で、住民の ID も本文も持たない。`letters`・`mailbox_items`・`delivery_notifications`・`newspapers`・`newspaper_articles`・`external_news_items`・`board_posts`・`moderation_queue` の `delivery_run_id` は、この表を CASCADE・SET NULL なしの外部キーで指す。
+行は消さない（J14 も J7 も消さない、ADR-0079）。1 日 2 行で、住民の ID も本文も持たない。`letters`・`mailbox_items`・`delivery_notifications`・`newspapers`・`newspaper_articles`・`external_news_items`・`board_posts`・`moderation_queue` の `delivery_run_id` は、この表を CASCADE・SET NULL なしの外部キーで指す。
 
 ---
 
 ### 通知
 
-配達完了の通知（ADR-0076、FR-028・FR-102）。`sessions` は security.md §9 の提案のテーブル（ADR-0019）。
+配達完了の通知（ADR-0076、FR-028・FR-102）。`sessions` は security.md §9 の提案のテーブル（ADR-0019）。退去では、受付（API）でその住民のセッションをすべて無効にし（`invalidated_at`）、同じトランザクションでその購読と送った記録を消す。J7 の手順 0 が、購読と送った記録の残り → `sessions` の行すべて → `credentials` の行の順に消す（ADR-0079 の D7・D8）。
 
 #### `push_subscriptions` — 通知の購読（端末ごと）
 
@@ -326,7 +327,7 @@ UNIQUE(newspaper_edition_id, resident_id)。誕生日の月日は持たない。
 | `body` text | 本文（文字だけ） |
 | `url` text NULL | 出典の URL（表示の仕方は OQ-060） |
 | `interest_category_id` UUID FK→interest_categories NULL | 配信元の分類から結び付けた興味（結び付け方は OQ-062） |
-| `fetched_at` timestamptz | 取り込んだ日時（保持は 30 日 [assumed]、ADR-0077） |
+| `fetched_at` timestamptz | 取り込んだ日時（保持は 30 日 [assumed]、ADR-0079） |
 
 UNIQUE(source_key, external_id) — J17 のやり直しで重複しない。前の回に取り込んだ記事は、あとの回の J17 で入れ直さない
 （`ON CONFLICT DO NOTHING` で最初の回の `delivery_run_id` のまま残る）。そのため、1 つの外のニュースが素材になるのは、取り込んだ 1 回の配達だけ。
@@ -537,7 +538,7 @@ pg-boss が管理するテーブル。DDL は pg-boss に委ねる。
 #### ログ
 
 アクセスログ・操作ログは構造化ログとして DB 外に出力する。
-個人を特定できない形で保持し（NFR-009）、30 日経過後に廃棄する（ADR-0077）。
+個人を特定できない形で保持し（NFR-009）、30 日経過後に廃棄する（ADR-0079）。
 DB 内には重要な操作の監査レコードのみ保持する（`moderation_actions` 等）。
 
 #### `erasure_log` — 削除の監査ログ
@@ -550,7 +551,7 @@ DB 内には重要な操作の監査レコードのみ保持する（`moderation
 | `erased_at` timestamptz | 削除日時 |
 
 バックアップのリストア後にこのログを再生し、削除済みデータが復元されないようにする（§6）。
-60 日経過後に自動削除する（ADR-0077）。
+60 日経過後に自動削除する（ADR-0079）。
 
 ---
 
@@ -590,36 +591,37 @@ ADR-0060 は「空き家は新規住民の割り当て候補となる」と定�
 
 | データ種別 | テーブル | 作る | 保つ | 消す |
 |-----------|---------|------|------|------|
-| 住民 | `residents` | 新規登録時に作成 | アカウント削除まで | 削除申請で即時物理削除（ADR-0077）→ erasure_log に記録 |
-| 認証情報 | `credentials` | 新規登録時に `residents` と同じトランザクションで作成 | アカウント削除まで。鍵の入れ替えでは行を残したまま暗号化と HMAC を新しい版で作り直す（`environment.md` §8.3） | 退去で J7 が最初に行ごと削除（`security.md` §2.4、ADR-0077） |
+| 住民 | `residents` | 新規登録時に作成 | アカウント削除まで | 削除申請で即時物理削除（ADR-0079）→ erasure_log に記録 |
+| 認証情報 | `credentials` | 新規登録時に `residents` と同じトランザクションで作成 | アカウント削除まで。鍵の入れ替えでは行を残したまま暗号化と HMAC を新しい版で作り直す（`environment.md` §8.3） | 退去で J7 の手順 0 が、`sessions` の行のあとに行ごと削除し、`erasure_log` に記録（`security.md` §2.4、ADR-0079 の D8） |
+| セッション | `sessions` | ログイン時（API） | 有効期限（`expires_at`）が切れるか、ログアウトするまで。退去の受付では `invalidated_at` を付けて無効にする（ADR-0079 の D7） | ログアウトでは API が削除。有効期限切れでは J14 が `expires_at < now()` の行を、それを指す `push_subscriptions` と `delivery_notifications` を同じトランザクションで先に消してから削除する [assumed]（security.md §2.1、async.md J14、ADR-0079 の保持期間）。退去で J7 の手順 0 が、無効にした行も含めてその住民の行をすべて削除し、`erasure_log` に記録（ADR-0079 の D8）。表の定義は security.md §9 の提案 |
 | 住所 | `addresses` | 住民登録時・新規割り当て時 | 居住中は保持。空き家後も保持し、段階 3 から割り当て候補に戻す（ADR-0062） | 管理者が廃棄するまで削除しない（住所のプールを維持） |
-| 居住記録 | `tenancies` | 住所割り当て時・転入時 | 歴史として保持（配達先解決に使う） | 住民削除から 1 年後に削除（ADR-0077） |
-| 手紙（本体） | `letters` | 送信時（`pending` 状態。確認を頼まれた手紙は `held`、ADR-0069。照合に当たって送った人が n を選んだ手紙は作らない） | 配達後も保持。送信者が削除されても `body_encrypted` は残す（受取人保護）。ただし送信者フラグを「退去済み」に更新。`held` はモデレーターが操作するまで保持（長く確かめられないときは OQ-065） | J14 が本文と宛先ごと削除する（ADR-0077 の D2〜D4）[assumed]。`delivered` は、`settled_at` から 30 日を過ぎ、受取人全員が郵便受けから削除した（`kind = 'letter'` のその手紙の `mailbox_items` に `deleted_at IS NULL` の行が 1 つもない）あとの次の J14。`returned`・`suppressed` は `settled_at` から 30 日後。`blocked` は `decided_at` から 30 日後（ADR-0069 の D6）。`reports`（`content_kind = 'letter'`）の行がある手紙は消さず、通報がクローズから 1 年で消えたあとの J14 で同じ条件を当てる。`erasure_log` には記録しない。どの削除も、送った人の送信済みに出す期間（確定から 30 日、api.md §7 F-04・ADR-0077 の D5）のあと。送信者の退去で、その住民の届いていない手紙（`pending`・`scheduled`・`held`・`blocked`・`returned`・`suppressed`）は J7 が即時削除（§5） |
+| 居住記録 | `tenancies` | 住所割り当て時・転入時 | 歴史として保持（配達先解決に使う） | 住民削除から 1 年後に削除（ADR-0079） |
+| 手紙（本体） | `letters` | 送信時（`pending` 状態。確認を頼まれた手紙は `held`、ADR-0069。照合に当たって送った人が n を選んだ手紙は作らない） | 配達後も保持。送信者が削除されても `body_encrypted` は残す（受取人保護）。ただし送信者フラグを「退去済み」に更新。`held` はモデレーターが操作するまで保持（長く確かめられないときは OQ-065） | J14 が本文と宛先ごと削除する（ADR-0079 の D2〜D4）[assumed]。`delivered` は、`settled_at` から 30 日を過ぎ、受取人全員が郵便受けから削除した（`kind = 'letter'` のその手紙の `mailbox_items` に `deleted_at IS NULL` の行が 1 つもない）あとの次の J14。`returned`・`suppressed` は `settled_at` から 30 日後。`blocked` は `decided_at` から 30 日後（ADR-0069 の D6）。`reports`（`content_kind = 'letter'`）の行がある手紙は消さず、通報がクローズから 1 年で消えたあとの J14 で同じ条件を当てる。`erasure_log` には記録しない。どの削除も、送った人の送信済みに出す期間（確定から 30 日、api.md §7 F-04・ADR-0079 の D5）のあと。送信者の退去で、その住民の届いていない手紙（`pending`・`scheduled`・`held`・`blocked`・`returned`・`suppressed`）は J7 が即時削除（§5） |
 | 手紙（宛先） | `letter_recipients` | 送信時 | 手紙本体と同期 | 手紙削除時（同じトランザクション） |
-| 郵便受け | `mailbox_items` | 配達バッチ時 | 受取人が削除するまで保持（FR-099）。削除では `deleted_at` を付ける | 手紙の行（`kind = 'letter'`）は、その手紙を J14 か J7（退去した送り手の `scheduled` の手紙）が消すとき同じトランザクションで削除（ADR-0077）。受取人のアカウント削除では、その住民の行（`resident_id` が本人）をすべて J7 が即時に削除（ADR-0077 の退去の表） |
-| 配達回 | `delivery_runs` | 締め切り処理時 | 期間を置かずに保持（郵便受け・紙面などが外部キーで指し、`done` の回だけを返す条件に使う。ADR-0077）[assumed] | 削除しない（J14・J7 の対象にしない） |
+| 郵便受け | `mailbox_items` | 配達バッチ時 | 受取人が削除するまで保持（FR-099）。削除では `deleted_at` を付ける | 手紙の行（`kind = 'letter'`）は、その手紙を J14 か J7（退去した送り手の `scheduled` の手紙）が消すとき同じトランザクションで削除（ADR-0079）。受取人のアカウント削除では、その住民の行（`resident_id` が本人）をすべて J7 が即時に削除（ADR-0079 の退去の表） |
+| 配達回 | `delivery_runs` | 締め切り処理時 | 期間を置かずに保持（郵便受け・紙面などが外部キーで指し、`done` の回だけを返す条件に使う。ADR-0079）[assumed] | 削除しない（J14・J7 の対象にしない） |
 | 通知の購読 | `push_subscriptions` | 住民が端末で通知を許可したとき（API） | セッションが有効な間（ADR-0076） | セッションの無効化・購読の削除・プッシュサービスの 404 / 410・アカウント削除時に即時削除 |
-| 通知を送った記録 | `delivery_notifications` | J15 が送る前 | 30 日保持（ADR-0077・ADR-0076）[assumed] | 指している配達回の `finished_at` から 30 日経過後に J14 が削除（async.md J14）。購読の削除・アカウント削除時に即時削除 |
+| 通知を送った記録 | `delivery_notifications` | J15 が送る前 | 30 日保持（ADR-0079・ADR-0076）[assumed] | 指している配達回の `finished_at` から 30 日経過後に J14 が削除（async.md J14）。購読の削除・アカウント削除時に即時削除 |
 | 朝刊・夕刊（紙面） | `newspapers` | 組版バッチ時 | バックナンバーとして保持（FR-039）。保持期間は OQ-030 次第（仮: 無期限） | 決定次第（OQ-030） |
 | 版 | `newspaper_editions` | 組版バッチ時（`newspapers` と同じトランザクション） | 紙面と同期 | 紙面削除時 |
 | 新聞素材一覧 | `newspaper_items` | 組版時 | 紙面と同期 | 紙面削除時 |
-| 記事の文字 | `newspaper_articles` | J16（素材ごとに 1 回、記事の打ち切りの前だけ）・J3（行のない素材に template） | 紙面と同じ（ADR-0077） | 紙面削除時。素材の投稿が削除されたとき・投稿者の退去時に即時削除し、版を組み直す |
+| 記事の文字 | `newspaper_articles` | J16（素材ごとに 1 回、記事の打ち切りの前だけ）・J3（行のない素材に template） | 紙面と同じ（ADR-0079） | 紙面削除時。素材の投稿が削除されたとき・投稿者の退去時に即時削除し、版を組み直す |
 | 誕生日の欄（組 1・2 と一緒に作る） | `newspaper_birthday_entries` | J3（住民ごとの版の朝刊を組むとき、ADR-0074 の D9） | 紙面と同じ | 紙面削除時。載った住民の退去時に J7 が即時削除し、行のあった版を J8 で組み直す [assumed] |
-| 外のニュース | `external_news_items` | J17 | 取り込みから 30 日（ADR-0077）[assumed]。OQ-060 の利用の条件で変わる | 30 日経過後に J14 が削除（載った記事の `newspaper_articles` は紙面と同じだけ残る） |
+| 外のニュース | `external_news_items` | J17 | 取り込みから 30 日（ADR-0079）[assumed]。OQ-060 の利用の条件で変わる | 30 日経過後に J14 が削除（載った記事の `newspaper_articles` は紙面と同じだけ残る） |
 | 興味の一覧 | `interest_categories` | 運用者の CLI | 運用者が外すまで（外すときは `active = false`） | 削除しない（版の `edition_key` が指すため） |
-| 住民の興味 | `resident_interests` | 登録のとき・設定（API） | 本人が外すまで | 本人が外したとき・アカウント削除時に即時削除（ADR-0077・ADR-0039 の D5） |
-| 推し量った興味（段階 2） | `inferred_interests` | 過去の新聞の検索で興味に当たったとき（API、ADR-0045） | 最後に当たってから 30 日 [assumed] | 30 日経過後に J14 が削除。5 つを超えるときはいちばん古い行を置き換える。アカウント削除時に即時削除（ADR-0077・ADR-0045 の D5）。本人が消す経路はない（D8） |
-| 掲示板投稿 | `board_posts` | 投稿時（`awaiting_review`） | 掲載後も保持。投稿者削除で即時 `deleted` に変更（ADR-0077） | 投稿者削除時に `body` を消去。deleted レコード自体は通報クローズから 1 年後削除 |
+| 住民の興味 | `resident_interests` | 登録のとき・設定（API） | 本人が外すまで | 本人が外したとき・アカウント削除時に即時削除（ADR-0079・ADR-0039 の D5） |
+| 推し量った興味（段階 2） | `inferred_interests` | 過去の新聞の検索で興味に当たったとき（API、ADR-0045） | 最後に当たってから 30 日 [assumed] | 30 日経過後に J14 が削除。5 つを超えるときはいちばん古い行を置き換える。アカウント削除時に即時削除（ADR-0079・ADR-0045 の D5）。本人が消す経路はない（D8） |
+| 掲示板投稿 | `board_posts` | 投稿時（`awaiting_review`） | 掲載後も保持。投稿者削除で即時 `deleted` に変更（ADR-0079） | 投稿者削除時に `body` を消去。deleted レコード自体は通報クローズから 1 年後削除 |
 | 住所録 | `address_book` | 住民が手動で追加（FR-051） | 住民が手動で削除するまで保持（ADR-0003）。足したもとの投稿・手紙が消えても行は残す（`board_post_id` は NULL になる、ADR-0065 の D6） | 所有者のアカウント削除時に削除 |
 | 住所録の追加の数え | `address_book_daily_counts` | 住所録の追加・住所を変えた更新のとき（API、ADR-0065 の D4） | 今日を含む直近 7 日（JST の暦日。相互にならない追加の判定、ADR-0066 の D5）。エントリを消しても減らさない | `jst_date` が今日（JST）より 7 日以上前の行を次の J14 が削除。アカウント削除時に即時削除（外部キーの CASCADE） |
 | ブロック | `blocks` | ブロック操作時 | ブロック解除まで | ブロック解除時、またはどちらかが退去時 |
-| モデレーション審査 | `moderation_queue` | 締め切り処理時にジョブ経由で登録（掲示板の投稿だけ、ADR-0069） | 審査完了後 1 年保持（ADR-0077）[assumed] | 1 年経過後削除 |
-| モデレーター操作 | `moderation_actions` | モデレーターの操作時 | 1 年保持（ADR-0077）[assumed] | 1 年経過後削除 |
-| 通報 | `reports` | 住民の通報操作時 | クローズまで保持。クローズ後 1 年保持（ADR-0077）[assumed] | クローズから 1 年後に削除 |
+| モデレーション審査 | `moderation_queue` | 締め切り処理時にジョブ経由で登録（掲示板の投稿だけ、ADR-0069） | 審査完了後 1 年保持（ADR-0079）[assumed] | 1 年経過後削除 |
+| モデレーター操作 | `moderation_actions` | モデレーターの操作時 | 1 年保持（ADR-0079）[assumed] | 1 年経過後削除 |
+| 通報 | `reports` | 住民の通報操作時 | クローズまで保持。クローズ後 1 年保持（ADR-0079）[assumed] | クローズから 1 年後に削除 |
 | 画像 | `images` | アップロード時 | 加工した画像は、参照するコンテンツ（手紙・掲示板）が存在する間。元の画像は加工が終わるか失敗するまで（取りこぼしは最長でアップロードから約 48 時間。24 時間 [assumed] を過ぎたあとの次の J14 で消す、ADR-0074 の D5） | 元の画像は J13 の加工のあと（失敗でも）に消し、残りは 24 時間を過ぎたあとの次の J14 が消す。加工した画像はコンテンツ削除時にオブジェクトストレージからも削除 |
 | ジョブ | `jobs`（pg-boss） | ジョブ enqueue 時 | 完了後 24 時間（pg-boss の設定）[assumed] | pg-boss が自動削除 |
-| ログ（DB 外） | — | 操作・アクセス時 | 30 日保持（ADR-0077）[assumed] | 30 日経過後廃棄（NFR-009） |
-| 消去ログ | `erasure_log` | 物理削除の実行時 | 60 日保持（ADR-0077）[assumed] | 60 日経過後削除 |
+| ログ（DB 外） | — | 操作・アクセス時 | 30 日保持（ADR-0079）[assumed] | 30 日経過後廃棄（NFR-009） |
+| 消去ログ | `erasure_log` | 物理削除の実行時 | 60 日保持（ADR-0079）[assumed] | 60 日経過後削除 |
 
 ### 状態遷移図
 
@@ -642,13 +644,13 @@ stateDiagram-v2
     scheduled --> [*] : 送信者の退去（J7 で削除）
     held --> [*] : 送信者の退去（J7 で削除）
     blocked --> [*] : decided_at から 30 日後（J14）・送信者の退去（J7）で削除
-    delivered --> [*] : settled_at から 30 日後かつ受取人全員が郵便受けから削除（次の J14 で削除、ADR-0077）
+    delivered --> [*] : settled_at から 30 日後かつ受取人全員が郵便受けから削除（次の J14 で削除、ADR-0079）
     suppressed --> [*] : settled_at から 30 日後（J14）・送信者の退去（J7）で削除
     returned --> [*] : settled_at から 30 日後（J14）・送信者の退去（J7）で削除
 ```
 
-送った人の送信済み（api.md §7 F-04）は、確定した手紙を状態にかかわらず確定の時刻（`settled_at`、`blocked` は `decided_at`）から 30 日まで返す。J14 の削除はどれもそのあとなので、送った人には削除が見えない（ADR-0077 の D5、security.md T-06）。
-通報された手紙（`reports` の行があるもの）は、J14 では `delivered`・`suppressed`・`returned` から `[*]` に進まない。通報の行が消えたあとの J14 で同じ条件を当てる（ADR-0077 の D4）。
+送った人の送信済み（api.md §7 F-04）は、確定した手紙を状態にかかわらず確定の時刻（`settled_at`、`blocked` は `decided_at`）から 30 日まで返す。J14 の削除はどれもそのあとなので、送った人には削除が見えない（ADR-0079 の D5、security.md T-06）。
+通報された手紙（`reports` の行があるもの）は、J14 では `delivered`・`suppressed`・`returned` から `[*]` に進まない。通報の行が消えたあとの J14 で同じ条件を当てる（ADR-0079 の D4）。
 
 手紙の審査はルール表だけで行い、LLM は使わない（ADR-0072）。照合は投函のときに API が行い、照合に当たって送った人が送らないと選んだ手紙は保存しない（ADR-0069）。
 ルール表の `reject` の段に当たった手紙（422 `letter_rejected`）と、本文に絵文字がある手紙（400）も保存しない。`letters` の行も、`matched_rule_id` も、`moderation_actions` の行もできない（ADR-0069 の D11・D13）。表と列は変えない。`held` と `blocked` の手紙は `review` の段に当たった手紙だけ。
@@ -692,39 +694,40 @@ stateDiagram-v2
 
 ## §5 住民が退去するとき
 
-詳細は ADR-0077 を参照。要点:
+詳細は ADR-0079 を参照。要点:
 
 1. **住民自身のデータ**: `residents` レコードは即時物理削除し、`erasure_log` に記録する。
-   プロフィール（`nickname`, `bio`）・認証情報は即時消去する。
+   プロフィール（`nickname`, `bio`）は即時消去する。
+   セッションは退去の受付ですべて無効にし（`invalidated_at`）、J7 の最初の手順（手順 0）で、通知の購読の残り → `sessions` の行すべて → `credentials` の行の順に消して、`sessions` と `credentials` の行を `erasure_log` に記録する（ADR-0079 の D7・D8）。
 
 2. **送信済み手紙**: 受取人の郵便受けに配達済みのものはそのまま残す。
    `sender_id` を NULL に変更し、API の表示では「退去済み」と返す。
-   届いていない手紙（`pending`・`scheduled`・`held`・`blocked`・`returned`・`suppressed`）は、受取人のために残す理由がなく、送った人ももう送信済みを見られないので、本文と宛先ごと即時に削除する。`scheduled` の手紙の、まだ `visible_at` を過ぎていない郵便受けの行も一緒に消す（ADR-0077 の退去の表・ADR-0069 の D6）[assumed]。
+   届いていない手紙（`pending`・`scheduled`・`held`・`blocked`・`returned`・`suppressed`）は、受取人のために残す理由がなく、送った人ももう送信済みを見られないので、本文と宛先ごと即時に削除する。`scheduled` の手紙の、まだ `visible_at` を過ぎていない郵便受けの行も一緒に消す（ADR-0079 の退去の表・ADR-0069 の D6）[assumed]。
 
 3. **掲示板投稿**: 即時 `deleted` 状態に変更し、`body` を消去する。
-   その投稿が掲載された新聞を組み直す（掲載内容から除去、ADR-0077）。
+   その投稿が掲載された新聞を組み直す（掲載内容から除去、ADR-0079）。
    その投稿から作った記事（`newspaper_articles`）も即時削除し、載った版をすべて組み直す（ADR-0039）。
 
    **新聞の誕生日の欄**（組 1・2 を作る段階から）: その住民の `newspaper_birthday_entries` の行を即時削除し、行のあった住民ごとの版を組み直して欄から除く（J7・J8、ADR-0074 の D9）[assumed]。
 
-   **興味**: `resident_interests` と `inferred_interests`（段階 2）を即時削除する（ADR-0077・ADR-0039 の D5・ADR-0045 の D5）。
+   **興味**: `resident_interests` と `inferred_interests`（段階 2）を即時削除する（ADR-0079・ADR-0039 の D5・ADR-0045 の D5）。
 
-   **受け取った郵便受けの行**: その住民の `mailbox_items`（`resident_id` が本人）を、`residents` を消す前に即時削除する（ADR-0077 の退去の表）。その住民に届いた手紙は、残りの受取人の行で §4 の条件を当てる。
+   **受け取った郵便受けの行**: その住民の `mailbox_items`（`resident_id` が本人）を、`residents` を消す前に即時削除する（ADR-0079 の退去の表）。その住民に届いた手紙は、残りの受取人の行で §4 の条件を当てる。
 
    **住所録の追加の数え**: `address_book_daily_counts` は `residents` の削除で即時に消える（外部キーの CASCADE、ADR-0065 の D4）。
 
 4. **住所**: `addresses.status` を `vacant_deleted` に変更する（ADR-0060 の D1）。
 
-   **通知**: 通知の購読（`push_subscriptions`）と送った記録（`delivery_notifications`）は即時削除する（ADR-0077・ADR-0076）。
+   **通知**: 通知の購読（`push_subscriptions`）と送った記録（`delivery_notifications`）は即時削除する（ADR-0079・ADR-0076）。
 
 5. **長期不在による空き家化**: 今は起きない（休眠は入居で、`vacant_expired` への遷移を持たない。ADR-0060 の D3、OQ-088）。
-   OQ-088 の答えで遷移を作るときは、`vacant_expired` になった住所の元住民を、さらに 12 か月が経過した時点で退去済みとして扱い、上記 1〜4 を適用する（ADR-0077）[assumed]。
+   OQ-088 の答えで遷移を作るときは、`vacant_expired` になった住所の元住民を、さらに 12 か月が経過した時点で退去済みとして扱い、上記 1〜4 を適用する（ADR-0079）[assumed]。
 
 ---
 
 ## §6 バックアップ
 
-- バックアップは 30 日間保持する（ADR-0077）[assumed]。
+- バックアップは 30 日間保持する（ADR-0079）[assumed]。
 - バックアップからリストアした後は `erasure_log` を順番に再生し、
   削除済みデータがリストアで復元されていないか確認・再削除する。
 - バックアップはマネージドの PostgreSQL の自動のバックアップ（毎日の全体と、その間の時点に戻せる WAL）で取り、別の地域にも写す。復元の練習は検証環境で行う（`environment.md` §6.5、ADR-0052）[assumed]。
@@ -782,7 +785,7 @@ stateDiagram-v2
 | FR-112 | §2 `letters`（`held`・`rule_version`・`matched_rule_id`・`decided_at`）・`moderation_actions.letter_id`・§4 手紙の状態遷移と保持（ADR-0069） |
 | FR-113 | §2 `residents.age_at_registration`・`age_base_date`・`birthday_month`・`birthday_day` と今の年齢の式（ADR-0073）・§9（年齢による違いは作らない、ADR-0057） |
 | FR-127 | §2 `residents.birthday_month`・`birthday_day`（CHECK で暦にある月日だけ。書き換えない、ADR-0073 の D3・D5）・§2 `newspaper_editions.edition_key` の `acquaintance:`（誕生日の欄、ADR-0074 の D9）・§2 `newspaper_birthday_entries`（欄の中身。組 1・2 と一緒に作る）・§4・§5（載った住民の退去で消して組み直す） |
-| FR-093, FR-097 | §5 退去処理（ADR-0077） |
+| FR-093, FR-097 | §5 退去処理（ADR-0079） |
 | FR-099 | §4 `mailbox_items.deleted_at` |
 | NFR-002 | §1 原則 5（個人情報最小限） |
 | NFR-009 | §4 ログ 30 日廃棄 |
@@ -817,7 +820,7 @@ stateDiagram-v2
 | OQ-081（掲示板の経路の中身）→ 決定 | 2026-11-21、ADR-0065・ADR-0066。オープンは投稿ごとなので `board_posts.accepts_letters`（既定は false）を足した。経路は投稿に結び付き、住所を見せないので、`address_book.source`・`board_post_id`（投稿の物理削除で NULL にし、行は残す）・`source_letter_id`（届いた手紙の差出人を住所を見せずに足し返す、ADR-0065 の D15）を足し、その行と `letter_recipients` の宛先の住所を NULL にできるようにした（`letter_recipients.route`・`board_post_id`）。知り合いにする行の組を `source` で分けた（住所を入れた行と住所を見せない行を組にしない）。関係は表に保存せず、住所録・居住記録・投稿からそのつど求める（§2 `address_book`）。相互にならない追加の判定のために `address_book.counted_at` を足し、`address_book_daily_counts` を 7 日分持つ（§2・§4） |
 | OQ-082（マッチング・商店・団体との手紙、転送のときの知り合い） | 仮置きなし（どれも MVP の外）。転送中の相手を知り合いとみなすなら、§3 の振り分けと知り合いの求め方（`tenancies` の転送の行）を直す |
 | OQ-060（外のニュースの配信元・利用の条件） | `external_news_items` の保持は 30 日 [assumed]。条件で保持期間と `url` の扱いが変わる |
-| OQ-030（アカウント情報の保持期間） | ADR-0077 の数値（logs 30 日, moderation 1 年, reports クローズ後 1 年, backups 30 日, erasure_log 60 日、手紙の `blocked`・`returned`・`suppressed`・`delivered` と送信済みに出す期間の 30 日）を `[assumed]` として仮置き。確定したら新しい ADR で決め、ADR-0077 を置き換える |
+| OQ-030（アカウント情報の保持期間） | ADR-0079 の数値（logs 30 日, moderation 1 年, reports クローズ後 1 年, backups 30 日, erasure_log 60 日、手紙の `blocked`・`returned`・`suppressed`・`delivered` と送信済みに出す期間の 30 日）を `[assumed]` として仮置き。確定したら新しい ADR で決め、ADR-0079 を置き換える |
 | OQ-031（管理者・モデレーター役割）→ 決定 | ロールは住民とモデレーターの 2 つ（ADR-0020）。`moderation_actions.moderator_id` は `residents` の FK として保持し、モデレーターのロールを持つ住民だけが書ける。権限の規則表は `security.md` §4。ロールの保持（`staff_roles` テーブルか `residents` の列か）は実装で決める |
 | OQ-037（違反した住民への処置）→ 決定 | 処置の内容はマスターが後で決める（2026-11-19、ADR-0032）。決まるまで、住民の停止・警告を表す列や状態（`residents` の列、`moderation_actions.action` の値）を置かない。内容は OQ-048（持ち越し）で、答えのあとに `moderation_actions.action` の値と §4 のライフサイクルを直す |
 

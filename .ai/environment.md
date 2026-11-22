@@ -3,7 +3,7 @@
 - 状態: 草案
 - 日付: 2026-11-21
 - チケット: YGO-009
-- 根拠: `.ai/brief.md`・`requirements.md`（NFR-058・NFR-063・NFR-065・NFR-067・NFR-071〜NFR-080・NFR-091・NFR-092）・`architecture.md`・`async.md`・`db.md`・`security.md`・`roadmap.md`・ADR-0006・0008〜0012・0021・0031・0033・0076・0077
+- 根拠: `.ai/brief.md`・`requirements.md`（NFR-058・NFR-063・NFR-065・NFR-067・NFR-071〜NFR-080・NFR-091・NFR-092）・`architecture.md`・`async.md`・`db.md`・`security.md`・`roadmap.md`・ADR-0006・0008〜0012・0021・0031・0033・0076・0079
 - 関連 ADR: 0052（ローカルの開発と `check.sh` の環境・IaC は OpenTofu で設計だけ）・0068（使い終わった道具は片付ける）
 
 ---
@@ -211,7 +211,7 @@ flowchart LR
 
 ### §6.5 バックアップと復元（`db.md` §6）
 
-- マネージドの PostgreSQL の自動のバックアップ（毎日の全体）と、その間の時点に戻せる記録（WAL）を **30 日**持つ（ADR-0077）[assumed]。バックアップは鍵管理の鍵で暗号化する。
+- マネージドの PostgreSQL の自動のバックアップ（毎日の全体）と、その間の時点に戻せる記録（WAL）を **30 日**持つ（ADR-0079）[assumed]。バックアップは鍵管理の鍵で暗号化する。
 - バックアップは同じ事業者の別の地域にも写す [assumed]（地域全体の障害に備える。費用は §9）。
 - 復元の練習は検証環境で行う（月に 1 回 [assumed]、検証環境を作るなら。OQ-085 (2)）: バックアップを検証環境に戻す → `erasure.replay` を動かす → 退去した住民のデータが戻っていないことを確かめる（`async.md` §6・`security.md` T-13）。本番に戻すのは運用者の手作業で、手順は `report.md` に書く（NFR-075）。
 - オブジェクトストレージは版を持たせず、紙面は DB の `newspapers` から組み直せる（ADR-0007）。消した画像を戻さないため、オブジェクトストレージのバックアップは作らない [assumed]。
