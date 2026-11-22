@@ -51,13 +51,18 @@ DDL は書かない。主なカラムと一意制約のみを示す。
 | `id` UUID PK | 内部 ID（変更不可、ADR-0001） |
 | `nickname` text | 任意の表示名（FR-009） |
 | `bio` text | 自己紹介文（FR-008） |
-| `age_at_registration` smallint NOT NULL | 登録のときに住民が入れた年齢（FR-113、ADR-0048 の D1）。CHECK(`age_at_registration BETWEEN 0 AND 999`)。登録のあとは書き換えない（D2） |
-| `age_base_date` date NOT NULL | 年齢を進める基準の日。登録した日の JST の日付（ADR-0048 の D3）。今の年齢 = `age_at_registration` + この日から JST の日付で満了した年数（2/29 はうるう年でない年は 3/1 に上がる）。登録のあとは書き換えない |
+| `age_at_registration` smallint NOT NULL | 登録のときに住民が入れた年齢（FR-113、ADR-0073 の D1）。CHECK(`age_at_registration BETWEEN 0 AND 999`)。登録のあとは書き換えない（D2） |
+| `age_base_date` date NOT NULL | 年齢を進める起点の日。登録した日の JST の日付（ADR-0073 の D3）。登録のあとは書き換えない |
+| `birthday_month` smallint NOT NULL | 誕生日の月（FR-127、ADR-0073 の D3・D5）。CHECK(`birthday_month BETWEEN 1 AND 12`)。架空でよい。登録のあとは書き換えない（D2） |
+| `birthday_day` smallint NOT NULL | 誕生日の日。CHECK(`birthday_day BETWEEN 1 AND 31`)。月日の組み合わせを CHECK で確かめる: `birthday_day <= CASE WHEN birthday_month = 2 THEN 29 WHEN birthday_month IN (4, 6, 9, 11) THEN 30 ELSE 31 END`（2/29 は許し、2/30・4/31 などは許さない）。登録のあとは書き換えない |
+
+今の年齢 = `age_at_registration` + 「`age_base_date` より後で、今日（JST）以前に来た誕生日の回数」（ADR-0073 の D3）。登録の日が誕生日でも、その日には上がらない。誕生日が 2/29 の住民は、うるう年でない年は 3/1 に上がる。C2 が読むときに時計のアダプタで計算し、列は書き換えない。
+誕生日で行を引く索引（今日が誕生日の住民を J3 が探すため）は、組 1・2 と誕生日の欄（ADR-0074 の D9）を作るときに足す `[assumed]`。MVP では誕生日で引く処理がないので置かない。
 | `last_login_at` timestamptz | 最終ログイン日時（住民の側に置く。下の注） |
 | `created_at` timestamptz | 登録日時 |
 | `deleted_at` timestamptz | 論理削除フラグ代わりに使用（即時物理削除への橋渡し用） |
 
-年齢の 2 列は平文で持ち、退去で行ごと即時に消す（ADR-0048 の D8・ADR-0013）。年齢を変える UPDATE は C2 のどの経路にも書かない（ADR-0048 の D2）。
+年齢と誕生日の 4 列は平文で持ち、退去で行ごと即時に消す（ADR-0073 の D8・ADR-0013）。年齢と誕生日を変える UPDATE は C2 のどの経路にも書かない（ADR-0073 の D2）。
 
 **注**: `last_login_at` を `addresses` に置くと、住民が引っ越しで住所を変えたとき
 その後のログイン記録が旧住所に紐づいてしまう。住民を認証する主体は `residents` であるため、
@@ -245,7 +250,7 @@ J3 は `newspapers` の行とすべての版の行を 1 つのトランザクシ
 |--------|------|
 | `id` UUID PK | 郵便受けの `item_id` と、閲覧の API の `{id}` が指す値 |
 | `newspaper_id` UUID FK→newspapers | — |
-| `edition_key` text | `common`（共通の版）/ `interest:<key>`（興味の版、`<key>` は `interest_categories.key`）/ `holiday`（休刊の印）/ `acquaintance:<resident_id>`（組 1・2 の住民ごとの版、`<resident_id>` は `residents.id`。ADR-0044 の D4。MVP では作らず、作る時期は OQ-070）。API では返さない（ADR-0039 の D11） |
+| `edition_key` text | `common`（共通の版）/ `interest:<key>`（興味の版、`<key>` は `interest_categories.key`）/ `holiday`（休刊の印）/ `acquaintance:<resident_id>`（組 1・2 の住民ごとの版、`<resident_id>` は `residents.id`。ADR-0074 の D4。紙面には知り合いの投稿と、朝刊ではその日が誕生日の知り合いの誕生日の欄（ADR-0074 の D9）が載る。MVP では作らず、作る時期は OQ-070）。API では返さない（ADR-0039 の D11） |
 | `storage_url` text NULL | 組版済み静的 HTML の保存先（C8）。`holiday` の版は NULL |
 | `typeset_at` timestamptz | 組版完了日時 |
 
@@ -287,6 +292,24 @@ CHECK ((source_kind = 'board_post') = (body IS NULL)) — 投稿の記事はま�
 - J16 は、記事の打ち切り（04:30 / 16:15 JST）[assumed] より前にしか行を入れない（入れるトランザクションの中で DB の時計で確かめる。J17 の取り込みの打ち切りと同じ形）
 - J3 は組む前に、行のない素材に `written_by = 'template'` の行を `ON CONFLICT DO NOTHING` で入れ、それから組む
 - これで J3 が組んだあとに行が増えず、J3 の再試行・J8 の組み直しは同じ行から同じ HTML を組む（FR-037・NFR-022）。行を消すのは、素材の投稿の削除・投稿者の退去のとき（§4）だけ
+
+#### `newspaper_birthday_entries` — 誕生日の欄に載せた住民（ADR-0074 の D9）
+
+組 1・2 と一緒に作る（MVP では作らない。時期は OQ-070）[assumed]。J3 が住民ごとの版（`acquaintance:<resident_id>`）の朝刊を組むとき、誕生日の欄に載せた住民ごとに 1 行を、版と同じトランザクションで入れる。
+J3 の再試行と J8 の組み直しは、この行から欄を組み、`residents` と住所録を読み直さない（`newspaper_articles` と同じく、保存した行から同じ HTML を組む）。
+
+| カラム | 説明 |
+|--------|------|
+| `id` UUID PK | — |
+| `newspaper_edition_id` UUID FK→newspaper_editions | 欄が載った版（`acquaintance:` の版だけ） |
+| `resident_id` UUID | 載った住民（外部キーにしない。退去で J7 がこの列で行を引いて消す） |
+| `nickname` text | J3 の時点のニックネーム |
+| `age` integer | その日に上がったあとの年齢（ADR-0073 の D3） |
+| `address_text` text | J3 の時点の今の住所 |
+| `position` integer | 欄の中の並び順（住所の順） |
+
+UNIQUE(newspaper_edition_id, resident_id)。誕生日の月日は持たない。
+平文で持ち、載った住民の退去で J7 が即時に消し、行のあった版を J8 で組み直す（§4・§5）。それ以外は紙面と同じだけ残す。ログ・ジョブのペイロード・LLM には出さない（ADR-0073 の D8）。
 
 #### `external_news_items` — 取り込んだ外のニュース（ADR-0039 の D6）
 
@@ -405,7 +428,7 @@ CHECK(source_letter_id IS NULL OR source = 'letter')
 掲示板の経路（ADR-0065 の D7、OQ-081 → 決定）は、関係を表に保存せず、そのつど求める。X の行が `source = 'board_post'`・`board_post_id = P` を持ち、その行の `registered_tenancy_id` が Y の今の居住記録を指し、
 P が `author_id = Y`・`status = 'published'`・`accepts_letters = true` なら、X はその行宛てに Y へ手紙を出せる（向きは X から Y だけ）。`board_post` でない行と、`board_post_id` が NULL になった行には D7 は効かない。
 住所録の `acquainted`（api.md §7 F-09）は、その行が D2 か、その行について D7 を満たすときに true。手紙の知り合いと `acquainted` は `blocks` を見ない。
-新聞の知り合い（ADR-0044 の D2）だけは、これに `blocks` に行がないことと、組が「`address` と `address`」であることを足す（ADR-0065 の D14）。住所がない・空き家の住所を足した行は `registered_tenancy_id` が NULL で、知り合いにならない。
+新聞の知り合い（ADR-0074 の D2）だけは、これに `blocks` に行がないことと、組が「`address` と `address`」であることを足す（ADR-0065 の D14）。住所がない・空き家の住所を足した行は `registered_tenancy_id` が NULL で、知り合いにならない。
 住所録の追加の 1 日 20 件 `[assumed]` は、`address_book` の `created_at` では数えない（行を消して足し直せば上限を越えられるため）。
 下の `address_book_daily_counts` で数える（ADR-0065 の D4）。
 
@@ -498,9 +521,9 @@ CHECK(`num_nonnulls(report_id, letter_id) = 1`) — 1 つの行は通報か確�
 |--------|------|
 | `id` UUID PK | — |
 | `uploader_id` UUID FK→residents | — |
-| `original_url` text NULL | アップロード元の保存先。J13 の加工が終わるか失敗した時点で元の画像を消して NULL にする。取りこぼしはアップロードから 24 時間 [assumed] を過ぎたあとの次の J14 が消す（最長で約 48 時間）（ADR-0044 の D5、FR-118） |
+| `original_url` text NULL | アップロード元の保存先。J13 の加工が終わるか失敗した時点で元の画像を消して NULL にする。取りこぼしはアップロードから 24 時間 [assumed] を過ぎたあとの次の J14 が消す（最長で約 48 時間）（ADR-0074 の D5、FR-118） |
 | `processed_url` text NULL | 新聞写真風加工後の保存先 |
-| `state` text | pending / processing / processed / failed（J13 が始めに `processing` にし、加工が終われば `processed`、最後の再試行に失敗すれば `failed`。再試行は `pending`・`processing` の行で動く。`processing` のまま 24 時間を過ぎた行は J14 が `failed` にする。`async.md` J13・J14、ADR-0044 の D5） |
+| `state` text | pending / processing / processed / failed（J13 が始めに `processing` にし、加工が終われば `processed`、最後の再試行に失敗すれば `failed`。再試行は `pending`・`processing` の行で動く。`processing` のまま 24 時間を過ぎた行は J14 が `failed` にする。`async.md` J13・J14、ADR-0074 の D5） |
 | `created_at` timestamptz | — |
 
 #### `jobs` — ジョブキュー
@@ -578,6 +601,7 @@ ADR-0060 は「空き家は新規住民の割り当て候補となる」と定�
 | 版 | `newspaper_editions` | 組版バッチ時（`newspapers` と同じトランザクション） | 紙面と同期 | 紙面削除時 |
 | 新聞素材一覧 | `newspaper_items` | 組版時 | 紙面と同期 | 紙面削除時 |
 | 記事の文字 | `newspaper_articles` | J16（素材ごとに 1 回、記事の打ち切りの前だけ）・J3（行のない素材に template） | 紙面と同じ（ADR-0013） | 紙面削除時。素材の投稿が削除されたとき・投稿者の退去時に即時削除し、版を組み直す |
+| 誕生日の欄（組 1・2 と一緒に作る） | `newspaper_birthday_entries` | J3（住民ごとの版の朝刊を組むとき、ADR-0074 の D9） | 紙面と同じ | 紙面削除時。載った住民の退去時に J7 が即時削除し、行のあった版を J8 で組み直す [assumed] |
 | 外のニュース | `external_news_items` | J17 | 取り込みから 30 日（ADR-0013）[assumed]。OQ-060 の利用の条件で変わる | 30 日経過後に J14 が削除（載った記事の `newspaper_articles` は紙面と同じだけ残る） |
 | 興味の一覧 | `interest_categories` | 運用者の CLI | 運用者が外すまで（外すときは `active = false`） | 削除しない（版の `edition_key` が指すため） |
 | 住民の興味 | `resident_interests` | 登録のとき・設定（API） | 本人が外すまで | 本人が外したとき・アカウント削除時に即時削除（ADR-0013・ADR-0039 の D5） |
@@ -589,7 +613,7 @@ ADR-0060 は「空き家は新規住民の割り当て候補となる」と定�
 | モデレーション審査 | `moderation_queue` | 締め切り処理時にジョブ経由で登録（掲示板の投稿だけ、ADR-0069） | 審査完了後 1 年保持（ADR-0013）[assumed] | 1 年経過後削除 |
 | モデレーター操作 | `moderation_actions` | モデレーターの操作時 | 1 年保持（ADR-0013）[assumed] | 1 年経過後削除 |
 | 通報 | `reports` | 住民の通報操作時 | クローズまで保持。クローズ後 1 年保持（ADR-0013）[assumed] | クローズから 1 年後に削除 |
-| 画像 | `images` | アップロード時 | 加工した画像は、参照するコンテンツ（手紙・掲示板）が存在する間。元の画像は加工が終わるか失敗するまで（取りこぼしは最長でアップロードから約 48 時間。24 時間 [assumed] を過ぎたあとの次の J14 で消す、ADR-0044 の D5） | 元の画像は J13 の加工のあと（失敗でも）に消し、残りは 24 時間を過ぎたあとの次の J14 が消す。加工した画像はコンテンツ削除時にオブジェクトストレージからも削除 |
+| 画像 | `images` | アップロード時 | 加工した画像は、参照するコンテンツ（手紙・掲示板）が存在する間。元の画像は加工が終わるか失敗するまで（取りこぼしは最長でアップロードから約 48 時間。24 時間 [assumed] を過ぎたあとの次の J14 で消す、ADR-0074 の D5） | 元の画像は J13 の加工のあと（失敗でも）に消し、残りは 24 時間を過ぎたあとの次の J14 が消す。加工した画像はコンテンツ削除時にオブジェクトストレージからも削除 |
 | ジョブ | `jobs`（pg-boss） | ジョブ enqueue 時 | 完了後 24 時間（pg-boss の設定）[assumed] | pg-boss が自動削除 |
 | ログ（DB 外） | — | 操作・アクセス時 | 30 日保持（ADR-0013）[assumed] | 30 日経過後廃棄（NFR-009） |
 | 消去ログ | `erasure_log` | 物理削除の実行時 | 60 日保持（ADR-0013）[assumed] | 60 日経過後削除 |
@@ -669,6 +693,8 @@ stateDiagram-v2
    その投稿が掲載された新聞を組み直す（掲載内容から除去、ADR-0013）。
    その投稿から作った記事（`newspaper_articles`）も即時削除し、載った版をすべて組み直す（ADR-0039）。
 
+   **新聞の誕生日の欄**（組 1・2 を作る段階から）: その住民の `newspaper_birthday_entries` の行を即時削除し、行のあった住民ごとの版を組み直して欄から除く（J7・J8、ADR-0074 の D9）[assumed]。
+
    **興味**: `resident_interests` と `inferred_interests`（段階 2）を即時削除する（ADR-0013・ADR-0039 の D5・ADR-0045 の D5）。
 
    **住所録の追加の数え**: `address_book_daily_counts` は `residents` の削除で即時に消える（外部キーの CASCADE、ADR-0065 の D4）。
@@ -726,8 +752,8 @@ stateDiagram-v2
 | FR-028, FR-102 | §2 通知（`push_subscriptions`・`delivery_notifications` の `kind`、ADR-0025・ADR-0035） |
 | FR-105, FR-106 | §2 `mailbox_items.visible_at`（手紙の枠の時刻・新聞の定時、全住民への新聞の行、ADR-0035） |
 | FR-031〜039 | §2 `newspapers` / `newspaper_editions` / `newspaper_items`・§4 新聞ライフサイクル |
-| FR-108 | §2 `newspaper_editions.edition_key`（`acquaintance:<resident_id>` は ADR-0044）・`mailbox_items` の新聞の部分一意索引（ADR-0039）。知り合いは `address_book.registered_tenancy_id`・`tenancies`・`blocks` から求める（表は足さない） |
-| FR-118 | §2 `images.original_url`（NULL 可）・§4 画像の保持（ADR-0044 の D5） |
+| FR-108 | §2 `newspaper_editions.edition_key`（`acquaintance:<resident_id>` は ADR-0074）・`mailbox_items` の新聞の部分一意索引（ADR-0039）。知り合いは `address_book.registered_tenancy_id`・`tenancies`・`blocks` から求める（表は足さない） |
+| FR-118 | §2 `images.original_url`（NULL 可）・§4 画像の保持（ADR-0074 の D5） |
 | FR-109 | §2 `interest_categories`（`keywords`）/ `resident_interests` / `inferred_interests`・§4 推し量った興味の保持 30 日・§5 退去で即時削除（ADR-0039・ADR-0045） |
 | FR-119 | 表は足さない。検索の対象は `mailbox_items`（自分に届いた版）・`newspaper_editions`・`newspaper_articles`。検索語は保存しない（ADR-0045 の D1・D4） |
 | FR-110 | §2 `external_news_items`・§4 保持 30 日（ADR-0039） |
@@ -740,7 +766,8 @@ stateDiagram-v2
 | FR-068 | §2 `blocks`・§3 suppressed 処理 |
 | FR-076〜082 | §2 `moderation_queue` / `reports` / `moderation_actions` |
 | FR-112 | §2 `letters`（`held`・`rule_version`・`matched_rule_id`・`decided_at`）・`moderation_actions.letter_id`・§4 手紙の状態遷移と保持（ADR-0069） |
-| FR-113 | §2 `residents.age_at_registration`・`age_base_date`（ADR-0048）・§9（年齢による違いは作らない、ADR-0057。誕生日は OQ-077） |
+| FR-113 | §2 `residents.age_at_registration`・`age_base_date`・`birthday_month`・`birthday_day` と今の年齢の式（ADR-0073）・§9（年齢による違いは作らない、ADR-0057） |
+| FR-127 | §2 `residents.birthday_month`・`birthday_day`（CHECK で暦にある月日だけ。書き換えない、ADR-0073 の D3・D5）・§2 `newspaper_editions.edition_key` の `acquaintance:`（誕生日の欄、ADR-0074 の D9）・§2 `newspaper_birthday_entries`（欄の中身。組 1・2 と一緒に作る）・§4・§5（載った住民の退去で消して組み直す） |
 | FR-093, FR-097 | §5 退去処理（ADR-0013） |
 | FR-099 | §4 `mailbox_items.deleted_at` |
 | NFR-002 | §1 原則 5（個人情報最小限） |
@@ -759,13 +786,13 @@ stateDiagram-v2
 | OQ-043（手紙で止める内容と、手紙の閲覧）→ 決定 | 通報された手紙はモデレーターが条件付きで 1 通だけ確かめてよい（2026-11-19、ADR-0036）。`moderation_actions.action` の `view_letter` は決定の記録として残す。表の変更はない |
 | OQ-052（手紙で止める内容・止めた手紙の閲覧と、年齢や設定で守り方を変えるか）→ 決定 | 2026-11-20、ADR-0069・ADR-0041。`letters` に `held`・`rule_version`・`matched_rule_id`・`decided_at` を足し、`delivery_run_id` を NULL 可にした。`moderation_queue` に手紙の行を入れない（CHECK を `content_kind <> 'letter'` に改めた）。`moderation_actions` に `letter_id` を足した。`blocked` の保持は 30 日 [assumed]（§4） |
 | OQ-063（年齢で何を変えるか）→ 決定 | 2026-11-20、ADR-0057。年齢による違いは作らない。ルール表と権限の規則に年齢の条件を持たせないので、表に年齢の区切りや年齢ごとの規則の列は置かない |
-| OQ-064（年齢の扱い）→ 決定 | 2026-11-20、ADR-0048。`residents` に `age_at_registration`（CHECK 0〜999）と `age_base_date`（登録した日の JST の日付）を足した（§2）。今の年齢は読むときに計算し、列を書き換えるジョブは持たない。生年月日の列は置かない（ADR-0041 の D4）。ほかの住民に見せる条件は、既存の `mailbox_items`（`kind = 'letter'`・`visible_at`・`deleted_at IS NULL` の行だけ）・`letters.sender_id`・`letters.created_at`・`tenancies.is_current`・`started_at`・`blocks`（見る住民がブロックした行だけ）から C2 が求めるので、表を足さない。削除した手紙は数えないので、§4 の保持（受取人の削除操作で `mailbox_items` を消す、受取人全員の削除で `letters` を消す）は変わらない。見せてよいという事実を持つ表も置かない（ADR-0048 の D4・理由） |
-| OQ-077（誕生日を集めて新聞に載せるか） | 誕生日の列は置かない（ADR-0048 の D5 の暫定）。集めるなら `residents` に月日の列を足し、`age_base_date` の扱い（ADR-0048 の D3）を直す。新聞に載せるなら、新聞の表（§2）と J3・J4 の入力を直す |
+| OQ-064（年齢の扱い）→ 決定 | 2026-11-20、ADR-0073（ADR-0048 を置き換え）。`residents` に `age_at_registration`（CHECK 0〜999）と `age_base_date`（登録した日の JST の日付）を足した（§2）。今の年齢は読むときに計算し、列を書き換えるジョブは持たない。生年月日の列は置かない（ADR-0041 の D4）。ほかの住民に見せる条件は、既存の `mailbox_items`（`kind = 'letter'`・`visible_at`・`deleted_at IS NULL` の行だけ）・`letters.sender_id`・`letters.created_at`・`tenancies.is_current`・`started_at`・`blocks`（見る住民がブロックした行だけ）から C2 が求めるので、表を足さない。削除した手紙は数えないので、§4 の保持（受取人の削除操作で `mailbox_items` を消す、受取人全員の削除で `letters` を消す）は変わらない。見せてよいという事実を持つ表も置かない（ADR-0073 の D4・理由） |
+| OQ-077（誕生日を集めて新聞に載せるか）→ 決定 | 2026-11-21、ADR-0073・ADR-0074。`residents` に `birthday_month`・`birthday_day`（NOT NULL。月日の組み合わせを CHECK で確かめ、2/29 は許す）を足した（§2）。`age_base_date` は登録の日のまま残し、今の年齢はそこから後に来た誕生日の回数で進める。誕生日の欄（ADR-0074 の D9）は J3 が組を計算するときに `residents` から読み、欄の中身を `newspaper_birthday_entries` に保存する（組み直しと退去のため。組 1・2 と一緒に作る）。誕生日で引く索引は組 1・2 を作るときに足す（`[assumed]`） |
 | OQ-076（当たった手紙の扱い）→ 決定 | 2026-11-21、ADR-0069・ADR-0057。照合を `reject` と `review` の 2 段に分けた。`reject` の段に当たった手紙と、絵文字のある手紙は保存しないので、表と列の変更はない（§4）。ルール表の項目の段（`tier`）はルール表の持ち方の一部で、置き場は OQ-065 |
 | OQ-087（絶対NGと絵文字を手紙のほかに当てるか）→ 決定 | 2026-11-22、ADR-0069・ADR-0070・ADR-0071。全ての書き込みに当てるが、入力の検査と書いたときの照合で、当たった書き込み（422 `content_rejected`）と絵文字のある書き込み（400）は保存しないので、表と列の変更はない（§4） |
 | OQ-065（手紙の照合の細部） | 長く確かめられない `held` の期限は置かない。決まったら §4 のライフサイクルと J14 を直す |
 | OQ-051（新聞の中身）→ 決定 | 組ごとの版・興味・外のニュース・記事の文字（2026-11-20、ADR-0039）。§2 の新聞と興味の表 |
-| OQ-058（知り合いで埋まる組・一部埋まらない組）→ 決定 | 2026-11-20、ADR-0044。MVP では全住民を知り合い 0 の組として扱うので、作る `edition_key` は `common` / `interest:<key>` / `holiday` だけ。組 1・2 の版の種類 `acquaintance:<resident_id>` を §2 に書いた（作る時期は OQ-070）。組は保存せず、知り合いは既存の `address_book.registered_tenancy_id`・`tenancies.is_current`・`blocks` から J3 が求めるので、表を足さない。`images.original_url` を NULL 可にし、元の画像の保持を §4 に書いた |
+| OQ-058（知り合いで埋まる組・一部埋まらない組）→ 決定 | 2026-11-20、ADR-0074（ADR-0044 を置き換え）。MVP では全住民を知り合い 0 の組として扱うので、作る `edition_key` は `common` / `interest:<key>` / `holiday` だけ。組 1・2 の版の種類 `acquaintance:<resident_id>` を §2 に書いた（作る時期は OQ-070）。組は保存せず、知り合いは既存の `address_book.registered_tenancy_id`・`tenancies.is_current`・`blocks` から J3 が求めるので、表を足さない。`images.original_url` を NULL 可にし、元の画像の保持を §4 に書いた |
 | OQ-071（地図の印を付けるエントリ）→ 決定 | 2026-11-20、ADR-0051。印は本人の住所録のすべてのエントリの `address_book.address_text` に付ける（OQ-054 の答え「2:1」、ADR-0064 の D1 (c)・ADR-0065 の D8。投稿から足した行は `address_text` が NULL で印が付かない、ADR-0065 の D12）。地図の印には `acquainted`（§2 `address_book` の知り合いの求め方）を使わない。表と列の変更はない |
 | OQ-059（検索などから興味を集めること）→ 決定 | 2026-11-20、ADR-0045。`interest_categories.keywords` と `inferred_interests` を足した（段階 2）。`resident_interests.source` は `registration` / `settings` のまま。検索語を保存する列・表は作らない。保持は §4 |
 | OQ-072（推し量ることを住民が止められるか）→ 決定 | 2026-11-21、ADR-0053。止められない。止めたことを持つ列・表は置かない（`residents` にも `inferred_interests` にも足さない）。表と列の変更はない。検索と `inferred_interests` への書き込みの連動は S2-3 の設計で整理してここに書く |
