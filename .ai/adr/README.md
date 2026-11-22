@@ -29,7 +29,7 @@
 - [0010 — PostgreSQL を DB とジョブキューの両方に使う](0010-postgresql-as-db-and-job-queue.md)
 - [0011 — 組版エンジンは TSX を静的 HTML に描く](0011-newspaper-template-engine.md)
 - [0012 — 想定規模](0012-assumed-scale.md)
-- [0013 — 退去処理とデータ保持期間](0013-account-deletion-and-retention.md)
+- [0013 — 退去処理とデータ保持期間](0013-account-deletion-and-retention.md)（ADR-0075 で置き換え）
 - [0014 — API は即時性と数値を返さない](0014-api-no-immediacy-no-counts.md)
 - [0015 — API・DB・バッチの責務の境界](0015-api-db-batch-boundary.md)
 - [0016 — 配達回は時刻の関門と見回りのジョブで進める](0016-delivery-run-pipeline-and-tick.md)
@@ -41,7 +41,7 @@
 - [0022 — 段階は features.md の 3 つのまま。MVP は作る順に M0〜M6 に分け、各段階は受け入れ条件・見直し・マスターの確認で閉じる](0022-roadmap-stages-and-gates.md)
 - [0023 — 休眠と空き家の再割り当ては段階 3。MVP の住所の候補は使われたことのない住所だけ](0023-dormancy-and-address-reuse-in-stage-3.md)（ADR-0062 で置き換え）
 - [0024 — マッチングは恋愛のためのものではなく、興味のある人どうしが連絡を取る手段。個別の連絡先の共有は禁止する](0024-matching-not-romance-no-contact-sharing.md)
-- [0025 — 配達完了の通知は、配達回の公開のあとに Web Push で 1 回送り、郵便の件数を含める](0025-delivery-notification-web-push-with-count.md)
+- [0025 — 配達完了の通知は、配達回の公開のあとに Web Push で 1 回送り、郵便の件数を含める](0025-delivery-notification-web-push-with-count.md)（ADR-0076 で置き換え）
 - [0026 — クローズドな手紙も審査する。本文は LLM に渡さず、ルール表だけで照合し、復号できる場面を限る](0026-closed-letters-rule-only-moderation.md)（ADR-0072 で置き換え）
 - [0027 — 未成年の利用を認め、年齢制限・特別な制限を置かない。生年月日・年齢は集めない](0027-minors-no-age-restriction.md)
 - [0028 — 架空の街の地図は、1 枚の静的な画像として MVP（M1）で作る。API・DB・ジオデータは持たない](0028-town-map-static-image-in-mvp.md)（ADR-0058 で置き換え）
@@ -91,3 +91,5 @@
 - [0072 — クローズドな手紙も審査し、LLM に渡さず復号の場面を限る](0072-closed-letters-reviewed-no-llm-limited-decryption.md)
 - [0073 — 年齢と誕生日は登録で必須、変えられず誕生日に年が進む](0073-age-and-birthday-required-immutable.md)
 - [0074 — 新聞の知り合いの版に、知り合いの投稿と誕生日を載せる](0074-newspaper-acquaintance-editions-posts-and-birthdays.md)
+- [0075 — 退去処理とデータ保持期間（配達回は消さない）](0075-account-deletion-and-retention-keep-delivery-runs.md)
+- [0076 — 配達の通知は Web Push で送り、記録は配達回から 30 日](0076-delivery-notification-web-push-retention-30-days.md)

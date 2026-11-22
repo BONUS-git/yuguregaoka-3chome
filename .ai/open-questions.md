@@ -70,10 +70,10 @@
 | OQ-036 | 未確定 | 決定 | FR-100 | F-02 | api, security |
 | OQ-037 | 不足 | 決定 | FR-081 | F-08, F-14 | security, api, db, roadmap, features, ADR-0019, ADR-0020, ADR-0024, ADR-0026, ADR-0032 |
 | OQ-038 | 未確定 | 持ち越し | FR-013 | F-10 | api, db |
-| OQ-039 | 不足 | 決定 | NFR-080 | F-02 | security, async, roadmap, features, ADR-0022, ADR-0023, ADR-0025, ADR-0033 |
+| OQ-039 | 不足 | 決定 | NFR-080 | F-02 | security, async, roadmap, features, ADR-0022, ADR-0023, ADR-0076, ADR-0033 |
 | OQ-040 | 未確定 | 決定 | FR-058 | F-09 | api, roadmap, ADR-0042, ADR-0049 |
 | OQ-041 | 未確定 | 決定 | FR-101 | F-18 | requirements, features, architecture, async, security, roadmap, ADR-0024, ADR-0026, ADR-0034, ADR-0071 |
-| OQ-042 | 未確定 | 決定 | FR-028, FR-014, FR-022, FR-023, FR-030, FR-031, FR-032, FR-105, FR-106 | F-05, F-06 | requirements, features, architecture, async, db, api, security, roadmap, ADR-0004, ADR-0007, ADR-0014, ADR-0016, ADR-0017, ADR-0025, ADR-0035 |
+| OQ-042 | 未確定 | 決定 | FR-028, FR-014, FR-022, FR-023, FR-030, FR-031, FR-032, FR-105, FR-106 | F-05, F-06 | requirements, features, architecture, async, db, api, security, roadmap, ADR-0004, ADR-0007, ADR-0014, ADR-0016, ADR-0017, ADR-0076, ADR-0035 |
 | OQ-043 | 未確定 | 決定 | FR-078, NFR-005 | F-08 | security, api, db, async, roadmap, requirements, features, architecture, ADR-0024, ADR-0026, ADR-0027, ADR-0034, ADR-0036 |
 | OQ-044 | 不足 | 決定 | FR-103 | F-19 | requirements, features, architecture, api, security, roadmap, ADR-0028, ADR-0037 |
 | OQ-045 | 不足 | 決定 | FR-046, FR-047, FR-104, FR-107 | F-17 | requirements, features, architecture, security, roadmap, ADR-0022, ADR-0029, ADR-0038 |
@@ -82,17 +82,17 @@
 | OQ-048 | 不足 | 持ち越し | FR-081 | F-08, F-14 | security, api, db, roadmap, features, ADR-0032 |
 | OQ-049 | 未確定 | 持ち越し | NFR-080 | F-02, F-16 | security, async, roadmap, features, environment, ADR-0033 |
 | OQ-050 | 不足 | 持ち越し | FR-101, FR-066, FR-067 | F-18 | features, async, security, roadmap, ADR-0071, ADR-0070 |
-| OQ-051 | 不足 | 決定 | FR-106, FR-035, FR-036, FR-108, FR-109, FR-110, FR-111 | F-06 | requirements, features, architecture, async, db, api, security, roadmap, ADR-0005, ADR-0007, ADR-0011, ADR-0013, ADR-0025, ADR-0031, ADR-0035, ADR-0039 |
-| OQ-052 | 未確定 | 決定 | FR-078, FR-080, NFR-005, FR-094, FR-064, FR-112, FR-113 | F-02, F-08 | requirements, features, architecture, async, db, api, security, roadmap, ADR-0005, ADR-0013, ADR-0015, ADR-0024, ADR-0026, ADR-0027, ADR-0034, ADR-0036, ADR-0040, ADR-0041 |
+| OQ-051 | 不足 | 決定 | FR-106, FR-035, FR-036, FR-108, FR-109, FR-110, FR-111 | F-06 | requirements, features, architecture, async, db, api, security, roadmap, ADR-0005, ADR-0007, ADR-0011, ADR-0075, ADR-0076, ADR-0031, ADR-0035, ADR-0039 |
+| OQ-052 | 未確定 | 決定 | FR-078, FR-080, NFR-005, FR-094, FR-064, FR-112, FR-113 | F-02, F-08 | requirements, features, architecture, async, db, api, security, roadmap, ADR-0005, ADR-0075, ADR-0015, ADR-0024, ADR-0026, ADR-0027, ADR-0034, ADR-0036, ADR-0040, ADR-0041 |
 | OQ-053 | リスク | 持ち越し | FR-076, FR-077, FR-078 | F-07, F-08 | security, roadmap, ADR-0036 |
 | OQ-054 | 不足 | 決定 | FR-103, FR-010, FR-114, FR-115 | F-19, F-01, F-09 | requirements, features, architecture, api, db, security, roadmap, ADR-0028, ADR-0037, ADR-0039, ADR-0042 |
 | OQ-055 | 未確定 | 持ち越し | FR-103 | F-19 | requirements, features, architecture, roadmap, ADR-0061 |
 | OQ-056 | 不足 | 決定 | FR-104, FR-047, FR-083, FR-116, FR-117 | F-17, F-20 | requirements, features, architecture, security, roadmap, ADR-0022, ADR-0029, ADR-0038, ADR-0039, ADR-0043 |
 | OQ-057 | 不足 | 持ち越し | FR-107, FR-047 | F-17 | requirements, features, architecture, security, roadmap, ADR-0038 |
-| OQ-058 | 不足 | 決定 | FR-108, FR-118 | F-06, F-11 | requirements, features, architecture, async, db, api, security, roadmap, ADR-0007, ADR-0025, ADR-0035, ADR-0039, ADR-0042, ADR-0044 |
-| OQ-059 | 不足 | 決定 | FR-109, FR-119 | F-06, F-02, F-12 | requirements, features, architecture, async, db, api, security, roadmap, ADR-0013, ADR-0039, ADR-0045 |
-| OQ-060 | 不足 | 持ち越し | FR-110, NFR-080 | F-06 | requirements, features, architecture, async, db, security, roadmap, ADR-0013, ADR-0039 |
-| OQ-061 | 未確定 | 決定 | FR-111 | F-06 | requirements, features, architecture, async, db, security, roadmap, ADR-0007, ADR-0025, ADR-0035, ADR-0039, ADR-0046 |
+| OQ-058 | 不足 | 決定 | FR-108, FR-118 | F-06, F-11 | requirements, features, architecture, async, db, api, security, roadmap, ADR-0007, ADR-0076, ADR-0035, ADR-0039, ADR-0042, ADR-0044 |
+| OQ-059 | 不足 | 決定 | FR-109, FR-119 | F-06, F-02, F-12 | requirements, features, architecture, async, db, api, security, roadmap, ADR-0075, ADR-0039, ADR-0045 |
+| OQ-060 | 不足 | 持ち越し | FR-110, NFR-080 | F-06 | requirements, features, architecture, async, db, security, roadmap, ADR-0075, ADR-0039 |
+| OQ-061 | 未確定 | 決定 | FR-111 | F-06 | requirements, features, architecture, async, db, security, roadmap, ADR-0007, ADR-0076, ADR-0035, ADR-0039, ADR-0046 |
 | OQ-062 | 未確定 | 持ち越し | FR-111, NFR-077, NFR-080 | F-06 | requirements, features, architecture, async, roadmap, ADR-0031, ADR-0039 |
 | OQ-063 | 不足 | 決定 | FR-113, FR-094, FR-064, FR-112, FR-120 | F-02, F-08, F-18 | requirements, features, architecture, api, async, db, security, roadmap, ADR-0026, ADR-0027, ADR-0034, ADR-0036, ADR-0040, ADR-0041, ADR-0047 |
 | OQ-064 | 不足 | 決定 | FR-113, FR-094, FR-008 | F-01, F-02 | requirements, features, architecture, api, db, security, roadmap, ADR-0027, ADR-0036, ADR-0041, ADR-0047, ADR-0048 |
@@ -157,7 +157,7 @@
 件数は通知の中身にだけ載せ、API の応答には載せない。  
 **決めていないこと**: 何を「郵便」として数えるか・0 通の便で送るか・件数のほかの中身（OQ-042 → 決定、2026-11-19、ADR-0035。新聞と手紙の通知を分け、配達の時刻も分けた）。
 新聞の中身（知り合いが少なくても成り立つ紙面）は OQ-051（OQ-051 → 決定、2026-11-20、ADR-0039。残りは OQ-058〜OQ-062。OQ-058 はのちに決定、2026-11-20、ADR-0044。OQ-059 ものちに決定、2026-11-20、ADR-0045。OQ-061 ものちに決定、2026-11-20、ADR-0046）。  
-**ADR**: [0025-delivery-notification-web-push-with-count](.ai/adr/0025-delivery-notification-web-push-with-count.md)
+**ADR**: [0076-delivery-notification-web-push-retention-30-days](.ai/adr/0076-delivery-notification-web-push-retention-30-days.md)
 
 ---
 
@@ -471,7 +471,7 @@ OQ-077 → 決定（2026-11-21、ADR-0073・ADR-0074）: 誕生日（月日）�
 
 ### OQ-042 — 新聞は全住民に定時に届けて通知し、手紙は午前・午後のランダムな時刻に届けて件数を通知する（未確定 → 決定）
 
-**関連**: FR-028, FR-014, FR-022, FR-023, FR-030, FR-031, FR-032, FR-105, FR-106, F-05, F-06, ADR-0025  
+**関連**: FR-028, FR-014, FR-022, FR-023, FR-030, FR-031, FR-032, FR-105, FR-106, F-05, F-06, ADR-0076  
 **もとの質問**: OQ-002 の答えで「通知あり（内容：郵便の件数を含む）」と決まった。(1) 件数として数える「郵便」は手紙だけか。新聞（朝刊・夕刊）も 1 件として数えるか。
 (2) その便で手紙が 0 通の住民にも通知を送るか。(3) 件数のほかに通知に載せたいもの（差出人の住所など）はあるか。  
 **マスターの答え（2026-11-19）**: 「何も届かないのは悲しいね。何かしら送りたい。例えば、興味があることを回収して、ニュースを加工して新聞にする。とか。新聞も知り合いの数がいないと成り立たない可能性がある。何かしら新聞を送る方向で考え、通知についても送る。手紙の配達と新聞の配達は時間を分ける。手紙については、出した時間に応じて午前、午後にランダム、新聞は一定の時間。新聞が配達されました！手紙が配達されました！（３通）みたいな形かな。」  
@@ -1336,7 +1336,7 @@ OQ-056（実在の店をどう迎えるか）は答えが出て §4 に移った
 (3) コミュニティが住所を持つか（FR-047）、(4) 誰がコミュニティとして発信できるか（作った住民だけか、ほかの住民にも渡せるか）、(5) 作った住民が退去したときの扱い。  
 **扱い**: 持ち越し。技術と設計で決められるので、段階 3 の S3-2 を始める前に秘書が ADR で決める。段階 3 の実装もデプロイもしない間は要らない。
 制約に費用を取るもの（利用料など）を含めるなら、費用にかかわるのでマスターに聞く。暫定は置かず、中身が決まるまでコミュニティを作る経路は作らない。
-答えで変わる箇所: FR-107・FR-047、`security.md` §4.2 の「コミュニティを作る」の行（上限と発信の権限）、退去の扱い（ADR-0013）、`architecture.md` §8、`roadmap.md` の S3-2・C-08 (1)・§7。
+答えで変わる箇所: FR-107・FR-047、`security.md` §4.2 の「コミュニティを作る」の行（上限と発信の権限）、退去の扱い（ADR-0075）、`architecture.md` §8、`roadmap.md` の S3-2・C-08 (1)・§7。
 
 ---
 
@@ -1356,7 +1356,7 @@ OQ-061（LLM が書いた文の示し方と、住民の投稿を LLM が書き�
 (2) 記事の著作権と出典の表示、(3) LLM で要約や書き直しをしてよいか（利用の条件）、(4) 契約と費用の上限、(5) 取り込んだ記事の保持期間。  
 **扱い**: 持ち越し。デプロイと契約をしない間は要らない。本番のアダプタを作る前、遅くとも契約の前にマスターに聞く（OQ-049 と同じ形、NFR-080）。
 暫定は置かず、本番のアダプタは作らない。M5 とテストは偽の記事（`EXAMPLE_NEWS_DO_NOT_USE`）のアダプタで作る。
-答えで変わる箇所: C13 の許可した送り先と認証情報（`architecture.md` §2・`security.md` §6.1・§7 の T-19）、`external_news_items` の保持期間（30 日 [assumed]、ADR-0013・`db.md` §4・`async.md` J14）と `url` の扱い、
+答えで変わる箇所: C13 の許可した送り先と認証情報（`architecture.md` §2・`security.md` §6.1・§7 の T-19）、`external_news_items` の保持期間（30 日 [assumed]、ADR-0075・`db.md` §4・`async.md` J14）と `url` の扱い、
 `async.md` J17、費用（NFR-080・`roadmap.md` §9.1）、`roadmap.md` の §7 と A-07、FR-110。
 
 ---
@@ -1586,13 +1586,13 @@ OQ-079 の答え（2026-11-21）は、街のすべての家の空き家・入居
 
 ### OQ-088 — 休眠を空き家にする判定と閾値、転送中の旧住所の地図の表示（未確定）
 
-**関連**: FR-006, FR-071, FR-115, FR-072, F-16, F-19, ADR-0060, ADR-0062, ADR-0064, ADR-0013（OQ-010・OQ-023・OQ-024 にかかわる）  
+**関連**: FR-006, FR-071, FR-115, FR-072, F-16, F-19, ADR-0060, ADR-0062, ADR-0064, ADR-0075（OQ-010・OQ-023・OQ-024 にかかわる）  
 **質問**（段階 3 の F-16 の計画の前にマスターに聞く）: 次の 2 点を決める。
 (1) 休眠を空き家にするか、するならその判定と閾値。OQ-079 の答え 2「休眠は空き家にしない。長くログインしていない判定に対する閾値などはMVP後に検討。いずれ空き家判定にする可能性はある」で、休眠（`dormant`）は入居と扱い、空き家にしないことが決まった（ADR-0060 の D2・D3）。
 休眠からさらに空き家（`vacant_expired`）にする判定を作るか・閾値をいくつにするか、休眠にする閾値（今は暫定の 12 か月と通知）をどうするかは MVP の後に検討することになった。
 (2) 転送中の旧住所（引っ越しのあと、転送期間 6 か月の間。ADR-0060 の D4）を、地図で入居と示すか空き家と示すか。答えはこの点に触れていない。今の `addresses.status` は転送期間が終わるまで `active` のまま。  
 **扱い**: 持ち越し。休眠・引っ越し・転送はどれも段階 3（F-16、ADR-0062）で、MVP では起きないので、デプロイしない間は聞かない。段階 3 の F-16 の計画を立てる前に、マスターに聞く（そのとき要回答にする）。  
-**暫定**: (1) 休眠は 12 か月ログインなしと通知で `dormant` にし、入居と示す。`dormant` から `vacant_expired` への移行と長期不在の退去（J9・ADR-0013 の「長期不在による空き家化後の処理」）は作らない（ADR-0060 の D3・ADR-0062 の D2）。(2) 転送中の旧住所は `active` のままなので入居と示す（ADR-0064 の D13）。
+**暫定**: (1) 休眠は 12 か月ログインなしと通知で `dormant` にし、入居と示す。`dormant` から `vacant_expired` への移行と長期不在の退去（J9・ADR-0075 の「長期不在による空き家化後の処理」）は作らない（ADR-0060 の D3・ADR-0062 の D2）。(2) 転送中の旧住所は `active` のままなので入居と示す（ADR-0064 の D13）。
 答えで変わる箇所: ADR-0060 の D2・D3（休眠の閾値と空き家への移行。変えるなら新しい ADR で置き換える）・ADR-0062 の D2（J9 を作るか）・ADR-0064 の D13（入居の読み方）・`db.md` §2 の `addresses` の入居の読み方と §4 の住所の状態遷移・`async.md` の J9・J10（段階 3）・FR-006・FR-071・FR-072・FR-115・`roadmap.md` の §6 の段階 3（C-03）と A-16 (12) (c)。
 入居の一覧の応答の形（`houses` / `address` / `occupied`）は変わらない見込み。
 
@@ -1644,7 +1644,7 @@ OQ-086 の答え（2026-11-21）は、要る道具はマスターが用意し、
 | 旧 ID | OQ ID | 備考 |
 |-------|-------|------|
 | Q-001 | OQ-001 | 決定済み（2026-11-19 のマスターの答え、ADR-0024）。残りの OQ-041 も決定（2026-11-19）。禁止の範囲は OQ-087 → 決定（2026-11-22、ADR-0071）。細部は OQ-050（持ち越し） |
-| Q-002 | OQ-002 | 決定済み（2026-11-19 のマスターの答え、ADR-0025）。残りの OQ-042 も決定（2026-11-19、ADR-0035）。新聞の中身は OQ-051（のちに決定、15 を参照。ADR-0039。残りは OQ-058〜OQ-062。OQ-058 はのちに決定、19 を参照。ADR-0044。OQ-059 ものちに決定、20 を参照。ADR-0045。OQ-061 ものちに決定、21 を参照。ADR-0046） |
+| Q-002 | OQ-002 | 決定済み（2026-11-19 のマスターの答え、ADR-0076）。残りの OQ-042 も決定（2026-11-19、ADR-0035）。新聞の中身は OQ-051（のちに決定、15 を参照。ADR-0039。残りは OQ-058〜OQ-062。OQ-058 はのちに決定、19 を参照。ADR-0044。OQ-059 ものちに決定、20 を参照。ADR-0045。OQ-061 ものちに決定、21 を参照。ADR-0046） |
 | Q-003 | OQ-003 | 決定済み（2026-11-19 のマスターの答え、ADR-0026）。残りの OQ-043 も決定（2026-11-19、ADR-0036）。手紙で止める内容と止めた手紙の閲覧は OQ-052（のちに決定、16 を参照。2026-11-20、ADR-0040・ADR-0041。残りは OQ-063〜OQ-065。OQ-063 ものちに決定、22 を参照。2026-11-20、ADR-0047（のちに ADR-0057 で置き換え）。OQ-064 ものちに決定、23 を参照。2026-11-20、ADR-0048（いまは ADR-0073）。そこから出た OQ-077 ものちに決定、35 を参照。2026-11-21、ADR-0073・ADR-0074。OQ-063 から出た OQ-076 ものちに決定、29 を参照。2026-11-21、ADR-0069。そこから出た OQ-087 ものちに決定、2026-11-22、ADR-0069〜ADR-0071） |
 | D-001 | OQ-012, OQ-013 | 朝便・夕便の時刻に分割 → 決定済み（ADR-0004） |
 | D-002 | OQ-012, OQ-013 | 締め切り時刻は配達時刻とまとめた → 決定済み（ADR-0004） |
@@ -1697,7 +1697,7 @@ OQ-086 の答え（2026-11-21）は、要る道具はマスターが用意し、
    残りの OQ-041 を §5 の未確定一覧に書いた（のちに決定、10 を参照）。
 
 2. **F-05 の更新**（OQ-002）:
-   OQ-002 の答えで済んだ（ADR-0025）。配達のあとに件数を含む通知を送ることと、FR-028・FR-102 を足した。
+   OQ-002 の答えで済んだ（ADR-0076）。配達のあとに件数を含む通知を送ることと、FR-028・FR-102 を足した。
    残りの OQ-042 を §5 の未確定一覧に書いた（のちに決定、11 を参照）。
 
 11. **F-05・F-06 の配達の時刻と通知の更新**（OQ-042）:
