@@ -4,7 +4,7 @@
 - 日付: 2026-11-19
 - チケット: YGO-006
 - 根拠: `.ai/brief.md`・`.ai/requirements.md`・`.ai/architecture.md`・`.ai/db.md`・`.ai/api.md`
-- 関連 ADR: 0002・0004・0005・0006・0007・0008・0010・0011・0012・0014・0015・0016・0017・0035・0039・0070・0072・0076・0079
+- 関連 ADR: 0002・0004・0005・0006・0007・0008・0010・0011・0012・0014・0015・0016・0017・0035・0039・0070・0072・0076・0085
 
 ---
 
@@ -55,14 +55,14 @@
 | J4 | `delivery.prepare` | `newspapers` の行ができた後、J0 が判断 | `run_id` | 見せる前の `mailbox_items`（新聞は全住民に版を 1 つずつ・手紙は宛先、行ごとに `visible_at`）。宛先ごとの振り分け |
 | J5 | `delivery.publish` | 07:00 / 17:00 JST、J0 が判断 | `run_id` | 配達回を `done` に。手紙と投稿の最終状態を確定。新聞の通知（J15、`kind = newspaper`）を積む（休刊の回も） |
 | J6 | `delivery.carry_over` | 配達時刻から 15 分過ぎても公開できない場合、J0 が判断 [assumed] | `run_id` | 配達回を `skipped` に。中身を次の便へ移す |
-| J7 | `account.erase` | キュー（API が退去を受けたのと同じトランザクションで積む） | `resident_id` | ADR-0079 の表に従い消去 |
+| J7 | `account.erase` | キュー（API が退去を受けたのと同じトランザクションで積む） | `resident_id` | ADR-0085 の表に従い消去 |
 | J8 | `newspaper.retypeset` | キュー（J7 から・投稿削除から） | `newspaper_id` | 紙面の差し替え |
 | J9 | `account.expire` | 毎日（段階 3、配達窓を外した時間帯）[assumed]。OQ-088 の答えで `vacant_expired` への遷移を作るときだけ作る（ADR-0060 の D3） | なし | `vacant_expired` から 12 か月たった住民の J7 を積む |
 | J10 | `address.dormancy` | 毎日（段階 3、配達窓を外した時間帯）[assumed] | なし | `active` → `dormant` への遷移と休眠通知の積み込み |
 | J11 | `address.forwarding_expire` | 毎日（段階 3、配達窓を外した時間帯）[assumed] | なし | 転送期限切れの旧住所を `vacant_forwarded` に |
 | J12 | `notify.dormancy` | キュー（段階 3、J10 が積む） | `address_id` | 休眠通知を 1 通送る（テスト環境はモックかローカルの SMTP、本番のサービスはマスターの事前承認を得て選ぶ。ADR-0033） |
 | J13 | `image.process` | キュー（段階 2。J0 も滞留分を拾い直す） | `image_id` | 新聞写真風に加工した画像 |
-| J14 | `retention.purge` | 毎日（配達窓を外した時間帯）[assumed] | なし | ADR-0079 の保持期間を過ぎたものを削除 |
+| J14 | `retention.purge` | 毎日（配達窓を外した時間帯）[assumed] | なし | ADR-0085 の保持期間を過ぎたものを削除 |
 | J15 | `notify.delivery` | キュー（新聞は J5 が公開と同じトランザクションで、手紙は J0 が枠の時刻を過ぎてから積む。`singletonKey` は §5） | `{run_id, kind, slot}` | 購読のある住民へ「新聞が配達されました！」か「手紙が配達されました！（N通）」を 1 回送る（ADR-0076・ADR-0035） |
 | J16 | `newspaper.write` | J2 と J17 が終わる（J17 は失敗か取り込みの打ち切りでもよい）か審査の打ち切り後、J0 が判断（M5 から） | `run_id` | 素材（承認済みの投稿・その回の J17 が取り込んだ外のニュース）ごとの見出しと記事の文字（`newspaper_articles`、ADR-0055 の D7） |
 | J17 | `news.fetch` | 01:00 / 14:00 JST 以降、取り込みの打ち切り（04:00 / 16:00）まで、J0 が判断（M5 から） | `run_id` | 取り込んだ外のニュース（`external_news_items`、`delivery_run_id = run_id`、ADR-0039 の D6）。本番のアダプタは OQ-060 のあと |
@@ -334,7 +334,7 @@ M3・M4 は、J2 完了（`moderation_queue` に `processed_at = NULL` の行が
 - 各行に `visible_at` を書く（ADR-0035 の D10）
 
 **新聞**（ADR-0035 の D1・D2、FR-106・FR-108、ADR-0039 の D2・D3、ADR-0045 の D6）:
-- その配達回の紙面を、J4 の時点で住んでいる全住民（`tenancies.is_current = true`）に `kind = 'newspaper'` で 1 行ずつ作る。手紙があるかにかかわらない
+- その配達回の紙面を、J4 の時点で住んでいる全住民（`tenancies.is_current = true`）に `kind = 'newspaper'` で 1 行ずつ作る。手紙があるかにかかわらない。退去した住民の居住記録は J7 の手順 7 で `is_current = false` になるので、そのあとの J4 は退去した住民の行を作らない（ADR-0085 の D10）
 - `item_id` は、その住民に届ける版（`newspaper_editions.id`）。住民ごとに組を決め、版を 1 つ選ぶ:
   1. 組: MVP（M5）では、全住民を知り合い 0 の組として扱う（ADR-0074 の D1）。組 1・2 を作る段階では、J4 は組を計算し直さず、その配達回に `acquaintance:<resident_id>` の版があればそれを選ぶ（ADR-0074 の D7）。なければ組 0 として 3・4 で選ぶ
   2. 休刊の回は全住民に `holiday` の版
@@ -357,7 +357,7 @@ M3・M4 は、J2 完了（`moderation_queue` に `processed_at = NULL` の行が
 - 転送期間 6 か月以内（ADR-0060 の D4）→ 新住所の住民に `mailbox_items` を作る
 - 転送期限切れ・空き家 → `letters.state = 'returned'` にし、`mailbox_items` を作らない
 - 受取人が送信者をブロック → `letters.state = 'suppressed'` にし、`mailbox_items` を作らない
-- J4 は `settled_at` を書かない（NULL のまま）。`settled_at` は J5 の手順 3 だけが、同じ回の手紙に同じ値で書く（ADR-0079 の D1・D5）。この配達回が J6 で持ち越されたときは、`returned`・`suppressed` にした手紙も `scheduled` に戻って次の便に移り（J6 の手順 2）、次の便の J4 が振り分け直す
+- J4 は `settled_at` を書かない（NULL のまま）。`settled_at` は J5 の手順 3 だけが、同じ回の手紙に同じ値で書く（ADR-0085 の D1・D5）。この配達回が J6 で持ち越されたときは、`returned`・`suppressed` にした手紙も `scheduled` に戻って次の便に移り（J6 の手順 2）、次の便の J4 が振り分け直す
 
 **冪等性**:
 - `mailbox_items` は `ON CONFLICT DO NOTHING` で挿入する（`UNIQUE` 制約で重複を弾く）
@@ -395,7 +395,7 @@ M3・M4 は、J2 完了（`moderation_queue` に `processed_at = NULL` の行が
 2. 退去などで状態が変わった（無効になった）`mailbox_items` の行を削除する
 3. 手紙の `state` を `delivered` / `suppressed` / `returned` に確定させる。確定の対象は J4 が準備した手紙
    （1 の時点でこの配達回の `mailbox_items` があった手紙は `delivered`、J4 が `returned`・`suppressed` にした手紙はその状態のまま）だけで、
-   1 で移した手紙は対象にしない。確定させた手紙のすべてに同じ値の `settled_at = now()` を書く（ADR-0079 の D1。`settled_at` を書くのはこの手順だけ）。`delivered` にした宛先の `letter_recipients.delivered_at` には、受取人の `mailbox_items.visible_at`（枠の時刻）を書く（ADR-0035）
+   1 で移した手紙は対象にしない。確定させた手紙のすべてに同じ値の `settled_at = now()` を書く（ADR-0085 の D1。`settled_at` を書くのはこの手順だけ）。`delivered` にした宛先の `letter_recipients.delivered_at` には、受取人の `mailbox_items.visible_at`（枠の時刻）を書く（ADR-0035）
 4. `board_posts.status` を `published` に・`published_at` を記録する
 5. `delivery_runs.status` を `done` にする
 6. 紙面が休刊（`newspapers.is_holiday = true`）かにかかわらず、新聞の通知の J15 を `{run_id, kind: 'newspaper'}`・`singletonKey = notify.delivery:<run_id>:newspaper` で積む（ADR-0076・ADR-0035 の D11）。
@@ -429,7 +429,7 @@ J0 が判断し `singletonKey` で積む。
 **1 つのトランザクションで行うこと**:
 1. 次の受付中の配達回を `FOR UPDATE` で取る（なければ `INSERT … ON CONFLICT DO NOTHING` で作る）
 2. `letters.delivery_run_id` を次の便に変更（`state = 'scheduled'` のままにする）。`scheduled` の手紙をすべて移す。
-   J4 がこの配達回で `returned`・`suppressed` にした手紙（この回の J5 が動かないので `settled_at` が NULL）も、`state = 'scheduled'` に戻して同じく次の便に移す。次の便の J4 が振り分け直し、次の便の J5 が、一緒に移ったほかの手紙と同じ値で `settled_at` を書く（ADR-0079 の D1・D5。`suppressed` の手紙だけが早く 30 日を数え始めて、送信済みから先に消えないため。security.md T-06）。
+   J4 がこの配達回で `returned`・`suppressed` にした手紙（この回の J5 が動かないので `settled_at` が NULL）も、`state = 'scheduled'` に戻して同じく次の便に移す。次の便の J4 が振り分け直し、次の便の J5 が、一緒に移ったほかの手紙と同じ値で `settled_at` を書く（ADR-0085 の D1・D5。`suppressed` の手紙だけが早く 30 日を数え始めて、送信済みから先に消えないため。security.md T-06）。
    移した手紙を照合し直さず、`moderation_queue` の行も入れない（手紙は投函のときに照合済み、ADR-0069 の D3）
 3. `board_posts.delivery_run_id` を次の便に変更（`status = 'awaiting_review'` のままにする）
 4. この配達回の `mailbox_items`（まだ公開前のもの）を削除する
@@ -458,37 +458,47 @@ J0 が判断し `singletonKey` で積む。
 
 **入力**: `resident_id`
 
-**出力**: ADR-0079 の表に従い消去処理を実行する。消した `credentials`・`sessions`・`residents` の行を `erasure_log` に記録する
+**出力**: ADR-0085 の表に従い消去処理を実行する。消した `credentials`・`sessions`・`residents` の行を `erasure_log` に記録する。`residents` を指す行は、消すか（0〜8）、指す列を NULL にしてから（9）、`residents` を消す（10）
 
 **処理の順序**（各項目は独立したトランザクション）:
-0. 認証情報とセッションを消す（ADR-0079 の D8。1 つのトランザクションで次の順。外部キーを CASCADE にしないので、指す側から消す）
-   1. その住民の通知の購読（`push_subscriptions`）の残りの行と、それを指す送った記録（`delivery_notifications`）を消す（退去の受付で消えていれば何もしない、ADR-0079 の D7）
+0. 認証情報とセッションを消す（ADR-0085 の D8。1 つのトランザクションで次の順。外部キーを CASCADE にしないので、指す側から消す）
+   1. その住民の通知の購読（`push_subscriptions`）の残りの行と、それを指す送った記録（`delivery_notifications`）を消す（退去の受付で消えていれば何もしない、ADR-0085 の D7）
    2. その住民のセッション（`sessions`）の行をすべて消す（受付で `invalidated_at` を付けた行・期限切れの行も含む）
    3. その住民の認証情報（`credentials`。メールの暗号化した値・検索用の HMAC・パスワードのハッシュ）の行を消す
 
    同じトランザクションで、消した `sessions` と `credentials` の行を `erasure_log` に記録する（`table_name` は `sessions`・`credentials`、`record_id` は行の ID。`credentials` は `resident_id`）
-1. その住民が送った届いていない手紙（`state = 'pending' / 'scheduled' / 'held' / 'blocked' / 'returned' / 'suppressed'`）を、本文と宛先ごと削除する。`scheduled` の手紙の郵便受けの行（`kind = 'letter'`・`item_id` がその手紙の行。まだ `visible_at` を過ぎていない）も同じトランザクションで削除する（ADR-0079 の退去の表・ADR-0069 の D6。届いていないので受取人のために残す理由がなく、送った人ももう送信済みを見られない）。消した手紙は J5 の手順 3 の確定の対象にならない（行がない）。`delivered` の手紙は残す
+1. その住民が送った届いていない手紙（`state = 'pending' / 'scheduled' / 'held' / 'blocked' / 'returned' / 'suppressed'`）を、本文と宛先ごと削除する。`scheduled` の手紙の郵便受けの行（`kind = 'letter'`・`item_id` がその手紙の行。まだ `visible_at` を過ぎていない）も同じトランザクションで削除する（ADR-0085 の退去の表・ADR-0069 の D6。届いていないので受取人のために残す理由がなく、送った人ももう送信済みを見られない）。消した手紙は J5 の手順 3 の確定の対象にならない（行がない）。`delivered` の手紙は残す
 2. 掲示板投稿（掲載前）を `deleted` に変更・`body` を消去し、同じトランザクションで J8 を積む
 3. 掲示板投稿（掲載済み）を `deleted` に変更・`body` を消去し、同じトランザクションで J8 を積む
 4. 住所録（所有するもの）を削除する
 5. ブロック（blocker / blocked）を削除する
-6. 通知を送った記録（`delivery_notifications`、`resident_id` が本人）の残りを削除する（ADR-0079・ADR-0076。購読と一緒に受付か 0 で消えていれば何もしない）
+6. 通知を送った記録（`delivery_notifications`、`resident_id` が本人）の残りを削除する（ADR-0085・ADR-0076。購読と一緒に受付か 0 で消えていれば何もしない）
    興味（`resident_interests`）と推し量った興味（`inferred_interests`、段階 2）を削除する（ADR-0039 の D5・ADR-0045 の D5）。2・3 で消した投稿から作った記事（`newspaper_articles`）は J8 が消す
    新聞の誕生日の欄に載った行（`newspaper_birthday_entries`、`resident_id` が本人の行。組 1・2 を作る段階から）を消し、同じトランザクションで、行のあった版の紙面の J8 を積む（ADR-0074 の D9）
-7. `addresses.status` を `vacant_deleted` に変更する
-8. その住民が受け取った郵便受けの行（`mailbox_items`、`resident_id` が本人。手紙・新聞・掲示板のすべて）を削除する（ADR-0079 の退去の表。外部キーは CASCADE にしないので、9 の前に消す）。行が消えた手紙には、残りの受取人の行で J14 の条件（ADR-0079 の D3）を当てる
-9. `residents` を物理削除し、`erasure_log` に記録する（最後に行う）
+7. 1 つのトランザクションで、`addresses.status` を `vacant_deleted` に変更し、その住民の今の居住記録（`tenancies.is_current = true` の行）の `ended_at` を今の時刻、`is_current` を false にする（ADR-0085 の D10）。このあとに始まる J4 は、その住民を `is_current = true` の全住民に数えず、新聞の行を作らない
+8. その住民が受け取った郵便受けの行（`mailbox_items`、`resident_id` が本人。手紙・新聞・掲示板のすべて）を削除する（ADR-0085 の退去の表。外部キーは CASCADE にしないので、10 の前に消す）。行が消えた手紙には、残りの受取人の行で J14 の条件（ADR-0085 の D3）を当てる
+9. 1 つのトランザクションで、その住民を指す次の 6 つの列を NULL にする（ADR-0085 の D11。外部キーは既定で、`residents` を消す前に外す、D9）。`erasure_log` には記録しない（記録の範囲は `reviews/0001-design-review.md` の R-014）
+   - `letters.sender_id`（残っているのは届いた手紙だけ。API では差出人を「退去済み」と示す）
+   - `board_posts.author_id`（2・3 で投稿を引いたあと）
+   - `reports.reporter_id`
+   - `moderation_actions.moderator_id`
+   - `images.uploader_id`
+   - `tenancies.resident_id`（7 で終わらせたあと。引っ越しで終わった前の行も含め、その住民の行すべて。同じ UPDATE で `resident_erased_at` に今の時刻を書く: `UPDATE tenancies SET resident_id = NULL, resident_erased_at = now() WHERE resident_id = $1`、ADR-0085 の D10。J14 が退去から 1 年で消す）
+10. `residents` を物理削除し、`erasure_log` に記録する（最後に行う。`address_book_daily_counts` は外部キーの CASCADE で一緒に消える）
 
 **冪等性**:
 - 各ステップは `WHERE resident_id=$1` と `WHERE status=<前の状態>` を組み合わせた
   条件付き UPDATE なので、2 回実行しても安全
 - 0 の削除は `WHERE resident_id=$1` の DELETE。行がなければ何もせず、`erasure_log` にも記録しない
+- 7 の居住記録は `WHERE resident_id=$1 AND is_current`。2 回目は対象が 0 行になる
+- 9 は列ごとの `UPDATE … SET <列> = NULL WHERE <列> = $1`。2 回目は対象が 0 行になる（`tenancies.resident_erased_at` も 2 回目は書き換わらない）
 - 最後の物理削除は `DELETE FROM residents WHERE id=$1`。なければ何もしない
 
 **失敗とやり直し**:
 - 途中で止まっても、`residents.deleted_at` が付いているため API は `404` を返す
 - J7 を再実行すると残りの項目を処理する（処理済みの項目は条件に合わないため何もしない）
 - `residents` の削除が最後なので、途中で止まっても再起動で再開できる
+- 7 の前に読み始めた J4 が、8 のあとにその住民の郵便受けの行を入れると、10 の削除が外部キーで失敗する。J7 の再試行では 0〜7 は条件に合わず何もせず、8 がその行を消し、10 が通る（7 のあとに始まる J4 はその住民の行を作らないので、再試行で行は増えない）
 
 ---
 
@@ -613,24 +623,24 @@ J0 も `state = 'pending'` の滞留分を拾い直す [assumed]。
 
 **入力**: なし
 
-**出力**: ADR-0079 の保持期間を過ぎた行（手紙は D2〜D4 の条件に当たるもの）を削除する。`delivery_runs` の行は消さない（郵便受け・紙面などが外部キーで指し、郵便受けとバックナンバーは `done` の回だけを返すため、ADR-0079）
+**出力**: ADR-0085 の保持期間を過ぎた行（手紙は D2〜D4 の条件に当たるもの）を削除する。`delivery_runs` の行は消さない（郵便受け・紙面などが外部キーで指し、郵便受けとバックナンバーは `done` の回だけを返すため、ADR-0085）
 
 **対象**:
 
 | テーブル | 条件 |
 |----------|------|
 | `delivery_notifications` | 指している配達回の `delivery_runs.finished_at < now() - interval '30 days'`（ADR-0076）。`created_at` ではなく配達回の `finished_at` で決めるので、同じ配達回を指す通知の記録はすべて同じ回で消える |
-| `letters`（`state = 'blocked'`）と、その `letter_recipients` | `decided_at < now() - interval '30 days'`（ADR-0079 の D2・ADR-0069 の D6 [assumed]）。`erasure_log` に記録しない（ADR-0079 の D6）。`moderation_actions.letter_id` は外部キーにしないので、操作の記録は 1 年残る。`held` の手紙は消さない（長く確かめられないときの扱いは OQ-065） |
-| `letters`（`state IN ('returned', 'suppressed')`）と、その `letter_recipients` | `settled_at < now() - interval '30 days'`（ADR-0079 の D2 [assumed]）。`reports` に `content_kind = 'letter'`・`content_id` がその手紙の行があれば消さない（D4）。`erasure_log` に記録しない（D6） |
-| `letters`（`state = 'delivered'`）と、その `letter_recipients`・`mailbox_items`（`kind = 'letter'`・`item_id` がその手紙の行） | `settled_at < now() - interval '30 days'`（送信済みに出す期間を過ぎた、ADR-0079 の D5 [assumed]）で、かつその手紙の `mailbox_items` に `deleted_at IS NULL` の行が 1 つもない（受取人全員が削除した。受取人の退去で行が消えたものを含む、ADR-0079 の D3）。3 つの表を同じトランザクションで消す。`reports` の行があれば消さない（D4）。`erasure_log` に記録しない（D6） |
-| `sessions`（期限切れ）と、それを指す `push_subscriptions`・`delivery_notifications` | `expires_at < now()`（ADR-0079 の保持期間 [assumed]）。外部キーを CASCADE にしないので、同じトランザクションで `delivery_notifications` → `push_subscriptions` → `sessions` の順に消す。`erasure_log` に記録しない（D6）。ログアウトしたセッションの行は API が消す（`security.md` §2.1） |
+| `letters`（`state = 'blocked'`）と、その `letter_recipients` | `decided_at < now() - interval '30 days'`（ADR-0085 の D2・ADR-0069 の D6 [assumed]）。`erasure_log` に記録しない（ADR-0085 の D6）。`moderation_actions.letter_id` は外部キーにしないので、操作の記録は 1 年残る。`held` の手紙は消さない（長く確かめられないときの扱いは OQ-065） |
+| `letters`（`state IN ('returned', 'suppressed')`）と、その `letter_recipients` | `settled_at < now() - interval '30 days'`（ADR-0085 の D2 [assumed]）。`reports` に `content_kind = 'letter'`・`content_id` がその手紙の行があれば消さない（D4）。`erasure_log` に記録しない（D6） |
+| `letters`（`state = 'delivered'`）と、その `letter_recipients`・`mailbox_items`（`kind = 'letter'`・`item_id` がその手紙の行） | `settled_at < now() - interval '30 days'`（送信済みに出す期間を過ぎた、ADR-0085 の D5 [assumed]）で、かつその手紙の `mailbox_items` に `deleted_at IS NULL` の行が 1 つもない（受取人全員が削除した。受取人の退去で行が消えたものを含む、ADR-0085 の D3）。3 つの表を同じトランザクションで消す。`reports` の行があれば消さない（D4）。`erasure_log` に記録しない（D6） |
+| `sessions`（期限切れ）と、それを指す `push_subscriptions`・`delivery_notifications` | `expires_at < now()`（ADR-0085 の保持期間 [assumed]）。外部キーを CASCADE にしないので、同じトランザクションで `delivery_notifications` → `push_subscriptions` → `sessions` の順に消す。`erasure_log` に記録しない（D6）。ログアウトしたセッションの行は API が消す（`security.md` §2.1） |
 | `moderation_queue` | `processed_at < now() - interval '1 year'` |
 | `moderation_actions` | `created_at < now() - interval '1 year'` |
 | `reports` | `closed_at < now() - interval '1 year'` |
-| `tenancies`（退去済み）| `ended_at < now() - interval '1 year'` かつ対応する resident が削除済み |
+| `tenancies`（退去済み）| `resident_erased_at < now() - interval '1 year'`（ADR-0085 の D10。J7 の手順 9 で `resident_id` を NULL にし、同じ UPDATE で退去の時刻を書いた行。前の引っ越しで終わった行も退去の時刻から数える。住民が残る引っ越しで終わった行は `resident_erased_at` が NULL なので消さない）。1 つのトランザクションで、先にその行を指す `address_book.registered_tenancy_id` と `letter_recipients.registered_tenancy_id` を NULL にしてから `tenancies` の行を消す（ADR-0085 の D12。外部キーは既定なので、指す列を残すと削除が止まる。住所録の行は消さない。NULL の住所録の行は知り合いにならず、宛先が NULL の手紙は J4 の振り分けで差し戻しになる、`db.md` §3）。`erasure_log` に記録しない |
 | `erasure_log` | `erased_at < now() - interval '60 days'` |
-| `external_news_items` | `fetched_at < now() - interval '30 days'`（ADR-0079・ADR-0039 [assumed]。OQ-060 の利用の条件で変わる）。載った記事の `newspaper_articles` は紙面と同じだけ残すので、`source_id` の参照は外部キーにしない |
-| `inferred_interests`（段階 2）| `last_matched_at < now() - interval '30 days'`（ADR-0079・ADR-0045 の D5 [assumed]） |
+| `external_news_items` | `fetched_at < now() - interval '30 days'`（ADR-0085・ADR-0039 [assumed]。OQ-060 の利用の条件で変わる）。載った記事の `newspaper_articles` は紙面と同じだけ残すので、`source_id` の参照は外部キーにしない |
+| `inferred_interests`（段階 2）| `last_matched_at < now() - interval '30 days'`（ADR-0085・ADR-0045 の D5 [assumed]） |
 | `address_book_daily_counts` | `jst_date` が今日（JST）より 7 日以上前（ADR-0066 の D5。相互にならない追加の判定に、今日を含む直近 7 日の数えを使う。1 日の上限（ADR-0065 の D4）は今日の行だけを見る） |
 | オブジェクトストレージ（古い組版 HTML）| J8 で差し替えた前のファイル |
 | オブジェクトストレージ（元の画像、段階 2）と `images.original_url` | `original_url IS NOT NULL` かつ `created_at < now() - interval '24 hours'`（ADR-0074 の D5 [assumed]）。J14 は毎日 1 回なので、取りこぼしは最長でアップロードから約 48 時間残る（それより短い間隔の掃除のジョブは足さない）。元の画像を消して `original_url` を NULL にし、加工が済んでいなければ `state = 'failed'` にする。J13 の取りこぼしに備えるもの |
@@ -845,7 +855,6 @@ worker が止まると J0 は書けないので、J0 の心拍がないことは
 | マッチング | FR-066・FR-069・OQ-050 | 段階 3 で、アルゴリズムの ADR を書いてから設計する。恋愛のカテゴリは設けない（OQ-001 → 決定、ADR-0024）。提案に街の外の連絡先を載せない（FR-101。禁止は全ての書き込みに及ぶ、OQ-041・OQ-087 → 決定、ADR-0071）。自由記述の欄を設けるなら絵文字と絶対NGを当てる（ADR-0070）。自由記述の欄の扱いと、成立後に最初の手紙を出す方法は OQ-050（持ち越し、アルゴリズムの ADR で決める） |
 | 宛先の一部だけが差し戻しになったときの `letters.state` | — | 全宛先が確定するまで状態を保留。設計は R-015（`reviews/0001`）で決める |
 | `mailbox_items.kind = 'board_post'` の使い道 | — | 掲示板の投稿を郵便受けに入れるかどうかが未確定 |
-
 ---
 
 ## §9 FR / NFR との対応表
@@ -879,7 +888,7 @@ worker が止まると J0 は書けないので、J0 の心拍がないことは
 | FR-079 | §4 J2（LLM の役割、ADR-0005）|
 | FR-080 | §4 J2（配達前に完了）|
 | FR-081 | §4 J2（人の審査はモデレーター、ADR-0020）|
-| FR-093 | §4 J7（退去処理、ADR-0079）|
+| FR-093 | §4 J7（退去処理、ADR-0085）|
 | FR-097 | §4 J14（保持期間による削除）|
 | FR-102 | §4 J15（有効なセッションの購読だけに送る、ADR-0076）|
 | FR-105 | §3 時刻表と手紙の枠・§4 J4（手紙の `visible_at`、ADR-0035）|
