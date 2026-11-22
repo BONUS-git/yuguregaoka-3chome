@@ -52,7 +52,7 @@
 - [0033 — メール送信は、テスト環境ではモックかローカルの SMTP を使う。本番のサービスはマスターの事前承認を得て選ぶ](0033-email-mock-or-local-smtp-in-test-production-by-approval.md)
 - [0034 — 共有を禁止する「連絡先」は街の外の連絡先だけ。禁止はマッチングの中だけで、掲示板・手紙には及ばない](0034-contact-sharing-ban-outside-contacts-in-matching-only.md)（ADR-0071 で置き換え）
 - [0035 — 新聞は全住民に定時に届け、通知も送る。手紙は午前・午後のランダムな時刻に届け、通知を新聞と手紙で分ける](0035-newspaper-for-all-letters-random-am-pm-separate-notifications.md)
-- [0036 — 通報された手紙は、モデレーターが条件付きで 1 通だけ確かめてよい。住民を守る制限は、住民が自分で外せる設定にしない](0036-reported-letters-viewable-by-moderators-protections-not-self-removable.md)
+- [0036 — 通報された手紙は、モデレーターが条件付きで 1 通だけ確かめてよい。住民を守る制限は、住民が自分で外せる設定にしない](0036-reported-letters-viewable-by-moderators-protections-not-self-removable.md)（ADR-0078 で置き換え）
 - [0037 — 架空の街の地図は、全住民で共有する 1 枚の白黒の画像とする。印（知り合いの家・自分の住所・候補）とゲーム風の地図は今は作らない](0037-town-map-shared-monochrome-image.md)（ADR-0061 で置き換え）
 - [0038 — 商店には実在の企業・個人のお店を迎えることを目指す。コミュニティ（団体）は住民が趣味などで作り、作ることに制約を置く](0038-shops-real-businesses-communities-by-residents.md)
 - [0039 — 新聞は一人 1 枚にせず、知り合いの数で分けた組ごとの版にする。知り合いのない組は興味で分ける。記事の文字は LLM が作り、組版はサーバーで決定的に行う](0039-newspaper-editions-by-group-and-interest-llm-text-server-typesetting.md)（ADR-0055 で置き換え）
@@ -94,3 +94,4 @@
 - [0075 — 退去処理とデータ保持期間（配達回は消さない）](0075-account-deletion-and-retention-keep-delivery-runs.md)（ADR-0077 で置き換え）
 - [0076 — 配達の通知は Web Push で送り、記録は配達回から 30 日](0076-delivery-notification-web-push-retention-30-days.md)
 - [0077 — 退去処理と保持期間（確定した手紙も消す）](0077-letters-purged-after-settling-or-recipient-deletion.md)
+- [0078 — 手紙の通報は受取人だけ、確かめは条件付きで 1 通](0078-letter-reports-by-recipients-only.md)
