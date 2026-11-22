@@ -93,5 +93,6 @@
 - [0074 — 新聞の知り合いの版に、知り合いの投稿と誕生日を載せる](0074-newspaper-acquaintance-editions-posts-and-birthdays.md)
 - [0075 — 退去処理とデータ保持期間（配達回は消さない）](0075-account-deletion-and-retention-keep-delivery-runs.md)（ADR-0077 で置き換え）
 - [0076 — 配達の通知は Web Push で送り、記録は配達回から 30 日](0076-delivery-notification-web-push-retention-30-days.md)
-- [0077 — 退去処理と保持期間（確定した手紙も消す）](0077-letters-purged-after-settling-or-recipient-deletion.md)
+- [0077 — 退去処理と保持期間（確定した手紙も消す）](0077-letters-purged-after-settling-or-recipient-deletion.md)（ADR-0079 で置き換え）
 - [0078 — 手紙の通報は受取人だけ、確かめは条件付きで 1 通](0078-letter-reports-by-recipients-only.md)
+- [0079 — 退去で認証情報とセッションを最初に消す](0079-account-erase-credentials-and-sessions-first.md)
