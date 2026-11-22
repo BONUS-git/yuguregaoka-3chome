@@ -60,5 +60,4 @@ ADR-0004 では「配達時刻に間に合わなければ途中まで出さず�
 ## 影響
 
 - `async.md` §3・§4（J4・J5）でこの ADR の具体化を書く
-- `delivery_runs` に `prepared_at`（J4 の完了時刻）を足す（J0 が準備の完了を判断するため。`reviews/0001-design-review.md` の R-010）
-  （J0 が「準備完了」を判断するために必要）
+- J0 は `delivery_runs.prepared_at`（J4 の完了の時刻）で準備の完了を判断する（`db.md` §2、`async.md` §3・J4）
