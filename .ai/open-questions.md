@@ -422,7 +422,7 @@ OQ-077 → 決定（2026-11-21、ADR-0073・ADR-0074）: 誕生日（月日）�
 **関連**: FR-006, F-16  
 **決定**: FR-006 と FR-071 の区分は [inferred] とする（`requirements.md` の FR-006・FR-071。中身は OQ-079 → 決定、2026-11-21、ADR-0060 の D6、ADR-0064 の D13・D17）。  
 **理由**: 構想の原文には「空き家」という語しかなく、ログイン不在による強制剥奪は明示されていない。  
-**ADR**: [0002-vacancy-requires-explicit-deletion](.ai/adr/0002-vacancy-requires-explicit-deletion.md)（のちに ADR-0060 で置き換え）・[0060-dormant-stays-occupied-no-expiry-until-oq-088](.ai/adr/0060-dormant-stays-occupied-no-expiry-until-oq-088.md)
+**ADR**: [0060-dormant-stays-occupied-no-expiry-until-oq-088](.ai/adr/0060-dormant-stays-occupied-no-expiry-until-oq-088.md)
 
 ---
 
@@ -1667,7 +1667,7 @@ OQ-086 の答え（2026-11-21）は、要る道具はマスターが用意し、
 
 1. **FR-006 の区分変更**（OQ-027）:
    済んだ。FR-006 は `[inferred]` で、構想の原文には強制剥奪の記述がない。
-   中身は OQ-079 の答え（ADR-0059）で、ログインしないだけでは空き家にせず、休眠は入居と示し、閾値は MVP の後に検討する（OQ-088）と書いた。
+   中身は OQ-079 の答え（ADR-0060）で、ログインしないだけでは空き家にせず、休眠は入居と示し、閾値は MVP の後に検討する（OQ-088）と書いた。
 
 2. **FR-010 の更新**（OQ-022）:
    「未確定」の注記を「選択式（複数候補から住民が選択する）」に変更し、ADR-0001 への参照を追加する。
