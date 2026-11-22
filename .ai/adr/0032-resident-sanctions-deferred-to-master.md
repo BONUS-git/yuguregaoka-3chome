@@ -21,7 +21,7 @@
 2. **D2 決まるまで、住民への処置を実行する手段は作らない**（秘書の判断）:
    - 住民を停止・警告する API・CLI・DB の列や状態を置かない。
    - 管理者の通報への操作（`POST /api/v1/admin/reports/{id}/actions`）は approve / reject / dismiss のまま。
-     `moderation_actions.action` の値は approve / reject / dismiss / view_letter のまま（`view_letter` は ADR-0026 の D4 (c)）。
+     `moderation_actions.action` の値は approve / reject / dismiss / view_letter のまま（`view_letter` は ADR-0072 の D4 (c)）。
 3. **D3 変わらないこと**: コンテンツへの操作（掲示板の投稿の取り下げ・維持、通報の `closed` / `dismissed`）、
    住民どうしのブロック（FR-068）、モデレーターの操作の記録（`moderation_actions`、ADR-0013 の 1 年）、
    段階 2 の異議の手続き（`roadmap.md` S2-5、F-14）は今までどおり。S2-5 は投稿の取り下げへの異議として進め、住民への処置への異議は OQ-048 の答えのあとに足す。
