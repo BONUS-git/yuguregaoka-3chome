@@ -42,7 +42,7 @@
 - [0023 — 休眠と空き家の再割り当ては段階 3。MVP の住所の候補は使われたことのない住所だけ](0023-dormancy-and-address-reuse-in-stage-3.md)（ADR-0062 で置き換え）
 - [0024 — マッチングは恋愛のためのものではなく、興味のある人どうしが連絡を取る手段。個別の連絡先の共有は禁止する](0024-matching-not-romance-no-contact-sharing.md)
 - [0025 — 配達完了の通知は、配達回の公開のあとに Web Push で 1 回送り、郵便の件数を含める](0025-delivery-notification-web-push-with-count.md)
-- [0026 — クローズドな手紙も審査する。本文は LLM に渡さず、ルール表だけで照合し、復号できる場面を限る](0026-closed-letters-rule-only-moderation.md)
+- [0026 — クローズドな手紙も審査する。本文は LLM に渡さず、ルール表だけで照合し、復号できる場面を限る](0026-closed-letters-rule-only-moderation.md)（ADR-0072 で置き換え）
 - [0027 — 未成年の利用を認め、年齢制限・特別な制限を置かない。生年月日・年齢は集めない](0027-minors-no-age-restriction.md)
 - [0028 — 架空の街の地図は、1 枚の静的な画像として MVP（M1）で作る。API・DB・ジオデータは持たない](0028-town-map-static-image-in-mvp.md)（ADR-0058 で置き換え）
 - [0029 — 商店・団体のアカウントは管理者（運用者の CLI）が作る。住民は商店・団体を開けない](0029-shop-and-group-accounts-created-by-operators.md)（ADR-0067 で置き換え）
@@ -50,7 +50,7 @@
 - [0031 — 外部 LLM の費用の見積もりはロードマップに置き、サービスは秘書が暫定で選ぶ（Anthropic API の Haiku）。本番のアダプタは承認のあとに作る](0031-llm-service-provisional-selection-and-cost-estimate.md)
 - [0032 — 違反した住民への処置の内容は、マスターが後で決める。決まるまで処置を実行する手段は作らない](0032-resident-sanctions-deferred-to-master.md)
 - [0033 — メール送信は、テスト環境ではモックかローカルの SMTP を使う。本番のサービスはマスターの事前承認を得て選ぶ](0033-email-mock-or-local-smtp-in-test-production-by-approval.md)
-- [0034 — 共有を禁止する「連絡先」は街の外の連絡先だけ。禁止はマッチングの中だけで、掲示板・手紙には及ばない](0034-contact-sharing-ban-outside-contacts-in-matching-only.md)
+- [0034 — 共有を禁止する「連絡先」は街の外の連絡先だけ。禁止はマッチングの中だけで、掲示板・手紙には及ばない](0034-contact-sharing-ban-outside-contacts-in-matching-only.md)（ADR-0071 で置き換え）
 - [0035 — 新聞は全住民に定時に届け、通知も送る。手紙は午前・午後のランダムな時刻に届け、通知を新聞と手紙で分ける](0035-newspaper-for-all-letters-random-am-pm-separate-notifications.md)
 - [0036 — 通報された手紙は、モデレーターが条件付きで 1 通だけ確かめてよい。住民を守る制限は、住民が自分で外せる設定にしない](0036-reported-letters-viewable-by-moderators-protections-not-self-removable.md)
 - [0037 — 架空の街の地図は、全住民で共有する 1 枚の白黒の画像とする。印（知り合いの家・自分の住所・候補）とゲーム風の地図は今は作らない](0037-town-map-shared-monochrome-image.md)（ADR-0061 で置き換え）
@@ -72,7 +72,7 @@
 - [0053 — 過去の新聞の検索から興味を推し量ることを、住民は止められない。止める手段を作らず、知らせて推し量ることを検索の処理に組み込む](0053-inferred-interests-from-search-cannot-be-stopped.md)
 - [0054 — 新聞の LLM の文に印を付けず、投稿の記事は見出しだけ書く](0054-newspaper-post-articles-llm-headline-only-no-summary.md)
 - [0055 — 新聞は一人 1 枚にせず組ごとの版にする。知り合いのない組は興味で分け、ニュースは街の中と外から取る。記事の文字は LLM が作り、組版はサーバーで決定的に行う。投稿の記事は見出しだけで、本文の欄を持たない](0055-newspaper-editions-llm-text-server-typesetting-post-articles-headline-only.md)
-- [0056 — 手紙の照合を絶対NGと疑いに分け、疑いだけ確認に回す](0056-letters-reject-tier-and-review-tier.md)
+- [0056 — 手紙の照合を絶対NGと疑いに分け、疑いだけ確認に回す](0056-letters-reject-tier-and-review-tier.md)（ADR-0069 で置き換え）
 - [0057 — 年齢による違いは作らず、全員に同じ基準を当てる](0057-no-age-differences-same-rules-for-all.md)
 - [0058 — 地図は静的な画像、入居の 2 値だけ API で返す](0058-town-map-static-image-occupancy-route-only.md)（ADR-0063 で置き換え）
 - [0059 — 地図の印と、空き家・入居を全員に見せる表示](0059-town-map-marks-and-public-occupancy.md)（ADR-0064 で置き換え）
@@ -85,3 +85,7 @@
 - [0066 — 相互にならない住所録の追加は自動で止める](0066-address-book-adds-stopped-when-not-mutual.md)
 - [0067 — 商店のアカウントは運用者の CLI だけで作る](0067-shop-accounts-created-by-operator-cli-only.md)
 - [0068 — 使い終わった道具は片付ける](0068-clean-up-tools-after-use.md)
+- [0069 — 手紙の照合は絶対NGと疑いの 2 段、疑いだけ確認に回す](0069-letters-reject-and-review-tiers-real-info.md)
+- [0070 — 絶対NGと絵文字の入力不可を全ての書き込みに当てる](0070-reject-tier-and-no-emoji-for-all-writes.md)
+- [0071 — 街の外の連絡先は全ての書き込みで止める](0071-outside-contacts-banned-in-all-writes.md)
+- [0072 — クローズドな手紙も審査し、LLM に渡さず復号の場面を限る](0072-closed-letters-reviewed-no-llm-limited-decryption.md)

@@ -4,7 +4,7 @@
 - 日付: 2026-11-19
 - 根拠: `.ai/brief.md`・`.ai/requirements.md`・`.ai/features.md`・`.ai/architecture.md`
 - チケット: YGO-004
-- 関連 ADR: 0001〜0012, 0013, 0026, 0039
+- 関連 ADR: 0001〜0012, 0013, 0039, 0069, 0070, 0072
 
 ---
 
@@ -130,16 +130,16 @@ DDL は書かない。主なカラムと一意制約のみを示す。
 | `sender_id` UUID FK→residents NULL | 送信者（退去済みは NULL に変更、§5 参照） |
 | `body_encrypted` bytea | 保存時暗号化済み本文（ADR-0006。AAD は手紙の `id`、ADR-0021） |
 | `body_key_version` int NOT NULL | `body_encrypted` を暗号化した鍵の版（ADR-0021）。`keys.reencrypt`（`kind: 'letter'`）が版 `from_version` の行を選ぶ（`environment.md` §8.3・`async.md` §2）。索引: (`body_key_version`) |
-| `delivery_run_id` text FK→delivery_runs NULL | 次の配達回 ID。`held`・`blocked` の手紙は NULL（配達回に入れない、ADR-0056） |
-| `state` text | pending / held / scheduled / delivered / blocked / suppressed / returned（`held` は送った人が確認を頼んだ確認待ち、`blocked` はモデレーターが却下した手紙、ADR-0056） |
-| `rule_version` text NULL | 投函のときの照合に使ったルール表の版（ADR-0056 の D2）。照合のない M2・M3 の手紙は NULL |
+| `delivery_run_id` text FK→delivery_runs NULL | 次の配達回 ID。`held`・`blocked` の手紙は NULL（配達回に入れない、ADR-0069） |
+| `state` text | pending / held / scheduled / delivered / blocked / suppressed / returned（`held` は送った人が確認を頼んだ確認待ち、`blocked` はモデレーターが却下した手紙、ADR-0069） |
+| `rule_version` text NULL | 投函のときの照合に使ったルール表の版（ADR-0069 の D2）。照合のない M2・M3 の手紙は NULL |
 | `matched_rule_id` text NULL | 当たった規則の ID（`held`・`blocked` のときだけ）。本文の抜き書きは持たない |
 | `decided_at` timestamptz NULL | モデレーターが `held` の手紙を操作した日時。`blocked` の 30 日の保持（J14）の起点 |
 | `created_at` timestamptz | — |
 
 UNIQUE 制約なし。複数宛先は `letter_recipients` で管理する。
 CHECK(`(state IN ('held','blocked')) = (delivery_run_id IS NULL)`) — 確認待ちと却下の手紙は配達回に入らない。
-CHECK(`state NOT IN ('held','blocked') OR (matched_rule_id IS NOT NULL AND rule_version IS NOT NULL)`) — 確認待ちと却下の手紙は、当たった規則と版を持つ（ADR-0056）。
+CHECK(`state NOT IN ('held','blocked') OR (matched_rule_id IS NOT NULL AND rule_version IS NOT NULL)`) — 確認待ちと却下の手紙は、当たった規則と版を持つ（ADR-0069）。
 
 #### `letter_recipients` — 宛先
 
@@ -462,7 +462,7 @@ UNIQUE(blocker_id, blocked_id)
 | カラム | 説明 |
 |--------|------|
 | `id` UUID PK | — |
-| `content_kind` text | board_post（手紙は入れない。手紙は投函のときに API が照合する、ADR-0056） |
+| `content_kind` text | board_post（手紙は入れない。手紙は投函のときに API が照合する、ADR-0069） |
 | `content_id` UUID | 審査対象レコードの ID |
 | `delivery_run_id` text FK→delivery_runs | 対象の配達回 |
 | `llm_label` text NULL | ok / review / block（LLM の一次判定） |
@@ -471,7 +471,7 @@ UNIQUE(blocker_id, blocked_id)
 | `rule_version` text NULL | 判定に使ったルール表の版（security.md §5.2） |
 | `processed_at` timestamptz NULL | — |
 
-CHECK(`content_kind <> 'letter'`) — 手紙をこのキュー（LLM の経路）に乗せないことを DB でも守る（ADR-0026 の D2。もとは `content_kind <> 'letter' OR llm_label IS NULL` で、ADR-0056 で手紙の行を入れなくなったので改めた）。
+CHECK(`content_kind <> 'letter'`) — 手紙をこのキュー（LLM の経路）に乗せないことを DB でも守る（ADR-0072 の D2）。
 このテーブルにも、ほかのどのテーブルにも、手紙の本文の平文は書かない。
 
 #### `moderation_actions` — モデレーター操作記録
@@ -480,13 +480,13 @@ CHECK(`content_kind <> 'letter'`) — 手紙をこのキュー（LLM の経路�
 |--------|------|
 | `id` UUID PK | — |
 | `report_id` UUID FK→reports NULL | 通報への操作のとき |
-| `letter_id` UUID NULL | 確認待ちの手紙（`held`）への操作のとき（ADR-0056 の D5）。`blocked` の手紙は 30 日で消えるが記録は 1 年残すので、外部キーにしない |
+| `letter_id` UUID NULL | 確認待ちの手紙（`held`）への操作のとき（ADR-0069 の D5）。`blocked` の手紙は 30 日で消えるが記録は 1 年残すので、外部キーにしない |
 | `moderator_id` UUID FK→residents | 操作したモデレーター（権限は ADR-0020・security.md §4） |
-| `action` text | approve / reject / dismiss / view_letter（手紙の本文を見た記録。見るたびに 1 行。通報された手紙は ADR-0026 の D4 (c)（OQ-043 → 決定、ADR-0036）、確認待ちの手紙は ADR-0056 の D5）。`letter_id` の行は view_letter / approve / reject だけ。住民への処置（停止・警告など）の値は置かない（ADR-0032。内容は OQ-048） |
+| `action` text | approve / reject / dismiss / view_letter（手紙の本文を見た記録。見るたびに 1 行。通報された手紙は ADR-0072 の D4 (c)（OQ-043 → 決定、ADR-0036）、確認待ちの手紙は ADR-0069 の D5）。`letter_id` の行は view_letter / approve / reject だけ。住民への処置（停止・警告など）の値は置かない（ADR-0032。内容は OQ-048） |
 | `note` text NULL | 操作メモ |
 | `created_at` timestamptz | — |
 
-CHECK(`num_nonnulls(report_id, letter_id) = 1`) — 1 つの行は通報か確認待ちの手紙のどちらか一方への操作（ADR-0056）。
+CHECK(`num_nonnulls(report_id, letter_id) = 1`) — 1 つの行は通報か確認待ちの手紙のどちらか一方への操作（ADR-0069）。
 
 ---
 
@@ -568,7 +568,7 @@ ADR-0060 は「空き家は新規住民の割り当て候補となる」と定�
 | 認証情報 | `credentials` | 新規登録時に `residents` と同じトランザクションで作成 | アカウント削除まで。鍵の入れ替えでは行を残したまま暗号化と HMAC を新しい版で作り直す（`environment.md` §8.3） | 退去で J7 が最初に行ごと削除（`security.md` §2.4、ADR-0013） |
 | 住所 | `addresses` | 住民登録時・新規割り当て時 | 居住中は保持。空き家後も保持し、段階 3 から割り当て候補に戻す（ADR-0062） | 管理者が廃棄するまで削除しない（住所のプールを維持） |
 | 居住記録 | `tenancies` | 住所割り当て時・転入時 | 歴史として保持（配達先解決に使う） | 住民削除から 1 年後に削除（ADR-0013） |
-| 手紙（本体） | `letters` | 送信時（`pending` 状態。確認を頼まれた手紙は `held`、ADR-0056。照合に当たって送った人が n を選んだ手紙は作らない） | 配達後も保持。送信者が削除されても `body_encrypted` は残す（受取人保護）。ただし送信者フラグを「退去済み」に更新。`held` はモデレーターが操作するまで保持（長く確かめられないときは OQ-065） | 受取人全員が郵便受けから削除したとき、または通報クローズから 1 年後（レポート対象分）（ADR-0013）。`blocked` は `decided_at` から 30 日後に J14 が本文と宛先ごと削除 [assumed]。送信者の退去で、その住民の `held`・`blocked` は即時削除（ADR-0056 の D6） |
+| 手紙（本体） | `letters` | 送信時（`pending` 状態。確認を頼まれた手紙は `held`、ADR-0069。照合に当たって送った人が n を選んだ手紙は作らない） | 配達後も保持。送信者が削除されても `body_encrypted` は残す（受取人保護）。ただし送信者フラグを「退去済み」に更新。`held` はモデレーターが操作するまで保持（長く確かめられないときは OQ-065） | 受取人全員が郵便受けから削除したとき、または通報クローズから 1 年後（レポート対象分）（ADR-0013）。`blocked` は `decided_at` から 30 日後に J14 が本文と宛先ごと削除 [assumed]。送信者の退去で、その住民の `held`・`blocked` は即時削除（ADR-0069 の D6） |
 | 手紙（宛先） | `letter_recipients` | 送信時 | 手紙本体と同期 | 手紙削除時 |
 | 郵便受け | `mailbox_items` | 配達バッチ時 | 受取人が削除するまで保持（FR-099） | 受取人の削除操作 or アカウント削除時 |
 | 配達回 | `delivery_runs` | 締め切り処理時 | 30 日保持（ADR-0013）[assumed] | 30 日経過後に削除 |
@@ -586,7 +586,7 @@ ADR-0060 は「空き家は新規住民の割り当て候補となる」と定�
 | 住所録 | `address_book` | 住民が手動で追加（FR-051） | 住民が手動で削除するまで保持（ADR-0003）。足したもとの投稿・手紙が消えても行は残す（`board_post_id` は NULL になる、ADR-0065 の D6） | 所有者のアカウント削除時に削除 |
 | 住所録の追加の数え | `address_book_daily_counts` | 住所録の追加・住所を変えた更新のとき（API、ADR-0065 の D4） | 今日を含む直近 7 日（JST の暦日。相互にならない追加の判定、ADR-0066 の D5）。エントリを消しても減らさない | `jst_date` が今日（JST）より 7 日以上前の行を次の J14 が削除。アカウント削除時に即時削除（外部キーの CASCADE） |
 | ブロック | `blocks` | ブロック操作時 | ブロック解除まで | ブロック解除時、またはどちらかが退去時 |
-| モデレーション審査 | `moderation_queue` | 締め切り処理時にジョブ経由で登録（掲示板の投稿だけ、ADR-0056） | 審査完了後 1 年保持（ADR-0013）[assumed] | 1 年経過後削除 |
+| モデレーション審査 | `moderation_queue` | 締め切り処理時にジョブ経由で登録（掲示板の投稿だけ、ADR-0069） | 審査完了後 1 年保持（ADR-0013）[assumed] | 1 年経過後削除 |
 | モデレーター操作 | `moderation_actions` | モデレーターの操作時 | 1 年保持（ADR-0013）[assumed] | 1 年経過後削除 |
 | 通報 | `reports` | 住民の通報操作時 | クローズまで保持。クローズ後 1 年保持（ADR-0013）[assumed] | クローズから 1 年後に削除 |
 | 画像 | `images` | アップロード時 | 加工した画像は、参照するコンテンツ（手紙・掲示板）が存在する間。元の画像は加工が終わるか失敗するまで（取りこぼしは最長でアップロードから約 48 時間。24 時間 [assumed] を過ぎたあとの次の J14 で消す、ADR-0044 の D5） | 元の画像は J13 の加工のあと（失敗でも）に消し、残りは 24 時間を過ぎたあとの次の J14 が消す。加工した画像はコンテンツ削除時にオブジェクトストレージからも削除 |
@@ -601,7 +601,7 @@ ADR-0060 は「空き家は新規住民の割り当て候補となる」と定�
 ```mermaid
 stateDiagram-v2
     [*] --> pending : 送信（投函のときの照合に当たらない）
-    [*] --> held : 送信（照合に当たり、送った人が確認を頼んだ。ADR-0056）
+    [*] --> held : 送信（照合に当たり、送った人が確認を頼んだ。ADR-0069）
     held --> pending : モデレーターが承認（次の配達回に入れる）
     held --> blocked : モデレーターが却下
     pending --> scheduled : 締め切り処理
@@ -614,10 +614,11 @@ stateDiagram-v2
     blocked --> [*] : 30 日後・送信者の退去（削除）
 ```
 
-手紙の審査はルール表だけで行い、LLM は使わない（ADR-0026）。照合は投函のときに API が行い、照合に当たって送った人が送らないと選んだ手紙は保存しない（ADR-0056）。
-ルール表の `reject` の段に当たった手紙（422 `letter_rejected`）と、本文に絵文字がある手紙（400）も保存しない。`letters` の行も、`matched_rule_id` も、`moderation_actions` の行もできない（ADR-0056 の D11・D13）。表と列は変えない。`held` と `blocked` の手紙は `review` の段に当たった手紙だけ。
+手紙の審査はルール表だけで行い、LLM は使わない（ADR-0072）。照合は投函のときに API が行い、照合に当たって送った人が送らないと選んだ手紙は保存しない（ADR-0069）。
+ルール表の `reject` の段に当たった手紙（422 `letter_rejected`）と、本文に絵文字がある手紙（400）も保存しない。`letters` の行も、`matched_rule_id` も、`moderation_actions` の行もできない（ADR-0069 の D11・D13）。表と列は変えない。`held` と `blocked` の手紙は `review` の段に当たった手紙だけ。
 `held` の手紙は送った人に「確認中」と見せ、`blocked` の手紙は配達せず、送った人には「届けられませんでした」と見せる（api.md §7 F-04）。
-`pending` / `scheduled` の手紙は、配達の前に照合し直さない（ADR-0056 の D3）。
+`pending` / `scheduled` の手紙は、配達の前に照合し直さない（ADR-0069 の D3）。
+手紙のほかの書き込み（`board_posts.body`・`residents.nickname`・`residents.bio`・`address_book.memo`・`reports.reason`）も、絵文字があれば（400）、`reject` の段に当たれば（422 `content_rejected`）保存しない。新しい行はできず、保存済みの値も変わらない。保存済みの値は当て直さない（ADR-0070 の D2・D3・D5）。表と列は変えない。
 
 #### 掲示板投稿（`board_posts.status`）
 
@@ -662,7 +663,7 @@ stateDiagram-v2
 
 2. **送信済み手紙**: 受取人の郵便受けに配達済みのものはそのまま残す。
    `sender_id` を NULL に変更し、API の表示では「退去済み」と返す。
-   確認待ち（`held`）と却下（`blocked`）の手紙は届いていないので、本文と宛先ごと即時に削除する（ADR-0013・ADR-0056 の D6）。
+   確認待ち（`held`）と却下（`blocked`）の手紙は届いていないので、本文と宛先ごと即時に削除する（ADR-0013・ADR-0069 の D6）。
 
 3. **掲示板投稿**: 即時 `deleted` 状態に変更し、`body` を消去する。
    その投稿が掲載された新聞を組み直す（掲載内容から除去、ADR-0013）。
@@ -738,7 +739,7 @@ stateDiagram-v2
 | FR-125 | §2 `address_book.counted_at`・§2 `address_book_daily_counts`（7 日の判定と 7 日分の保持）・§4 の保持期間（ADR-0066） |
 | FR-068 | §2 `blocks`・§3 suppressed 処理 |
 | FR-076〜082 | §2 `moderation_queue` / `reports` / `moderation_actions` |
-| FR-112 | §2 `letters`（`held`・`rule_version`・`matched_rule_id`・`decided_at`）・`moderation_actions.letter_id`・§4 手紙の状態遷移と保持（ADR-0056） |
+| FR-112 | §2 `letters`（`held`・`rule_version`・`matched_rule_id`・`decided_at`）・`moderation_actions.letter_id`・§4 手紙の状態遷移と保持（ADR-0069） |
 | FR-113 | §2 `residents.age_at_registration`・`age_base_date`（ADR-0048）・§9（年齢による違いは作らない、ADR-0057。誕生日は OQ-077） |
 | FR-093, FR-097 | §5 退去処理（ADR-0013） |
 | FR-099 | §4 `mailbox_items.deleted_at` |
@@ -754,14 +755,14 @@ stateDiagram-v2
 
 | OQ | 本文書での仮の扱い |
 |----|-----------------|
-| OQ-003（クローズドな手紙のモデレーション）→ 決定 | 手紙はルール表だけで審査する。通報された手紙をモデレーターが見るたびに `moderation_actions` に `view_letter` を書く（ADR-0026。見てよいことは OQ-043 → 決定、ADR-0036）。照合の時点は OQ-052 で投函のときに変わり、手紙は `moderation_queue` に積まなくなった（ADR-0056） |
+| OQ-003（クローズドな手紙のモデレーション）→ 決定 | 手紙はルール表だけで審査する。通報された手紙をモデレーターが見るたびに `moderation_actions` に `view_letter` を書く（ADR-0072。見てよいことは OQ-043 → 決定、ADR-0036）。照合の時点は OQ-052 で投函のときに変わり、手紙は `moderation_queue` に積まなくなった（ADR-0069） |
 | OQ-043（手紙で止める内容と、手紙の閲覧）→ 決定 | 通報された手紙はモデレーターが条件付きで 1 通だけ確かめてよい（2026-11-19、ADR-0036）。`moderation_actions.action` の `view_letter` は決定の記録として残す。表の変更はない |
-| OQ-052（手紙で止める内容・止めた手紙の閲覧と、年齢や設定で守り方を変えるか）→ 決定 | 2026-11-20、ADR-0056・ADR-0041。`letters` に `held`・`rule_version`・`matched_rule_id`・`decided_at` を足し、`delivery_run_id` を NULL 可にした。`moderation_queue` に手紙の行を入れない（CHECK を `content_kind <> 'letter'` に改めた）。`moderation_actions` に `letter_id` を足した。`blocked` の保持は 30 日 [assumed]（§4） |
+| OQ-052（手紙で止める内容・止めた手紙の閲覧と、年齢や設定で守り方を変えるか）→ 決定 | 2026-11-20、ADR-0069・ADR-0041。`letters` に `held`・`rule_version`・`matched_rule_id`・`decided_at` を足し、`delivery_run_id` を NULL 可にした。`moderation_queue` に手紙の行を入れない（CHECK を `content_kind <> 'letter'` に改めた）。`moderation_actions` に `letter_id` を足した。`blocked` の保持は 30 日 [assumed]（§4） |
 | OQ-063（年齢で何を変えるか）→ 決定 | 2026-11-20、ADR-0057。年齢による違いは作らない。ルール表と権限の規則に年齢の条件を持たせないので、表に年齢の区切りや年齢ごとの規則の列は置かない |
 | OQ-064（年齢の扱い）→ 決定 | 2026-11-20、ADR-0048。`residents` に `age_at_registration`（CHECK 0〜999）と `age_base_date`（登録した日の JST の日付）を足した（§2）。今の年齢は読むときに計算し、列を書き換えるジョブは持たない。生年月日の列は置かない（ADR-0041 の D4）。ほかの住民に見せる条件は、既存の `mailbox_items`（`kind = 'letter'`・`visible_at`・`deleted_at IS NULL` の行だけ）・`letters.sender_id`・`letters.created_at`・`tenancies.is_current`・`started_at`・`blocks`（見る住民がブロックした行だけ）から C2 が求めるので、表を足さない。削除した手紙は数えないので、§4 の保持（受取人の削除操作で `mailbox_items` を消す、受取人全員の削除で `letters` を消す）は変わらない。見せてよいという事実を持つ表も置かない（ADR-0048 の D4・理由） |
 | OQ-077（誕生日を集めて新聞に載せるか） | 誕生日の列は置かない（ADR-0048 の D5 の暫定）。集めるなら `residents` に月日の列を足し、`age_base_date` の扱い（ADR-0048 の D3）を直す。新聞に載せるなら、新聞の表（§2）と J3・J4 の入力を直す |
-| OQ-076（当たった手紙の扱い）→ 決定 | 2026-11-21、ADR-0056・ADR-0057。照合を `reject` と `review` の 2 段に分けた。`reject` の段に当たった手紙と、絵文字のある手紙は保存しないので、表と列の変更はない（§4）。ルール表の項目の段（`tier`）はルール表の持ち方の一部で、置き場は OQ-065 |
-| OQ-087（絶対NGと絵文字を手紙のほかに当てるか） | 表と列の変更はない（暫定は手紙だけ）。掲示板などにも当てても、入力の検査と照合の段なので、表は変わらない見込み。答えのあとに確かめる |
+| OQ-076（当たった手紙の扱い）→ 決定 | 2026-11-21、ADR-0069・ADR-0057。照合を `reject` と `review` の 2 段に分けた。`reject` の段に当たった手紙と、絵文字のある手紙は保存しないので、表と列の変更はない（§4）。ルール表の項目の段（`tier`）はルール表の持ち方の一部で、置き場は OQ-065 |
+| OQ-087（絶対NGと絵文字を手紙のほかに当てるか）→ 決定 | 2026-11-22、ADR-0069・ADR-0070・ADR-0071。全ての書き込みに当てるが、入力の検査と書いたときの照合で、当たった書き込み（422 `content_rejected`）と絵文字のある書き込み（400）は保存しないので、表と列の変更はない（§4） |
 | OQ-065（手紙の照合の細部） | 長く確かめられない `held` の期限は置かない。決まったら §4 のライフサイクルと J14 を直す |
 | OQ-051（新聞の中身）→ 決定 | 組ごとの版・興味・外のニュース・記事の文字（2026-11-20、ADR-0039）。§2 の新聞と興味の表 |
 | OQ-058（知り合いで埋まる組・一部埋まらない組）→ 決定 | 2026-11-20、ADR-0044。MVP では全住民を知り合い 0 の組として扱うので、作る `edition_key` は `common` / `interest:<key>` / `holiday` だけ。組 1・2 の版の種類 `acquaintance:<resident_id>` を §2 に書いた（作る時期は OQ-070）。組は保存せず、知り合いは既存の `address_book.registered_tenancy_id`・`tenancies.is_current`・`blocks` から J3 が求めるので、表を足さない。`images.original_url` を NULL 可にし、元の画像の保持を §4 に書いた |
