@@ -106,6 +106,6 @@ DB は一意制約・外部キー・状態の値の制約によって整合性�
 ## 影響
 
 - `api.md` §2・§4 がこの ADR の具体化。
-- db.md §4 `delivery_runs` のライフサイクル表の「作る」の説明を修正する（`api.md` §10 提案 1）。
+- db.md §4 `delivery_runs` のライフサイクル表の「作る」に、API が `pending` で冪等に作ることを書く（`api.md` §2.3）。
 - async.md: 締め切りのロック手順・`account.erase` ジョブの詳細設計を引き継ぐ。
 - security.md: セッション無効化の実装方法（OQ-028・OQ-036 と連携）。

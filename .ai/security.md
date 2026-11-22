@@ -172,6 +172,7 @@ ADR-0079 の表が正本。退去時の処理:
 - **強制ログアウト**: 運用者の CLI だけで行い、その住民のセッションの行をすべて消す。HTTP の経路（admin の経路を含む）は作らない（ADR-0081 の D4・ADR-0032）。
 - セッションの行を消すとき・退去の受付で無効にするときは、その端末の通知の購読も同じトランザクションで消す（ADR-0081 の D4・ADR-0076）。
   ログアウトした端末には配達完了の通知が届かない。
+- `sessions` に持つ項目: `session_id`・`resident_id`・`created_at`・`last_seen_at`・`expires_at`・`reauthenticated_at`・`invalidated_at`・二要素認証を済ませた時刻・一覧で見せる識別子（Cookie の値とは別、ADR-0081 の D1・D3）。表の定義は db.md §2 にまだない（`reviews/0001-design-review.md` の R-025）。
 
 ### §3.4 再認証
 
@@ -184,7 +185,7 @@ ADR-0079 の表が正本。退去時の処理:
 ### §3.5 CSRF 対策と流量の制限
 
 - CSRF 対策: `Origin` ヘッダの検査 ＋ 独自ヘッダ（`X-Requested-With` 相当）の確認。
-- **流量の制限**: PostgreSQL のカウンタ（`rate_limit_buckets` または類似の表）で記録する。
+- **流量の制限**: PostgreSQL のカウンタ（`rate_limit_buckets` または類似の表）で記録する。項目は `key`・`count`・`window_start`・`updated_at`（表の定義は R-025）。
 - 登録の要求・ログイン試行・再認証の試行・パスワード再設定の依頼と完了・確認メールの送り直しと確認の完了・メールアドレスの変更に流量の制限を設ける（ADR-0080 の D4・ADR-0081 の D5・D7）。メールアドレスの変更は住民が入れた任意のアドレスに確認のメールを送るので、ほかの人のアドレスへ大量にメールを送る踏み台にさせない。超えた要求には 429（code は `rate_limited`。手紙・投稿・住所録の追加の 1 日の上限の `daily_limit_reached` とは分ける。残りの数は返さない。api.md §5）を返す。
   登録は開放式で招待で入り口を絞らないため、登録の要求も対象にする（ADR-0030 の D2）。上限の数値は実装の段階で決める。
   登録の住所は地図の空き家の印からも選べ、登録の要求は提示した候補かどうかを確かめない（ADR-0082 の D3・ADR-0084 の D7）。この制限が、空き家を順に試して 409 から前に使われた住所を探ることと、決まった住所を先に押さえることの数も抑える（ADR-0084 の D18）。
@@ -220,6 +221,7 @@ ADR-0079 の表が正本。退去時の処理:
   - admin の経路は、二要素認証を済ませたセッションだけが呼べ、済ませていなければ 403 `forbidden`。手紙を返す経路と確認待ちの手紙への操作は、§4.2 の条件のとおり 404。
   - 作り直しと解除は運用者の CLI だけで行い、解除したらそのモデレーターのセッションの行をすべて消す。HTTP の経路は作らない。
 - モデレーターは自分が当事者（送信者・受取人・通報者・被通報者）の案件を処理できない。
+- ロールの付与の記録に持つ項目: `resident_id`・`role`・`granted_at`・`granted_by`（表か列かは R-025）。
 
 ### §4.2 権限表
 
@@ -689,39 +691,7 @@ web と worker は、自分の行にない秘密が渡されたら起動に失�
 
 ---
 
-## §9 他の文書への変更提案（別チケット）
-
-以下は本文書の内容を反映して他の文書に追加・修正が必要な箇所。変更は別チケットで行う。
-
-### db.md への提案
-
-1. `credentials` テーブル（またはカラム）を `residents` テーブルに追加または別テーブルとして設ける:
-   - `email_encrypted`（暗号化済みメール）
-   - `email_hmac`（検索用 HMAC）
-   - `password_hash`（Argon2id）
-   - `email_verified_at`
-   → 済み（db.md §2 の `credentials`。鍵の入れ替えのため `email_key_version`・`email_hmac_key_version` とその索引も足した、ADR-0052・`environment.md` §8.3）
-2. `sessions` テーブル: `session_id`・`resident_id`・`created_at`・`last_seen_at`・`expires_at`・`reauthenticated_at`・`invalidated_at`・二要素認証を済ませた時刻・一覧で見せる識別子（Cookie の値とは別。ADR-0081 の D1・D3）。この 2 つの列の型と名前は R-025 で決める
-3. `staff_roles` テーブル（またはカラム）: `resident_id`・`role`・`granted_at`・`granted_by`
-4. `letters` テーブルに `body_key_version` カラムを追加（ADR-0021）。→ 済み（db.md §2。`keys.reencrypt` が版で行を選ぶための索引も置いた、ADR-0052）
-5. `rate_limit_buckets` テーブル: `key`・`count`・`window_start`・`updated_at`
-6. `moderation_queue` に `rule_version`（使用したルール表の版）カラムを追加。→ 済み（db.md §2。`matched_rule_id` と手紙の行の CHECK 制約も一緒に足した、ADR-0072）
-
-### api.md への提案
-
-1. 認証エンドポイントの追加: `POST /api/v1/registrations`・`POST /api/v1/sessions`・`DELETE /api/v1/sessions/current`・`POST /api/v1/password-reset-requests`・`POST /api/v1/password-resets`・`POST /api/v1/email-verifications`・`POST /api/v1/email-verification-requests`・`POST /api/v1/sessions/current/reauthentication`
-   → 済み（api.md §4・§5・§7 F-02、ADR-0080・ADR-0081）
-2. セッション管理エンドポイントの追加: `GET /api/v1/sessions`・`DELETE /api/v1/sessions/{id}`
-   → 済み（api.md §7 F-02、ADR-0081 の D3）
-
-### async.md への提案
-
-1. J7（`account.erase`）の「最初の手順」として認証情報の削除（メール暗号化値・HMAC・パスワードハッシュ）を明記する。
-   → 済み（async.md §4 J7 の手順 0。セッションの行と通知の購読の残りも同じ手順で消し、`erasure_log` に記録する、ADR-0079 の D8）
-
----
-
-## §10 FR/NFR との対応表
+## §9 FR/NFR との対応表
 
 | FR/NFR | 内容（要約） | 対応する節 |
 |--------|------------|----------|

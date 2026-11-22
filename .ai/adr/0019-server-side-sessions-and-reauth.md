@@ -72,7 +72,7 @@ API の認証チェックは `invalidated_at IS NULL` かつ有効期限内の�
 
 ## 影響
 
-- DB 設計: `sessions` テーブルを追加する（security.md §9）。
+- DB 設計: `sessions` テーブルを追加する（項目は security.md §3.3、表の定義は `reviews/0001-design-review.md` の R-025）。
   カラム: `session_id`・`resident_id`・`created_at`・`last_seen_at`・`expires_at`・
   `reauthenticated_at`・`invalidated_at`
 - API 設計: `GET /auth/sessions`・`DELETE /auth/sessions/:id`・`POST /auth/reauth` を設ける。

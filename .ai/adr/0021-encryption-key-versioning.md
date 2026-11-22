@@ -60,7 +60,7 @@ AES-256-GCM の AAD に **手紙の ID**（`letter_id`）を含める。
 
 ## 影響
 
-- DB 設計: `letters` テーブルに `body_key_version` カラムを追加する（security.md §9）。
+- DB 設計: `letters` テーブルに `body_key_version` カラムを追加する（db.md §2 の `letters`）。
 - 非同期処理: 鍵の入れ替え後に旧版で暗号化されたレコードを再暗号化するジョブを設ける
   （環境構成の設定チケット（`environment.md`）で詳細を書く）。
 - 秘密管理: security.md §6.3 の鍵の入れ替え手順が本 ADR の版管理方針を引き継ぐ。

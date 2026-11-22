@@ -60,8 +60,8 @@ OQ-028「認証方式」は `security.md` で決定する持ち越し項目だ�
 ## 影響
 
 - DB 設計: `residents`（または `credentials`）テーブルに `email_encrypted`・`email_hmac`・
-  `password_hash`・`email_verified_at` カラムを追加する（security.md §9）。
+  `password_hash`・`email_verified_at` カラムを追加する（db.md §2 の `credentials`）。
 - API 設計: `POST /auth/register`・`POST /auth/login`・`POST /auth/forgot-password`・
-  `POST /auth/reset-password`・`POST /auth/verify-email` を設ける（security.md §9）。
+  `POST /auth/reset-password`・`POST /auth/verify-email` を設ける（今の経路は api.md §7 F-02）。
 - 秘密管理: 暗号化鍵と HMAC 鍵を security.md §6 の一覧に追加する。
 - OQ-028: 本 ADR の決定により持ち越し → 決定に変更する。
