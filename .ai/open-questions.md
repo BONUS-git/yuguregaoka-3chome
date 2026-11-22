@@ -68,7 +68,7 @@
 | OQ-034 | 未確定 | 持ち越し | NFR-047, NFR-048 | — | api |
 | OQ-035 | 未確定 | 持ち越し | NFR-049 | — | — |
 | OQ-036 | 未確定 | 決定 | FR-100 | F-02 | api, security |
-| OQ-037 | 不足 | 決定 | FR-081 | F-08, F-14 | security, api, db, roadmap, features, ADR-0019, ADR-0020, ADR-0024, ADR-0026, ADR-0032 |
+| OQ-037 | 不足 | 決定 | FR-081 | F-08, F-14 | security, api, db, roadmap, features, ADR-0081, ADR-0020, ADR-0024, ADR-0026, ADR-0032 |
 | OQ-038 | 未確定 | 持ち越し | FR-013 | F-10 | api, db |
 | OQ-039 | 不足 | 決定 | NFR-080 | F-02 | security, async, roadmap, features, ADR-0022, ADR-0023, ADR-0076, ADR-0033 |
 | OQ-040 | 未確定 | 決定 | FR-058 | F-09 | api, roadmap, ADR-0042, ADR-0049 |
@@ -1068,7 +1068,7 @@ ADR-0056 は ADR-0069、ADR-0034 は ADR-0071 で丸ごと置き換えた。受�
 **担当文書**: `security.md`  
 メール＋パスワード・ソーシャルログイン・パスキーなどの選択肢を `security.md` で評価・決定する。  
 **決定**: メールアドレス＋パスワード（security.md §3）。  
-**ADR**: [0018-authentication-email-password](.ai/adr/0018-authentication-email-password.md)
+**ADR**: [0080-authentication-email-password-api-v1](.ai/adr/0080-authentication-email-password-api-v1.md)
 
 ---
 
@@ -1151,7 +1151,7 @@ ADR-0056 は ADR-0069、ADR-0034 は ADR-0071 で丸ごと置き換えた。受�
 **担当文書**: `security.md`・`api.md`  
 セッション管理・トークン管理の設計（OQ-028）とあわせて `security.md` で決める。  
 **決定**: セッションはサーバー側に持ち、複数の端末で同時に持てる（security.md §3.3）。  
-**ADR**: [0019-server-side-sessions-and-reauth](.ai/adr/0019-server-side-sessions-and-reauth.md)
+**ADR**: [0081-server-side-sessions-reauth-api](.ai/adr/0081-server-side-sessions-reauth-api.md)
 
 ---
 
@@ -1218,8 +1218,9 @@ OQ-045（商店・団体は誰か、作ったあと誰が発信するか）は�
 **関連**: FR-091, FR-010, F-01, F-02, ADR-0062, ADR-0030  
 **内容**: OQ-007 の答えで、新規登録は開放式に決まりました（ADR-0030）。誰でも登録を始められるので、
 メールの確認（`security.md` §3.1）が済まないまま住所を押さえ続ける登録が出ます。
-(1) 確認が済まない登録が住所を押さえる期限、(2) 期限が来た住所を候補に戻すか（ADR-0062 の D3「使われたことのない住所だけ」との関係を含む）を決めます。  
+(1) 確認が済まない登録が住所を押さえる期限、(2) 期限が来た住所を候補に戻すか（ADR-0062 の D3「使われたことのない住所だけ」との関係を含む）、(3) 確認のメールのリンクの期限（(1) の期限との関係を含む）を決めます。  
 **扱い**: 持ち越し。技術と設計で決められるので、M1 の前に秘書が決めて ADR に残す（`db.md`・`security.md`）。暫定は置かない。
+答えで変わる箇所: 確認のメールのリンクの期限（ADR-0080 の D2）、`api.md` §7 F-02 の `POST /api/v1/email-verifications`・`POST /api/v1/email-verification-requests`、`security.md` §3.1。
 
 ---
 
@@ -1248,7 +1249,7 @@ OQ-045（商店・団体は誰か、作ったあと誰が発信するか）は�
 (3) 住民への通知、(4) 処置への異議の手続き。  
 **扱い**: 持ち越し。マスターが後で決めると答えたので、すぐには聞き直さない。処置を実行する手段を作る前、遅くともデプロイの前にマスターに聞く。
 それまでは処置を実行する手段を作らない（ADR-0032 の D2）。暫定は置かない。
-答えで変わる箇所: ADR-0032 の「影響」のとおり（`security.md` §1・§3.4・§4.2・§5.4・§7 の T-12、ADR-0019 の再認証、`api.md` §7 F-08、`db.md` §2 の `moderation_actions.action`、`roadmap.md` の S2-5・A-09、`features.md` §5）。
+答えで変わる箇所: ADR-0032 の「影響」のとおり（`security.md` §1・§3.4・§4.2・§5.4・§7 の T-12、ADR-0081 の D5 の再認証、`api.md` §7 F-08、`db.md` §2 の `moderation_actions.action`、`roadmap.md` の S2-5・A-09、`features.md` §5）。
 
 ---
 
@@ -1652,7 +1653,7 @@ OQ-086 の答え（2026-11-21）は、要る道具はマスターが用意し、
 | D-004 | OQ-020 | 新聞の内容・構成 → 決定済み（ADR-0007） |
 | D-005 | OQ-022 | 住所の割り当て方法 → 決定済み（ADR-0001） |
 | D-006 | OQ-023, OQ-024 | 空き家期間・転送期間に分割 → 決定済み（ADR-0002） |
-| D-007 | OQ-028 | 認証方式 → 決定済み（ADR-0018） |
+| D-007 | OQ-028 | 認証方式 → 決定済み（ADR-0080） |
 | D-008 | OQ-029 | 想定規模 → 決定済み（ADR-0012） |
 | D-009 | OQ-025 | 手紙の文字数 → 決定済み（ADR-0004） |
 | D-010 | OQ-026 | 掲示板フォーマット → 決定済み（ADR-0004） |
