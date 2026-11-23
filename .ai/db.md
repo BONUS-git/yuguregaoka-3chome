@@ -194,9 +194,12 @@ UNIQUE(delivery_run_id, resident_id) WHERE kind = 'newspaper' — 1 回の配達
 | `run_id` text PK | `YYYY-MM-DD-morning` / `YYYY-MM-DD-evening`（ADR-0004） |
 | `status` text | pending / running / done / failed / skipped |
 | `started_at` timestamptz NULL | 締め切りの時刻。J1 が `running` にする UPDATE で `now()` を書く（async.md §4 J1） |
+| `prepared_at` timestamptz NULL | 準備（J4）が終わった時刻。J4 がすべての宛先を書き終えた最後のトランザクションで `now()` を書く [assumed]。J0 はこの列で準備の完了を判断する（NULL の間は J5 を積まない）。`pending` の間は NULL、`done` の回は NULL でない。J6 は書き換えない（準備の途中で持ち越した `skipped` の回は NULL のまま）（async.md §3・§4 J4・J5、ADR-0017） |
 | `finished_at` timestamptz NULL | 配達回が終わった時刻。J5 が `done` にする UPDATE（手順 5）と、J6 が `skipped` にする UPDATE（手順 5）で `now()` を書く [assumed]。J5 では同じトランザクションの手順 3 の `letters.settled_at` と同じ値（公開の時刻）、J6 では持ち越した時刻。`pending`・`running`・`failed` の間は NULL。J15 の新聞の通知の期限（公開から 30 分）と、J14 の `delivery_notifications` の保持（30 日）の起点（async.md §4 J14・J15、ADR-0076 の D2・D7） |
 
 CHECK ((status IN ('done', 'skipped')) = (finished_at IS NOT NULL)) — 終わった回だけが終わった時刻を持つ [assumed]。
+CHECK (status <> 'pending' OR prepared_at IS NULL) — 締め切りの前の回は準備していない [assumed]。
+CHECK (status <> 'done' OR prepared_at IS NOT NULL) — 公開した回は準備を終えている [assumed]。
 
 行は消さない（J14 も J7 も消さない、ADR-0085）。1 日 2 行で、住民の ID も本文も持たない。`letters`・`mailbox_items`・`delivery_notifications`・`newspapers`・`newspaper_articles`・`external_news_items`・`board_posts`・`moderation_queue` の `delivery_run_id` は、この表を CASCADE・SET NULL なしの外部キーで指す。
 
