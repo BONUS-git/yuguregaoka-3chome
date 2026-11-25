@@ -218,3 +218,4 @@
 - `.ai/tickets/YGO-041-oq-020-llm-text-adr-0055.md`
 - `.ai/tickets/YGO-042-adr-0022-d6-no-blockers.md`
 - `.ai/tickets/YGO-043-m1-gaps-ticket-per-row.md`
+- `.ai/tickets/YGO-044-r-055-vendor-names-precedence-confirmed.md`
