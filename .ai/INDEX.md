@@ -25,7 +25,7 @@
 | 退去と保持期間で消すもの（J7・J14 の正本の表） | — | ADR-0091 の退去の表と保持期間の表、`.ai/security.md` §2.4、`.ai/async.md` J7・J14、`.ai/db.md` §4 |
 | リストアのあとの消し直し（消去の控えと `erasure.replay`） | — | ADR-0096、`.ai/async.md` §4 `erasure.replay`、`.ai/db.md` §2 の `erasure_log`・§6、`.ai/environment.md` §6.5、`.ai/gaps.md` G-055 |
 | マスターに聞くこと・決まったこと | — | `.ai/open-questions.md` §2（一覧）・§3（要回答） |
-| 持ち越し・仕分け | — | `.ai/gaps.md`、`.ai/triage.md` |
+| 持ち越し・仕分け | — | `.ai/gaps.md`（冒頭: 今の M の行を 1 行 1 チケットで閉じる決まり）、`.ai/triage.md` |
 | 進み具合・振り返り | — | `.ai/status.md`、`.ai/retros.md` |
 | 環境・秘密・費用 | — | `.ai/environment.md` §3・§4・§8、`.ai/roadmap.md` §9 |
 
@@ -217,3 +217,4 @@
 - `.ai/tickets/YGO-040-requirements-rows-adr.md`
 - `.ai/tickets/YGO-041-oq-020-llm-text-adr-0055.md`
 - `.ai/tickets/YGO-042-adr-0022-d6-no-blockers.md`
+- `.ai/tickets/YGO-043-m1-gaps-ticket-per-row.md`
