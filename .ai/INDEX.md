@@ -27,7 +27,7 @@
 | マスターに聞くこと・決まったこと | — | `.ai/open-questions.md` §2（一覧）・§3（要回答） |
 | 持ち越し・仕分け | — | `.ai/gaps.md`（冒頭: 今の M の行を 1 行 1 チケットで閉じる決まり）、`.ai/triage.md` |
 | 進み具合・振り返り | — | `.ai/status.md`、`.ai/retros.md` |
-| 環境・秘密・費用 | — | `.ai/environment.md` §3・§4・§8、`.ai/roadmap.md` §9 |
+| 環境・秘密・費用 | — | `.ai/environment.md` §3・§4・§8、`.ai/roadmap.md` §9・§4 A-07（M0 の環境の約束の受け入れ条件） |
 
 ## 図（`.ai/diagrams/`）
 
@@ -219,3 +219,4 @@
 - `.ai/tickets/YGO-042-adr-0022-d6-no-blockers.md`
 - `.ai/tickets/YGO-043-m1-gaps-ticket-per-row.md`
 - `.ai/tickets/YGO-044-r-055-vendor-names-precedence-confirmed.md`
+- `.ai/tickets/YGO-045-g-009-m0-env-promises-a-07.md`
