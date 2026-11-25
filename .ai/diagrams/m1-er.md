@@ -3,7 +3,7 @@
 M1 で作る表と、そのあいだの関係。列の正本は `db.md` §2（`residents`・`credentials`・`sessions`・`staff_roles`・`auth_tokens`・`rate_limit_buckets`・`addresses`・`tenancies`）。M1 で使わない列（休眠・転送の列）は描かない。
 
 - FR: FR-001, FR-002, FR-003, FR-008, FR-009, FR-010, FR-092, FR-098, FR-100, FR-113, FR-127
-- ADR: 0073, 0080, 0082, 0084, 0087, 0088, 0089, 0090, 0091
+- ADR: 0080, 0082, 0084, 0087, 0088, 0089, 0090, 0091, 0093
 - 確かめた M: M1
 
 ```mermaid

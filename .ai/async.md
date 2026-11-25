@@ -4,7 +4,7 @@
 - 日付: 2026-11-19
 - チケット: YGO-006
 - 根拠: `.ai/brief.md`・`.ai/requirements.md`・`.ai/architecture.md`・`.ai/db.md`・`.ai/api.md`
-- 関連 ADR: 0002・0004・0005・0006・0007・0008・0010・0011・0012・0014・0015・0016・0017・0035・0039・0070・0072・0076・0085
+- 関連 ADR: 0002・0004・0005・0006・0007・0008・0010・0011・0012・0014・0015・0017・0035・0039・0070・0072・0076・0085・0092
 
 ---
 
@@ -48,7 +48,7 @@
 
 | ID | キュー名 | きっかけ | 入力 | 出力 |
 |----|---------|---------|------|------|
-| J0 | `delivery.tick` | 定時（5 分ごと）[assumed] | なし | J1〜J6 を必要に応じて積む。公開済みの配達回の手紙の枠の時刻を過ぎたら、枠ごとに J15（`kind = letter`）を積む（ADR-0035） |
+| J0 | `delivery.tick` | 定時（5 分ごと）[assumed] | なし | J1〜J6 を必要に応じて積む。J6 の再試行が尽きた回を `failed` にする（ADR-0092 の D5）。公開済みの配達回の手紙の枠の時刻を過ぎたら、枠ごとに J15（`kind = letter`）を積む（ADR-0035） |
 | J1 | `delivery.close` | 01:00 / 14:00 JST 以降、J0 が判断 | `run_id` | 配達回を `running` にする。手紙を `pending` → `scheduled`。`moderation_queue` に投稿の行を入れる（手紙の行は入れない、ADR-0069） |
 | J2 | `moderation.review` | 02:00 / 15:00 JST 以降、J0 が判断 | `run_id` | ラベルと判定。投稿を `approved` / `rejected` にする。手紙は扱わない（投函のときに API が照合する、ADR-0069） |
 | J3 | `newspaper.typeset` | J16 完了か記事の打ち切り（04:30 / 16:15）[assumed] 後、J0 が判断（締め切りは 05:00 / 16:30）。M3・M4 は J2 完了か打ち切り後 | `run_id` | 版ごとの静的 HTML と、`newspapers`・`newspaper_editions` の行（ADR-0039）。間に合わなければ休刊 |
@@ -84,7 +84,7 @@ J13 は段階 2（F-11）。
 
 ---
 
-## §3 配達回の流れ（ADR-0016・ADR-0017 の具体化）
+## §3 配達回の流れ（ADR-0092・ADR-0017 の具体化）
 
 ### 時刻表（JST）
 
@@ -118,7 +118,7 @@ ADR-0004 の表を拡張する。
 | `running` | 締め切り済み。審査・組版・準備の最中 |
 | `done` | 公開完了 |
 | `skipped` | 次の便に持ち越した |
-| `failed` | 持ち越し先も作れない。運用者の対応が必要 |
+| `failed` | 持ち越せなかった（J6 の再試行が尽きた）。J0 だけが書く。中身は動かさず、運用者の対応が必要（ADR-0092 の D5・D7） |
 
 ```mermaid
 stateDiagram-v2
@@ -126,7 +126,7 @@ stateDiagram-v2
     pending --> running : J1 締め切り
     running --> done : J5 公開
     running --> skipped : J6 持ち越し
-    running --> failed : 持ち越し先を作れない
+    running --> failed : J0（J6 の再試行が尽きた）
 ```
 
 `delivery_runs.started_at` は J1 が `running` にする UPDATE で書く。`delivery_runs.finished_at` を書くのは、J5 が `done` にする UPDATE と J6 が `skipped` にする UPDATE だけで、`pending`・`running`・`failed` の間は NULL [assumed]（`db.md` §2 の CHECK）。
@@ -148,9 +148,10 @@ J0 は 5 分ごとに `delivery_runs` を `run_id` の昇順に調べる。
 
 1. 各配達回について次の工程を 1 つだけ特定する。
 2. `singletonKey = '<キュー名>:<run_id>'` で積む。同じキーのジョブがキューに残っていれば積まない。
-3. 前の配達回が `done` または `skipped` になるまで、後の配達回の J5（公開）を積まない。
+3. 古い配達回がすべて `done`・`skipped`・`failed` のどれかになるまで、後の配達回の J5（公開）を積まない [assumed]（ADR-0092 の D6）。`failed` の回があっても後の回は公開する。
 4. M5 から、`running` の配達回に J17（外のニュースの取り込み）を取り込みの打ち切りまで積み、審査と取り込みが済んだあとに J16（記事の文字）を挟んでから J3 を積む（ADR-0039）。J16 は、J17 が完了・失敗するか取り込みの打ち切りを過ぎるまで積まない（素材の範囲がそこで決まる）。M3・M4 の J0 は今のまま（J16・J17 を積まない）。
-5. `running` の配達回は、持ち越しの打ち切り（公開の打ち切り、07:15 / 17:15 JST）を過ぎていれば、どの工程で止まっていても J6 を積み、ほかの工程を積まない [assumed]（ADR-0016）。この判断を `running` の枝の先頭に置くので、J4 が失敗し続けても J6 に届く。打ち切りの前は、準備が済んでいなければ（`prepared_at` が NULL）J4 を、済んでいれば（NULL でない）公開の時刻のあとに J5 を積む
+5. `running` の配達回は、まずその回の J6（`delivery.carry_over:<run_id>`）が再試行を使い切って pg-boss で `failed` になっていないかを見る。なっていれば、ほかの処理と別のトランザクションで `UPDATE delivery_runs SET status='failed' WHERE run_id=$1 AND status='running'` を書き、`alert=delivery_run_failed`（`run_id` を含む）の 1 行をログに書いて、その回にはもう何も積まない [assumed]（ADR-0092 の D5。`failed` を書くのは J0 だけ）。
+   そうでなければ、持ち越しの打ち切り（公開の打ち切り、07:15 / 17:15 JST）を過ぎていれば、どの工程で止まっていても J6 を積み、ほかの工程を積まない [assumed]（ADR-0092 の D4）。この判断を `running` の枝の先頭に置くので、J4 が失敗し続けても J6 に届く。打ち切りの前は、準備が済んでいなければ（`prepared_at` が NULL）J4 を、済んでいれば（NULL でない）公開の時刻のあとに J5 を積む
 6. `done` の配達回のうち、手紙の通知の期限がまだ来ていないもの（最後の枠から 30 分以内）について、時刻を過ぎて 30 分以内の枠ごとに J15（`kind = letter`）を積む（ADR-0035 の D11）。
 
 ```
@@ -159,7 +160,11 @@ J0 の判断ロジック（概略）:
     if run.status = 'pending' and now >= close_time(run):
       enqueue J1 with singletonKey
     elif run.status = 'running':
-      if now >= carry_over_cutoff(run):             -- 07:15 / 17:15。どの工程で止まっていても先に当てる [assumed]
+      if carry_over_job_failed(run):                -- pg-boss の delivery.carry_over:<run_id> が failed（再試行を使い切った）[assumed]
+        in a separate transaction:
+          UPDATE delivery_runs SET status='failed' WHERE run_id=run.run_id AND status='running'
+        log 'alert=delivery_run_failed run_id=<run_id>' -- J6 を積み直さない（ADR-0092 の D5）
+      elif now >= carry_over_cutoff(run):           -- 07:15 / 17:15。どの工程で止まっていても先に当てる [assumed]
         enqueue J6 with singletonKey
       else:
         -- M5 から（ADR-0039）。fetch_settled = J17 が完了か失敗（再試行を使い切った）か、now >= fetch_cutoff(run)
@@ -179,7 +184,8 @@ J0 の判断ロジック（概略）:
             enqueue J3 (holiday) with singletonKey
           elif newspapers row exists and run.prepared_at is null:
             enqueue J4 with singletonKey
-          elif run.prepared_at is not null and now >= publish_time(run) and prev runs all done:
+          elif run.prepared_at is not null and now >= publish_time(run) and prev runs all settled:
+            -- settled = done / skipped / failed（ADR-0092 の D6）
             enqueue J5 with singletonKey
     elif run.status = 'done':
       for each slot in letter_slots(run):          -- 08:00〜11:50 / 18:00〜20:50 の 10 分ごと
@@ -292,7 +298,7 @@ M3・M4 は、J2 完了（`moderation_queue` に `processed_at = NULL` の行が
   朝刊（`newspapers.kind = 'morning'`）のときは、知り合いのうち、配達回の日（JST）が誕生日（`residents.birthday_month`・`birthday_day`。2/29 の住民はうるう年でない年は 3/1）の住民の人数 b も数える。夕刊では b = 0。
   S（組 1・2 のテンプレートの記事の枠の数）に対し、k = 0 かつ b = 0 なら組 0 で何もしない。それ以外で k < S なら組 2 で、k 件の知り合いの記事のあとに、その住民が組 0 なら受け取る版（興味の版か共通の版、J4 と同じ選び方）の記事をその版の順に S − k 件足す（すでに載った素材は飛ばす。k = 0 なら S 件すべて）。
   k ≥ S なら組 1 で、知り合いの記事を `(created_at, id)` の順で先頭の S 件。どちらも `acquaintance:<resident_id>` の版として、ほかの版と同じトランザクションで入れる。組は保存しない。手紙は載せない。記事の文字は素材ごとの `newspaper_articles` を使い回し、LLM は呼ばない
-- 組 1・2 の朝刊には、b ≥ 1 なら誕生日の欄を S の枠の外に置く（ADR-0074 の D9）。載せるのは、その日が誕生日の知り合いのニックネーム・その日に上がったあとの年齢（ADR-0073 の D3）・今の住所だけで、住所の順に並べ、上限を置かない。読む住民自身・月日の数字・自己紹介は載せない。
+- 組 1・2 の朝刊には、b ≥ 1 なら誕生日の欄を S の枠の外に置く（ADR-0074 の D9）。載せるのは、その日が誕生日の知り合いのニックネーム・その日に上がったあとの年齢（ADR-0093 の D3）・今の住所だけで、住所の順に並べ、上限を置かない。読む住民自身・月日の数字・自己紹介は載せない。
   欄は C6 のテンプレートの決まった文で組み、J16（LLM）には誕生日・年齢・ニックネーム・住所を渡さない。共通の版・興味の版・`holiday` には載せず、休刊の朝刊の分は持ち越さない。誕生日と年齢をジョブのペイロードとログに書かない（J3 は `run_id` だけを受け取り、`residents` から読む）。
   欄に載せた住民ごとに `newspaper_birthday_entries` の行（ニックネーム・年齢・住所・並び順）を版と同じトランザクションで入れ、欄はこの行から組む。J3 の再試行と J8 の組み直しもこの行から組み、`residents` と住所録を読み直さない（`db.md` §2）
 - 共通の記事（`interest_category_id` が NULL）はすべての版に、興味の記事はその興味の版に載せる。結び付け方は OQ-062
@@ -381,7 +387,7 @@ M3・M4 は、J2 完了（`moderation_queue` に `processed_at = NULL` の行が
 ### J5 — 公開（`delivery.publish`）
 
 **きっかけ**: 朝便は 07:00 JST、夕便は 17:00 JST。J0 が判断し `singletonKey` で積む。
-前の配達回（古い `run_id`）が `done` または `skipped` になるまで積まない。
+前の配達回（古い `run_id`）がすべて `done`・`skipped`・`failed` のどれかになるまで積まない（ADR-0092 の D6）。
 
 **入力**: `run_id`
 
@@ -457,8 +463,10 @@ J0 が判断し `singletonKey` で積む。
 - 持ち越し先の `run_id` は `delivery_runs` に持たない `[assumed]`。持ち越し先は「次の受付中の配達回」で、移した手紙と投稿の `delivery_run_id` がその回を指すので、追跡はそれで足りる
 
 **失敗とやり直し**:
-- トランザクションなので全体が冪等に再実行できる
-- `delivery_runs.status = 'failed'` になるのは、持ち越し先を作れない（DB の制約違反等）場合のみ。`failed` の回は `finished_at` が NULL のまま
+- トランザクションなので全体が冪等に再実行できる。失敗したら例外で終え、pg-boss の再試行に任せる（J6 は `failed` を書かない）
+- 再試行を使い切っても持ち越せない（持ち越し先を作れない・DB の制約違反など）と、次の見回りの J0 がその回を `failed` にし、アラートを出す（§3 の J0 の 5、ADR-0092 の D5）
+- `failed` の回の手紙・投稿・`mailbox_items` は動かさず（J6 のトランザクションが戻ったまま）、`finished_at` は NULL のまま。J4 が準備した `mailbox_items` が残っていても、郵便受けの一覧と項目・プロフィールの年齢の見せる条件は行の配達回が `done` であることを条件にするので、住民には見えず数えない（`api.md` §7 F-01・F-03）。後の回の公開は止めない（ADR-0092 の D6・D7）
+- 運用者が直す手順（原因を直したあとに運用者の CLI で持ち越しをやり直す）は暫定で、M3 で決める（`gaps.md` G-053）
 
 ---
 
@@ -796,6 +804,7 @@ worker が 2 台あっても実行は 1 回分になる。`singletonKey` と DB 
 | 外のニュースの取り込みの失敗 | 外のニュースなしで組む | 外のニュースの記事がない紙面が届く | pg-boss のジョブ履歴 |
 | 準備が間に合わない | J4 が `prepared_at` を書かないまま公開の打ち切りを過ぎると、J0 は工程によらず J6 を積んで持ち越す（`prepared_at` は NULL のまま） | 配達なし（次の便で届く） | `delivery_runs.status = 'skipped'`・`prepared_at` が NULL |
 | 公開の失敗 | 再試行。打ち切りまでに成功しなければ J6 で持ち越し。打ち切りのあとに動いた J5 は何もしない（手順 0） | 配達なし（次の便で届く） | pg-boss のジョブ履歴 |
+| 持ち越しの失敗（J6 の再試行が尽きた） | J0 がその回を `failed` にし、`alert=delivery_run_failed` を書く。中身は動かさない。後の回の公開は止めない（ADR-0092 の D5〜D7） | その回の手紙と新聞は郵便受けに出ない（準備済みの `mailbox_items` も、配達回が `done` でないので見せず、年齢の見せる条件にも数えない）。送った人には「投函済み」と見えたまま。後の便は通常どおり届く | `delivery_runs.status = 'failed'`・`finished_at` が NULL・pg-boss のジョブ履歴 |
 | worker が何便分も止まった | 再起動後、J0 が古い配達回から順に持ち越しを実行 | 複数便分が次の 1 便で届く（件数が多い） | 操作ログ |
 | 配達の通知の失敗 | J15 が期限（新聞は公開から・手紙は枠の時刻から 30 分）まで再試行。期限を過ぎたら送らない。404・410 の購読は消す | 通知が届かないことがある。郵便受けは通常どおり（配達回は `done` のまま） | `delivery_notifications.sent_at` が NULL の行・pg-boss のジョブ履歴 |
 | リストアした | `erasure_log` を再生し、削除済みデータを再削除。`erasure.replay` で実行 | 通常通り（データの整合性が回復後は影響なし） | `erasure_log`・操作ログ |
@@ -818,6 +827,7 @@ NFR-027（可用性）・NFR-074（障害通知）に合わせる。
 | 手紙の枠の J15 が枠の時刻から 10 分以上積まれない（ADR-0035） | — | 同上 |
 | J7 が 24 時間以内に完了しない | — | 同上 |
 | pg-boss のジョブが `failed` 状態に積み上がる | J1〜J6・J15 は 1 件でも。ほかのジョブは 24 時間で 10 件以上 [assumed] | 同上 |
+| 配達回が `failed` になった（`alert=delivery_run_failed`、ADR-0092 の D5） | 1 件でも | 同上 |
 | J0 の心拍（`heartbeat=delivery.tick`）がない | 15 分（3 回分）| 同上 |
 | 版 `from_version` の行が残っているのに `keys.reencrypt` のジョブ（`created`・`retry`・`active`）がない（再暗号化が止まった。`environment.md` §8.3） | J0 が、今の版（`LETTER_KEY_CURRENT_VERSION` など）より古い版の行があり、そのジョブもないのを 2 回続けて見たら（10 分。暗号化の版を切り替えてから CLI でジョブを積むまでの間を拾わないため）[assumed] | 同上 |
 
@@ -835,7 +845,7 @@ worker が止まると J0 は書けないので、J0 の心拍がないことは
 | API の `FOR SHARE` と締め切りの競合 | 締め切り処理の最中に API が `pending` の手紙を書こうとしたとき、次の便に振り分けられること |
 | 途中停止と再開 | ジョブの実行を途中で止め（プロセス kill）、再起動したとき残りの処理が正しく完了すること |
 | 休刊 | 組版の締め切りまでに J3 が完了しないとき `is_holiday = true` の行が入ること |
-| 持ち越し | 公開の打ち切りまでに J5 が完了しないとき `delivery_runs.status = 'skipped'` になり、次の便に移ること。その回の `finished_at` に J6 の時刻が入ること。J4 が失敗し続けると、打ち切りのあとに `skipped` になり、`prepared_at` は NULL のままであること。`prepared_at` が NULL の間は J0 が J5 を積まないこと。打ち切りのあとに動いた J5 は回を `done` にしないこと。J6 が `skipped` にしたあとに動いた J4 が `mailbox_items` を足さないこと |
+| 持ち越し | 公開の打ち切りまでに J5 が完了しないとき `delivery_runs.status = 'skipped'` になり、次の便に移ること。その回の `finished_at` に J6 の時刻が入ること。J4 が失敗し続けると、打ち切りのあとに `skipped` になり、`prepared_at` は NULL のままであること。`prepared_at` が NULL の間は J0 が J5 を積まないこと。打ち切りのあとに動いた J5 は回を `done` にしないこと。J6 が `skipped` にしたあとに動いた J4 が `mailbox_items` を足さないこと。J6 が再試行を使い切ると、次の J0 がその回を `failed` にして `alert=delivery_run_failed` を 1 行書き、J6 を積み直さないこと。`failed` の回の `finished_at` が NULL で、手紙と `mailbox_items` が動かないこと。J4 が準備し終えた `failed` の回の手紙が、`visible_at` を過ぎても郵便受けに出ず、受取人に送り手の年齢を見せないこと（`api.md` §7 F-01・F-03）。`failed` の回より後の回は J5 で `done` になること（ADR-0092） |
 | 公開と退去の競合 | J5 の実行中に J7 が動いたとき、退去済み住民の `mailbox_items` が削除されること |
 | モックの LLM が失敗 | LLM のモックが全件エラーを返したとき、打ち切り後に投稿が次の便に持ち越されること |
 | 通知の重複と期限 | J15 を 2 回動かしてもモックのプッシュ送信が受ける通知が増えないこと。公開の前・`skipped` の便・枠の時刻の前・それぞれの時刻から 30 分のあとには送らないこと。休刊の回にも新聞の通知を送ること。新聞の 30 分は J5 が書いた `finished_at` から数え、その値が同じ回の手紙の `settled_at` と同じこと。J5・J6 を 2 回動かしても `finished_at` が変わらないこと（`roadmap.md` A-15） |

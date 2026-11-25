@@ -32,7 +32,7 @@
 - [0013 — 退去処理とデータ保持期間](0013-account-deletion-and-retention.md)（ADR-0075 で置き換え）
 - [0014 — API は即時性と数値を返さない](0014-api-no-immediacy-no-counts.md)
 - [0015 — API・DB・バッチの責務の境界](0015-api-db-batch-boundary.md)
-- [0016 — 配達回は時刻の関門と見回りのジョブで進める](0016-delivery-run-pipeline-and-tick.md)
+- [0016 — 配達回は時刻の関門と見回りのジョブで進める](0016-delivery-run-pipeline-and-tick.md)（ADR-0092 で置き換え）
 - [0017 — 配達は準備と公開の 2 段に分ける](0017-delivery-prepare-then-publish.md)
 - [0018 — ログインはメールとパスワード。メールは暗号化して持ち検索用に HMAC を持つ](0018-authentication-email-password.md)（ADR-0080 で置き換え）
 - [0019 — セッションはサーバー側に持つ。複数デバイスを許す。重要な操作では再認証する](0019-server-side-sessions-and-reauth.md)（ADR-0081 で置き換え）
@@ -57,7 +57,7 @@
 - [0038 — 商店には実在の企業・個人のお店を迎えることを目指す。コミュニティ（団体）は住民が趣味などで作り、作ることに制約を置く](0038-shops-real-businesses-communities-by-residents.md)
 - [0039 — 新聞は一人 1 枚にせず、知り合いの数で分けた組ごとの版にする。知り合いのない組は興味で分ける。記事の文字は LLM が作り、組版はサーバーで決定的に行う](0039-newspaper-editions-by-group-and-interest-llm-text-server-typesetting.md)（ADR-0055 で置き換え）
 - [0040 — 手紙は送るときにルール表に当てる。当たったら送った人に確認を頼むかを選んでもらい、頼んだ手紙をモデレーターが確かめる](0040-letters-checked-at-send-sender-confirms-moderator-reviews.md)（ADR-0056 で置き換え）
-- [0041 — 年齢で守り方を変える。年齢は住民が設定した値をそのまま使い、確かめない。何を変えるかが決まるまで、年齢による違いと年齢の項目は作らない](0041-age-self-declared-protections-vary-by-age.md)（D1 は ADR-0057、D5 は ADR-0073 で置き換え）
+- [0041 — 年齢で守り方を変える。年齢は住民が設定した値をそのまま使い、確かめない。何を変えるかが決まるまで、年齢による違いと年齢の項目は作らない](0041-age-self-declared-protections-vary-by-age.md)（D1 は ADR-0057、D5 は ADR-0093 で置き換え）
 - [0042 — 地図に印を付ける。自分の家と登録のときの候補は M1、知り合い（自分の住所録に入れた住民）の家は M2（手紙の知り合いの定義は ADR-0049。印を付けるエントリは ADR-0051）。土台の画像は全住民で同じまま、印は C1 が重ねる。空き家・入居の表示は OQ-079 の答えまで作らない](0042-town-map-marks-own-home-candidates-acquaintances.md)（ADR-0059 で置き換え）
 - [0043 — 商店とは契約を結び利用料を取る考え（MVP ではメモだけ）。架空の店を置いてよく、空いた区画には金額を載せない入居者募集の張り紙を出す。発信はお店の担当者が行い、出せるものは広さと料金のランクで変える（折込チラシが最高）。商店は実在の情報を出してよい](0043-shops-contract-fee-memo-fictional-shops-vacancy-posters-staff-post.md)（D2 の示し方と D7 は ADR-0050 で決めた）
 - [0044 — MVP は全住民を知り合い 0 の組とする。新聞の知り合いは互いに住所録に入れた住民で、載せるのは知り合いの掲示板の投稿（手紙は載せない）。組 1・2 は住民ごとに組み、足りない分は興味の版か共通の版の記事で埋める。アップロードした画像は加工し、元の画像は持たない](0044-newspaper-acquaintance-groups-mutual-board-posts-per-resident-images-no-original.md)（ADR-0074 で置き換え）
@@ -89,7 +89,7 @@
 - [0070 — 絶対NGと絵文字の入力不可を全ての書き込みに当てる](0070-reject-tier-and-no-emoji-for-all-writes.md)
 - [0071 — 街の外の連絡先は全ての書き込みで止める](0071-outside-contacts-banned-in-all-writes.md)
 - [0072 — クローズドな手紙も審査し、LLM に渡さず復号の場面を限る](0072-closed-letters-reviewed-no-llm-limited-decryption.md)
-- [0073 — 年齢と誕生日は登録で必須、変えられず誕生日に年が進む](0073-age-and-birthday-required-immutable.md)
+- [0073 — 年齢と誕生日は登録で必須、変えられず誕生日に年が進む](0073-age-and-birthday-required-immutable.md)（ADR-0093 で置き換え）
 - [0074 — 新聞の知り合いの版に、知り合いの投稿と誕生日を載せる](0074-newspaper-acquaintance-editions-posts-and-birthdays.md)
 - [0075 — 退去処理とデータ保持期間（配達回は消さない）](0075-account-deletion-and-retention-keep-delivery-runs.md)（ADR-0077 で置き換え）
 - [0076 — 配達の通知は Web Push で送り、記録は配達回から 30 日](0076-delivery-notification-web-push-retention-30-days.md)
@@ -108,3 +108,5 @@
 - [0089 — セッション・役割・流量の表と TOTP の秘密の置き場](0089-auth-tables-sessions-roles-rate-limits-totp.md)
 - [0090 — セッションと再認証の API、確かめる順と流量](0090-server-side-sessions-reauth-rate-limit-order.md)
 - [0091 — 退去と保持期間で住民・認証の行を消すか外す](0091-erase-and-retention-cover-auth-tables.md)
+- [0092 — 配達回は見回りで進め、持ち越せない回は failed にする](0092-delivery-runs-tick-and-failed-runs.md)
+- [0093 — 年齢と誕生日は必須で変えられず、配達済みの手紙で見せる](0093-age-birthday-immutable-shown-for-done-runs.md)

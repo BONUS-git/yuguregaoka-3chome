@@ -48,18 +48,18 @@ DDL は書かない。主なカラムと一意制約のみを示す。
 | `id` UUID PK | 内部 ID（変更不可、ADR-0082） |
 | `nickname` text | 任意の表示名（FR-009） |
 | `bio` text | 自己紹介文（FR-008） |
-| `age_at_registration` smallint NOT NULL | 登録のときに住民が入れた年齢（FR-113、ADR-0073 の D1）。CHECK(`age_at_registration BETWEEN 0 AND 999`)。登録のあとは書き換えない（D2） |
-| `age_base_date` date NOT NULL | 年齢を進める起点の日。登録した日の JST の日付（ADR-0073 の D3）。登録のあとは書き換えない |
-| `birthday_month` smallint NOT NULL | 誕生日の月（FR-127、ADR-0073 の D3・D5）。CHECK(`birthday_month BETWEEN 1 AND 12`)。架空でよい。登録のあとは書き換えない（D2） |
+| `age_at_registration` smallint NOT NULL | 登録のときに住民が入れた年齢（FR-113、ADR-0093 の D1）。CHECK(`age_at_registration BETWEEN 0 AND 999`)。登録のあとは書き換えない（D2） |
+| `age_base_date` date NOT NULL | 年齢を進める起点の日。登録した日の JST の日付（ADR-0093 の D3）。登録のあとは書き換えない |
+| `birthday_month` smallint NOT NULL | 誕生日の月（FR-127、ADR-0093 の D3・D5）。CHECK(`birthday_month BETWEEN 1 AND 12`)。架空でよい。登録のあとは書き換えない（D2） |
 | `birthday_day` smallint NOT NULL | 誕生日の日。CHECK(`birthday_day BETWEEN 1 AND 31`)。月日の組み合わせを CHECK で確かめる: `birthday_day <= CASE WHEN birthday_month = 2 THEN 29 WHEN birthday_month IN (4, 6, 9, 11) THEN 30 ELSE 31 END`（2/29 は許し、2/30・4/31 などは許さない）。登録のあとは書き換えない |
 
-今の年齢 = `age_at_registration` + 「`age_base_date` より後で、今日（JST）以前に来た誕生日の回数」（ADR-0073 の D3）。登録の日が誕生日でも、その日には上がらない。誕生日が 2/29 の住民は、うるう年でない年は 3/1 に上がる。C2 が読むときに時計のアダプタで計算し、列は書き換えない。
+今の年齢 = `age_at_registration` + 「`age_base_date` より後で、今日（JST）以前に来た誕生日の回数」（ADR-0093 の D3）。登録の日が誕生日でも、その日には上がらない。誕生日が 2/29 の住民は、うるう年でない年は 3/1 に上がる。C2 が読むときに時計のアダプタで計算し、列は書き換えない。
 誕生日で行を引く索引（今日が誕生日の住民を J3 が探すため）は、組 1・2 と誕生日の欄（ADR-0074 の D9）を作るときに足す `[assumed]`。MVP では誕生日で引く処理がないので置かない。
 | `last_login_at` timestamptz | 最終ログイン日時（住民の側に置く。下の注） |
 | `created_at` timestamptz | 登録日時 |
 | `deleted_at` timestamptz | 論理削除フラグ代わりに使用（即時物理削除への橋渡し用） |
 
-年齢と誕生日の 4 列は平文で持ち、退去で行ごと即時に消す（ADR-0073 の D8・ADR-0091）。年齢と誕生日を変える UPDATE は C2 のどの経路にも書かない（ADR-0073 の D2）。
+年齢と誕生日の 4 列は平文で持ち、退去で行ごと即時に消す（ADR-0093 の D8・ADR-0091）。年齢と誕生日を変える UPDATE は C2 のどの経路にも書かない（ADR-0093 の D2）。
 
 **注**: `last_login_at` を `addresses` に置くと、住民が引っ越しで住所を変えたとき
 その後のログイン記録が旧住所に紐づいてしまう。住民を認証する主体は `residents` であるため、
@@ -268,7 +268,7 @@ UNIQUE(delivery_run_id, resident_id) WHERE kind = 'newspaper' — 1 回の配達
 | カラム | 説明 |
 |--------|------|
 | `run_id` text PK | `YYYY-MM-DD-morning` / `YYYY-MM-DD-evening`（ADR-0004） |
-| `status` text | pending / running / done / failed / skipped |
+| `status` text | pending / running / done / failed / skipped。`failed` を書くのは J0 だけで、J6 の再試行が尽きたときに書く（`async.md` §3、ADR-0092 の D5） |
 | `started_at` timestamptz NULL | 締め切りの時刻。J1 が `running` にする UPDATE で `now()` を書く（async.md §4 J1） |
 | `prepared_at` timestamptz NULL | 準備（J4）が終わった時刻。J4 がすべての宛先を書き終えた最後のトランザクションで `now()` を書く [assumed]。J0 はこの列で準備の完了を判断する（NULL の間は J5 を積まない）。`pending` の間は NULL、`done` の回は NULL でない。J6 は書き換えない（準備の途中で持ち越した `skipped` の回は NULL のまま）（async.md §3・§4 J4・J5、ADR-0017） |
 | `finished_at` timestamptz NULL | 配達回が終わった時刻。J5 が `done` にする UPDATE（手順 5）と、J6 が `skipped` にする UPDATE（手順 5）で `now()` を書く [assumed]。J5 では同じトランザクションの手順 3 の `letters.settled_at` と同じ値（公開の時刻）、J6 では持ち越した時刻。`pending`・`running`・`failed` の間は NULL。J15 の新聞の通知の期限（公開から 30 分）と、J14 の `delivery_notifications` の保持（30 日）の起点（async.md §4 J14・J15、ADR-0076 の D2・D7） |
@@ -390,12 +390,12 @@ J3 の再試行と J8 の組み直しは、この行から欄を組み、`reside
 | `newspaper_edition_id` UUID FK→newspaper_editions | 欄が載った版（`acquaintance:` の版だけ） |
 | `resident_id` UUID | 載った住民（外部キーにしない。退去で J7 がこの列で行を引いて消す） |
 | `nickname` text | J3 の時点のニックネーム |
-| `age` integer | その日に上がったあとの年齢（ADR-0073 の D3） |
+| `age` integer | その日に上がったあとの年齢（ADR-0093 の D3） |
 | `address_text` text | J3 の時点の今の住所 |
 | `position` integer | 欄の中の並び順（住所の順） |
 
 UNIQUE(newspaper_edition_id, resident_id)。誕生日の月日は持たない。
-平文で持ち、載った住民の退去で J7 が即時に消し、行のあった版を J8 で組み直す（§4・§5）。それ以外は紙面と同じだけ残す。ログ・ジョブのペイロード・LLM には出さない（ADR-0073 の D8）。
+平文で持ち、載った住民の退去で J7 が即時に消し、行のあった版を J8 で組み直す（§4・§5）。それ以外は紙面と同じだけ残す。ログ・ジョブのペイロード・LLM には出さない（ADR-0093 の D8）。
 
 #### `external_news_items` — 取り込んだ外のニュース（ADR-0039 の D6）
 
@@ -899,9 +899,9 @@ stateDiagram-v2
 | FR-068 | §2 `blocks`・§3 suppressed 処理 |
 | FR-076〜082 | §2 `moderation_queue` / `reports` / `moderation_actions` |
 | FR-112 | §2 `letters`（`held`・`rule_version`・`matched_rule_id`・`decided_at`）・`moderation_actions.letter_id`・§4 手紙の状態遷移と保持（ADR-0069） |
-| FR-094 | 足す表・列はない。年を含む生年月日・保護者の同意・年齢確認の結果の列を置かない。年齢は FR-113 の `residents.age_at_registration` を住民の設定のまま使い、確かめない（ADR-0027 の D1・D2・ADR-0041 の D2・D4・ADR-0073） |
-| FR-113 | §2 `residents.age_at_registration`・`age_base_date`・`birthday_month`・`birthday_day` と今の年齢の式（ADR-0073）・§9（年齢による違いは作らない、ADR-0057） |
-| FR-127 | §2 `residents.birthday_month`・`birthday_day`（CHECK で暦にある月日だけ。書き換えない、ADR-0073 の D3・D5）・§2 `newspaper_editions.edition_key` の `acquaintance:`（誕生日の欄、ADR-0074 の D9）・§2 `newspaper_birthday_entries`（欄の中身。組 1・2 と一緒に作る）・§4・§5（載った住民の退去で消して組み直す） |
+| FR-094 | 足す表・列はない。年を含む生年月日・保護者の同意・年齢確認の結果の列を置かない。年齢は FR-113 の `residents.age_at_registration` を住民の設定のまま使い、確かめない（ADR-0027 の D1・D2・ADR-0041 の D2・D4・ADR-0093） |
+| FR-113 | §2 `residents.age_at_registration`・`age_base_date`・`birthday_month`・`birthday_day` と今の年齢の式（ADR-0093）・§9（年齢による違いは作らない、ADR-0057） |
+| FR-127 | §2 `residents.birthday_month`・`birthday_day`（CHECK で暦にある月日だけ。書き換えない、ADR-0093 の D3・D5）・§2 `newspaper_editions.edition_key` の `acquaintance:`（誕生日の欄、ADR-0074 の D9）・§2 `newspaper_birthday_entries`（欄の中身。組 1・2 と一緒に作る）・§4・§5（載った住民の退去で消して組み直す） |
 | FR-093, FR-097 | §5 退去処理（ADR-0091） |
 | FR-099 | §4 `mailbox_items.deleted_at` |
 | NFR-002 | §1 原則 5（個人情報最小限） |
@@ -920,8 +920,8 @@ stateDiagram-v2
 | OQ-043（手紙で止める内容と、手紙の閲覧）→ 決定 | 通報された手紙はモデレーターが条件付きで 1 通だけ確かめてよい（2026-11-19、ADR-0078）。`moderation_actions.action` の `view_letter` は決定の記録として残す。表の変更はない |
 | OQ-052（手紙で止める内容・止めた手紙の閲覧と、年齢や設定で守り方を変えるか）→ 決定 | 2026-11-20、ADR-0069・ADR-0041。`letters` に `held`・`rule_version`・`matched_rule_id`・`decided_at` を足し、`delivery_run_id` を NULL 可にした。`moderation_queue` に手紙の行を入れない（CHECK を `content_kind <> 'letter'` に改めた）。`moderation_actions` に `letter_id` を足した。`blocked` の保持は 30 日 [assumed]（§4） |
 | OQ-063（年齢で何を変えるか）→ 決定 | 2026-11-20、ADR-0057。年齢による違いは作らない。ルール表と権限の規則に年齢の条件を持たせないので、表に年齢の区切りや年齢ごとの規則の列は置かない |
-| OQ-064（年齢の扱い）→ 決定 | 2026-11-20、ADR-0073（ADR-0048 を置き換え）。`residents` に `age_at_registration`（CHECK 0〜999）と `age_base_date`（登録した日の JST の日付）を足した（§2）。今の年齢は読むときに計算し、列を書き換えるジョブは持たない。生年月日の列は置かない（ADR-0041 の D4）。ほかの住民に見せる条件は、既存の `mailbox_items`（`kind = 'letter'`・`visible_at`・`deleted_at IS NULL` の行だけ）・`letters.sender_id`・`letters.created_at`・`tenancies.is_current`・`started_at`・`blocks`（見る住民がブロックした行だけ）から C2 が求めるので、表を足さない。削除した手紙は数えないので、§4 の保持（受取人の削除操作で `mailbox_items` を消す、受取人全員の削除で `letters` を消す）は変わらない。見せてよいという事実を持つ表も置かない（ADR-0073 の D4・理由） |
-| OQ-077（誕生日を集めて新聞に載せるか）→ 決定 | 2026-11-21、ADR-0073・ADR-0074。`residents` に `birthday_month`・`birthday_day`（NOT NULL。月日の組み合わせを CHECK で確かめ、2/29 は許す）を足した（§2）。`age_base_date` は登録の日のまま残し、今の年齢はそこから後に来た誕生日の回数で進める。誕生日の欄（ADR-0074 の D9）は J3 が組を計算するときに `residents` から読み、欄の中身を `newspaper_birthday_entries` に保存する（組み直しと退去のため。組 1・2 と一緒に作る）。誕生日で引く索引は組 1・2 を作るときに足す（`[assumed]`） |
+| OQ-064（年齢の扱い）→ 決定 | 2026-11-20、ADR-0093。`residents` に `age_at_registration`（CHECK 0〜999）と `age_base_date`（登録した日の JST の日付）を足した（§2）。今の年齢は読むときに計算し、列を書き換えるジョブは持たない。生年月日の列は置かない（ADR-0041 の D4）。ほかの住民に見せる条件は、既存の `mailbox_items`（`kind = 'letter'`・行の配達回（`delivery_runs.status`）が `done`・`visible_at`・`deleted_at IS NULL` の行だけ。`failed` の回の行は数えない、ADR-0092 の D7）・`letters.sender_id`・`letters.created_at`・`tenancies.is_current`・`started_at`・`blocks`（見る住民がブロックした行だけ）から C2 が求めるので、表を足さない。削除した手紙は数えないので、§4 の保持（受取人の削除操作で `mailbox_items` を消す、受取人全員の削除で `letters` を消す）は変わらない。見せてよいという事実を持つ表も置かない（ADR-0093 の D4・理由） |
+| OQ-077（誕生日を集めて新聞に載せるか）→ 決定 | 2026-11-21、ADR-0093・ADR-0074。`residents` に `birthday_month`・`birthday_day`（NOT NULL。月日の組み合わせを CHECK で確かめ、2/29 は許す）を足した（§2）。`age_base_date` は登録の日のまま残し、今の年齢はそこから後に来た誕生日の回数で進める。誕生日の欄（ADR-0074 の D9）は J3 が組を計算するときに `residents` から読み、欄の中身を `newspaper_birthday_entries` に保存する（組み直しと退去のため。組 1・2 と一緒に作る）。誕生日で引く索引は組 1・2 を作るときに足す（`[assumed]`） |
 | OQ-076（当たった手紙の扱い）→ 決定 | 2026-11-21、ADR-0069・ADR-0057。照合を `reject` と `review` の 2 段に分けた。`reject` の段に当たった手紙と、絵文字のある手紙は保存しないので、表と列の変更はない（§4）。ルール表の項目の段（`tier`）はルール表の持ち方の一部で、置き場は OQ-065 |
 | OQ-087（絶対NGと絵文字を手紙のほかに当てるか）→ 決定 | 2026-11-22、ADR-0069・ADR-0070・ADR-0071。全ての書き込みに当てるが、入力の検査と書いたときの照合で、当たった書き込み（422 `content_rejected`）と絵文字のある書き込み（400）は保存しないので、表と列の変更はない（§4） |
 | OQ-065（手紙の照合の細部） | 長く確かめられない `held` の期限は置かない。決まったら §4 のライフサイクルと J14 を直す |
