@@ -3,7 +3,7 @@
 - 状態: 草案
 - 日付: 2026-11-21
 - チケット: YGO-009
-- 根拠: `.ai/brief.md`・`requirements.md`（NFR-058・NFR-063・NFR-065・NFR-067・NFR-071〜NFR-080・NFR-091・NFR-092）・`architecture.md`・`async.md`・`db.md`・`security.md`・`roadmap.md`・ADR-0006・0008〜0012・0021・0033・0076・0085・0086
+- 根拠: `.ai/brief.md`・`requirements.md`（NFR-058・NFR-063・NFR-065・NFR-067・NFR-071〜NFR-080・NFR-091・NFR-092）・`architecture.md`・`async.md`・`db.md`・`security.md`・`roadmap.md`・ADR-0006・0009〜0012・0021・0033・0076・0085・0086・0100
 - 関連 ADR: 0052（ローカルの開発と `check.sh` の環境・IaC は OpenTofu で設計だけ）・0068（使い終わった道具は片付ける）
 
 ---
@@ -62,8 +62,8 @@
 
 | プロセス | コマンド（M0 で決める名前）| エントリポイント | 待ち受け |
 |----------|----------------------------|------------------|----------|
-| web | `npm run dev:web` | `src/server.ts`（ADR-0008）| `127.0.0.1:3000` |
-| worker | `npm run dev:worker` | `src/worker.ts`（ADR-0008）| 待ち受けない（DB だけに繋ぐ） |
+| web | `npm run dev:web` | `src/server.ts`（ADR-0100）| `127.0.0.1:3000` |
+| worker | `npm run dev:worker` | `src/worker.ts`（ADR-0100）| 待ち受けない（DB だけに繋ぐ） |
 | クライアントの開発サーバー | `npm run dev:client` | Vite | `127.0.0.1:5173`。`/api` を web へ中継する |
 
 - 本番に近い形で確かめるときは、`npm run build` でクライアントを静的なファイルにし、web がそれを配る（ADR-0009）。
