@@ -24,7 +24,7 @@
 - [0005 — モデレーション方針](0005-moderation-policy.md)
 - [0006 — 手紙はサーバー鍵で保存時に暗号化する](0006-letter-encryption-at-rest.md)
 - [0007 — 新聞はテンプレートで決定的に組む](0007-newspaper-deterministic-template.md)（ADR-0098 で置き換え）
-- [0008 — モジュラーモノリスと 2 プロセス構成](0008-modular-monolith-two-processes.md)
+- [0008 — モジュラーモノリスと 2 プロセス構成](0008-modular-monolith-two-processes.md)（ADR-0100 で置き換え）
 - [0009 — TypeScript・Fastify・React と Vite](0009-typescript-fastify-react.md)
 - [0010 — PostgreSQL を DB とジョブキューの両方に使う](0010-postgresql-as-db-and-job-queue.md)
 - [0011 — 組版エンジンは TSX を静的 HTML に描く](0011-newspaper-template-engine.md)
@@ -116,3 +116,4 @@
 - [0097 — M は M0〜M6 のまま、M1 は住所・アカウント](0097-milestones-keep-m0-m6-m1-address-account.md)
 - [0098 — 新聞はテンプレートで決定的に組み、組版の失敗は休刊](0098-newspaper-deterministic-typesetting-holiday.md)
 - [0099 — 段階は 3 つ、MVP は M0〜M6、要回答で止めない](0099-stages-m0-m6-gates-no-blocking-oqs.md)
+- [0100 — モジュラーモノリスと 2 プロセス、ルール表は共有](0100-modular-monolith-process-placement.md)
