@@ -16,7 +16,8 @@
 | 住所の列挙と探り（入居の一覧・プロフィールの 404・流量の制限） | `.ai/diagrams/m1-components.md` | `.ai/security.md` §3.5 の規則の表・§7 の T-05、`.ai/api.md` §7 F-01・F-19、`.ai/roadmap.md` A-12、ADR-0084 の D16・ADR-0088 |
 | 年齢と誕生日 | `.ai/diagrams/m1-er.md`・`.ai/diagrams/m1-registration-sequence.md` | `.ai/db.md` §2 の `residents`、`.ai/api.md` §7 F-02、ADR-0093 |
 | M1 の FR の一覧 | — | `.ai/roadmap.md` §4 の「今の M の範囲」、`.ai/mvp.md` (b) |
-| M の分け方と、手紙の一続きが通る M・中心の体験の全体がそろう M | — | `.ai/roadmap.md` §4 の段階、ADR-0022・ADR-0097、`.ai/gaps.md` G-069 |
+| M の分け方と、手紙の一続きが通る M・中心の体験の全体がそろう M | — | `.ai/roadmap.md` §4 の段階、ADR-0099・ADR-0097、`.ai/gaps.md` G-069 |
+| 要回答で止まる M・FR があるか | — | `.ai/roadmap.md` §8、ADR-0099 の D6、`.ai/open-questions.md` §2（一覧） |
 | M1 の受け入れ条件 | — | `.ai/roadmap.md` §4 の受け入れ条件（A-01〜A-18） |
 | 要求の原文と区分 | — | `.ai/brief.md`、`.ai/brief-map.md`、`.ai/requirements.md` §3・§4 |
 | ジョブ・定時の処理 | — | `.ai/async.md` §2・§3（配達回の状態と J0、ADR-0094）・§4（審査キューの一意と持ち越し、ADR-0095）・§4（M1 で使うのは J14 の確認が済まない登録と数えの行の削除だけ、ADR-0087・0089。メールを渡すジョブは `.ai/gaps.md` G-049） |
@@ -165,6 +166,7 @@
 - `.ai/adr/0096-erasure-replay-redo-erase-from-markers.md`
 - `.ai/adr/0097-milestones-keep-m0-m6-m1-address-account.md`
 - `.ai/adr/0098-newspaper-deterministic-typesetting-holiday.md`
+- `.ai/adr/0099-stages-m0-m6-gates-no-blocking-oqs.md`
 
 ## レビュー（`.ai/reviews/`）
 
@@ -214,3 +216,4 @@
 - `.ai/tickets/YGO-039-totp-secret-collected-items.md`
 - `.ai/tickets/YGO-040-requirements-rows-adr.md`
 - `.ai/tickets/YGO-041-oq-020-llm-text-adr-0055.md`
+- `.ai/tickets/YGO-042-adr-0022-d6-no-blockers.md`
