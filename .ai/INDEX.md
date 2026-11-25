@@ -1,0 +1,187 @@
+# 地図（INDEX）
+
+読む順（DLG-14）: 1. この地図 → 2. 図（`.ai/diagrams/`） → 3. 地図が指す文書の節だけ。
+今の M は M1（住所・アカウント、F-01・F-02・F-19）。図は M1 の範囲で確かめてある。
+
+## 知りたいこと → 図 → 文書の節
+
+| 知りたいこと | 図 | 文書の節 |
+|---|---|---|
+| M1 で誰が何をできるか | `.ai/diagrams/m1-usecases.md` | `.ai/mvp.md` (a)・(b)、`.ai/roadmap.md` §4 の M1 の行、`.ai/features.md` §2 の F-01・F-02・F-19 |
+| M1 で動くコンポーネントと呼び出し | `.ai/diagrams/m1-components.md` | `.ai/architecture.md` §2・§3・§5、`.ai/api.md` §2.5 |
+| 地図で住所を選んで登録し、ログインするまで | `.ai/diagrams/m1-registration-sequence.md` | `.ai/api.md` §7 F-01・F-02・F-19、`.ai/security.md` §3.1〜§3.5 |
+| 住所の状態・入居の読み方・確認とセッションの状態 | `.ai/diagrams/m1-address-account-states.md` | `.ai/db.md` §2 の `addresses`・§4 の状態遷移図、`.ai/security.md` §3.3・§3.4 |
+| M1 の表と列 | `.ai/diagrams/m1-er.md` | `.ai/db.md` §2 の住民・住所、`.ai/security.md` §3.3 |
+| 架空の街の地図（画像・印・入居の層） | `.ai/diagrams/m1-components.md`・`.ai/diagrams/m1-usecases.md` | `.ai/architecture.md` §2 の C1、`.ai/api.md` §7 F-19、ADR-0061・0083・0084 |
+| 年齢と誕生日 | `.ai/diagrams/m1-er.md`・`.ai/diagrams/m1-registration-sequence.md` | `.ai/db.md` §2 の `residents`、`.ai/api.md` §7 F-02、ADR-0073 |
+| M1 の FR の一覧 | — | `.ai/roadmap.md` §4 の「今の M の範囲」、`.ai/mvp.md` (b) |
+| M1 の受け入れ条件 | — | `.ai/roadmap.md` §4 の受け入れ条件（A-01〜A-18） |
+| 要求の原文と区分 | — | `.ai/brief.md`、`.ai/brief-map.md`、`.ai/requirements.md` §3・§4 |
+| ジョブ・定時の処理 | — | `.ai/async.md` §2・§4（M1 で使うジョブはない。メールを渡すジョブは `.ai/gaps.md` G-049） |
+| マスターに聞くこと・決まったこと | — | `.ai/open-questions.md` §2（一覧）・§3（要回答） |
+| 持ち越し・仕分け | — | `.ai/gaps.md`、`.ai/triage.md` |
+| 進み具合・振り返り | — | `.ai/status.md`、`.ai/retros.md` |
+| 環境・秘密・費用 | — | `.ai/environment.md` §3・§4・§8、`.ai/roadmap.md` §9 |
+
+## 図（`.ai/diagrams/`）
+
+| ファイル | 種類 | 確かめた M |
+|---|---|---|
+| `.ai/diagrams/m1-usecases.md` | ユースケース図 | M1 |
+| `.ai/diagrams/m1-components.md` | コンポーネント図 | M1 |
+| `.ai/diagrams/m1-registration-sequence.md` | シーケンス図（主な流れ） | M1 |
+| `.ai/diagrams/m1-address-account-states.md` | 状態遷移図 | M1 |
+| `.ai/diagrams/m1-er.md` | ER 図 | M1 |
+
+## 文書（`.ai/` の直下）
+
+| ファイル | 中身 |
+|---|---|
+| `.ai/INDEX.md` | この地図 |
+| `.ai/README.md` | `.ai/` の文書の一覧と段階 |
+| `.ai/brief.md` | マスターの構想の原文（変えない） |
+| `.ai/brief-map.md` | ブリーフの対応 |
+| `.ai/requirements.md` | 要求仕様（FR・NFR） |
+| `.ai/features.md` | 機能一覧と優先順位・FR 逆引き |
+| `.ai/mvp.md` | MVP の定義 |
+| `.ai/roadmap.md` | ロードマップ・M・受け入れ条件 |
+| `.ai/architecture.md` | アーキテクチャ（C1〜C13） |
+| `.ai/db.md` | DB 設計 |
+| `.ai/api.md` | API 設計 |
+| `.ai/async.md` | 非同期処理（J0〜J17） |
+| `.ai/security.md` | セキュリティ設計 |
+| `.ai/environment.md` | 開発・検証環境 |
+| `.ai/open-questions.md` | 未確定事項（OQ） |
+| `.ai/gaps.md` | 持ち越し（G） |
+| `.ai/triage.md` | 仕分け（K） |
+| `.ai/retros.md` | 振り返り |
+| `.ai/status.md` | 進捗の写し（秘書が書く） |
+
+## ADR（`.ai/adr/`）
+
+状態は各ファイルの 3 行目。`置き換え（→ NNNN）` のものは、矢印の先を読む。
+
+- `.ai/adr/README.md`
+- `.ai/adr/0001-internal-id-separate-from-address.md`
+- `.ai/adr/0002-vacancy-requires-explicit-deletion.md`
+- `.ai/adr/0003-no-auto-update-address-book-on-move.md`
+- `.ai/adr/0004-delivery-schedule-and-limits.md`
+- `.ai/adr/0005-moderation-policy.md`
+- `.ai/adr/0006-letter-encryption-at-rest.md`
+- `.ai/adr/0007-newspaper-deterministic-template.md`
+- `.ai/adr/0008-modular-monolith-two-processes.md`
+- `.ai/adr/0009-typescript-fastify-react.md`
+- `.ai/adr/0010-postgresql-as-db-and-job-queue.md`
+- `.ai/adr/0011-newspaper-template-engine.md`
+- `.ai/adr/0012-assumed-scale.md`
+- `.ai/adr/0013-account-deletion-and-retention.md`
+- `.ai/adr/0014-api-no-immediacy-no-counts.md`
+- `.ai/adr/0015-api-db-batch-boundary.md`
+- `.ai/adr/0016-delivery-run-pipeline-and-tick.md`
+- `.ai/adr/0017-delivery-prepare-then-publish.md`
+- `.ai/adr/0018-authentication-email-password.md`
+- `.ai/adr/0019-server-side-sessions-and-reauth.md`
+- `.ai/adr/0020-staff-roles-and-permission-table.md`
+- `.ai/adr/0021-encryption-key-versioning.md`
+- `.ai/adr/0022-roadmap-stages-and-gates.md`
+- `.ai/adr/0023-dormancy-and-address-reuse-in-stage-3.md`
+- `.ai/adr/0024-matching-not-romance-no-contact-sharing.md`
+- `.ai/adr/0025-delivery-notification-web-push-with-count.md`
+- `.ai/adr/0026-closed-letters-rule-only-moderation.md`
+- `.ai/adr/0027-minors-no-age-restriction.md`
+- `.ai/adr/0028-town-map-static-image-in-mvp.md`
+- `.ai/adr/0029-shop-and-group-accounts-created-by-operators.md`
+- `.ai/adr/0030-open-registration.md`
+- `.ai/adr/0031-llm-service-provisional-selection-and-cost-estimate.md`
+- `.ai/adr/0032-resident-sanctions-deferred-to-master.md`
+- `.ai/adr/0033-email-mock-or-local-smtp-in-test-production-by-approval.md`
+- `.ai/adr/0034-contact-sharing-ban-outside-contacts-in-matching-only.md`
+- `.ai/adr/0035-newspaper-for-all-letters-random-am-pm-separate-notifications.md`
+- `.ai/adr/0036-reported-letters-viewable-by-moderators-protections-not-self-removable.md`
+- `.ai/adr/0037-town-map-shared-monochrome-image.md`
+- `.ai/adr/0038-shops-real-businesses-communities-by-residents.md`
+- `.ai/adr/0039-newspaper-editions-by-group-and-interest-llm-text-server-typesetting.md`
+- `.ai/adr/0040-letters-checked-at-send-sender-confirms-moderator-reviews.md`
+- `.ai/adr/0041-age-self-declared-protections-vary-by-age.md`
+- `.ai/adr/0042-town-map-marks-own-home-candidates-acquaintances.md`
+- `.ai/adr/0043-shops-contract-fee-memo-fictional-shops-vacancy-posters-staff-post.md`
+- `.ai/adr/0044-newspaper-acquaintance-groups-mutual-board-posts-per-resident-images-no-original.md`
+- `.ai/adr/0045-interests-from-past-newspaper-search-notice-no-consent-no-view.md`
+- `.ai/adr/0046-newspaper-no-ai-label-posts-verbatim-llm-text-not-shown-as-residents.md`
+- `.ai/adr/0047-no-age-based-differences-common-rules-for-all.md`
+- `.ai/adr/0048-age-required-immutable-advances-yearly-shown-to-letter-recipients.md`
+- `.ai/adr/0049-letters-only-to-acquaintances-mutual-add-or-board-open-requests-hidden.md`
+- `.ai/adr/0050-fictional-shops-stage-3-vacancy-poster-no-posting-newspaper-tenant-ads.md`
+- `.ai/adr/0051-town-map-acquaintance-marks-all-address-book-entries-definitions-split.md`
+- `.ai/adr/0052-local-dev-and-check-env-opentofu-iac-design-only.md`
+- `.ai/adr/0053-inferred-interests-from-search-cannot-be-stopped.md`
+- `.ai/adr/0054-newspaper-post-articles-llm-headline-only-no-summary.md`
+- `.ai/adr/0055-newspaper-editions-llm-text-server-typesetting-post-articles-headline-only.md`
+- `.ai/adr/0056-letters-reject-tier-and-review-tier.md`
+- `.ai/adr/0057-no-age-differences-same-rules-for-all.md`
+- `.ai/adr/0058-town-map-static-image-occupancy-route-only.md`
+- `.ai/adr/0059-town-map-marks-and-public-occupancy.md`
+- `.ai/adr/0060-dormant-stays-occupied-no-expiry-until-oq-088.md`
+- `.ai/adr/0061-town-map-shared-monochrome-base-image.md`
+- `.ai/adr/0062-stage-3-dormancy-reuse-expiry-by-oq-088.md`
+- `.ai/adr/0063-town-map-static-image-candidate-marks-selectable.md`
+- `.ai/adr/0064-town-map-candidate-marks-selectable-public-occupancy.md`
+- `.ai/adr/0065-letters-acquaintances-only-board-open-per-post.md`
+- `.ai/adr/0066-address-book-adds-stopped-when-not-mutual.md`
+- `.ai/adr/0067-shop-accounts-created-by-operator-cli-only.md`
+- `.ai/adr/0068-clean-up-tools-after-use.md`
+- `.ai/adr/0069-letters-reject-and-review-tiers-real-info.md`
+- `.ai/adr/0070-reject-tier-and-no-emoji-for-all-writes.md`
+- `.ai/adr/0071-outside-contacts-banned-in-all-writes.md`
+- `.ai/adr/0072-closed-letters-reviewed-no-llm-limited-decryption.md`
+- `.ai/adr/0073-age-and-birthday-required-immutable.md`
+- `.ai/adr/0074-newspaper-acquaintance-editions-posts-and-birthdays.md`
+- `.ai/adr/0075-account-deletion-and-retention-keep-delivery-runs.md`
+- `.ai/adr/0076-delivery-notification-web-push-retention-30-days.md`
+- `.ai/adr/0077-letters-purged-after-settling-or-recipient-deletion.md`
+- `.ai/adr/0078-letter-reports-by-recipients-only.md`
+- `.ai/adr/0079-account-erase-credentials-and-sessions-first.md`
+- `.ai/adr/0080-authentication-email-password-api-v1.md`
+- `.ai/adr/0081-server-side-sessions-reauth-api.md`
+- `.ai/adr/0082-internal-id-address-from-candidates-or-vacant.md`
+- `.ai/adr/0083-town-map-static-image-candidate-and-vacant-marks-selectable.md`
+- `.ai/adr/0084-town-map-candidate-and-vacant-marks-selectable-public-occupancy.md`
+- `.ai/adr/0085-account-erase-clears-all-resident-references.md`
+- `.ai/adr/0086-llm-provisional-selection-names-and-prices-published.md`
+
+## レビュー（`.ai/reviews/`）
+
+- `.ai/reviews/0001-design-review.md` — 設計のレビュー（R-001〜）
+- `.ai/reviews/0002-phase-evaluation-2026-11-25.md` — 段階の評価（2026-11-25）
+
+## チケット（`.ai/tickets/`）
+
+- `.ai/tickets/YGO-001-features.md`
+- `.ai/tickets/YGO-002-open-questions.md`
+- `.ai/tickets/YGO-003-architecture.md`
+- `.ai/tickets/YGO-004-db.md`
+- `.ai/tickets/YGO-005-api.md`
+- `.ai/tickets/YGO-006-async.md`
+- `.ai/tickets/YGO-007-security.md`
+- `.ai/tickets/YGO-008-roadmap.md`
+- `.ai/tickets/YGO-009-environment.md`
+- `.ai/tickets/YGO-010-design-review.md`
+- `.ai/tickets/YGO-011-vacancy-definition.md`
+- `.ai/tickets/YGO-012-keep-delivery-runs.md`
+- `.ai/tickets/YGO-013-purge-settled-letters.md`
+- `.ai/tickets/YGO-014-letter-reports-recipients-only.md`
+- `.ai/tickets/YGO-015-erase-credentials-and-sessions.md`
+- `.ai/tickets/YGO-016-auth-endpoints.md`
+- `.ai/tickets/YGO-017-remove-cross-doc-proposals.md`
+- `.ai/tickets/YGO-018-erase-all-resident-references.md`
+- `.ai/tickets/YGO-019-write-delivery-run-finished-at.md`
+- `.ai/tickets/YGO-020-prepared-at-and-carry-over.md`
+- `.ai/tickets/YGO-021-mvp-definition.md`
+- `.ai/tickets/YGO-022-brief-map.md`
+- `.ai/tickets/YGO-023-vendor-names-redaction.md`
+- `.ai/tickets/YGO-024-m1-scope-line.md`
+- `.ai/tickets/YGO-025-vendor-names-published.md`
+- `.ai/tickets/YGO-026-index-and-m1-diagrams.md`
+- `.ai/tickets/YGO-027-m1-k-items.md`
+- `.ai/tickets/YGO-028-mvp-status-confirmed.md`
+- `.ai/tickets/YGO-029-fr-094-api-db-async.md`

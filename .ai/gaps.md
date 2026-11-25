@@ -52,3 +52,4 @@
 | G-046 | 後回し | M6 のあと（段階 3） | 架空の店と張り紙・広告の細部は段階 3（S3-2） | OQ-084 |
 | G-047 | 後回し | M6 のあと（デプロイの準備） | 本番の事業者・検証環境・費用の上限はデプロイの準備の前に聞く（NFR-080） | OQ-085 |
 | G-048 | 暫定 | M1 | FR-094（登録に年齢制限・年齢確認・保護者の同意を置かない）を `api.md` §7 F-02 の `POST /api/v1/registrations` の行の FR 列に足し、年齢を確かめず制限もしないことを ADR-0027・ADR-0041 の D2 で指すだけ `[assumed]`。db・async は FR-094 で足す列もジョブもない | 点検（M1 の FR で api・db・async に出ない: FR-094） |
+| G-049 | 暫定 | M1 | 確認と再設定のメールは worker のメールのアダプタ（`MAIL_ADAPTER`、`environment.md` §8.1）が送るが、web から worker に渡すジョブが `async.md` にない。登録・送り直し・再設定の依頼・メールアドレスの変更の要求の処理が、同じトランザクションで `jobs` に送るジョブを積む `[assumed]`。ジョブの名前・ペイロード（トークンとメールアドレスを平文で残さない、`security.md` T-03）・やり直しを `async.md` に足すだけ | 図（`diagrams/m1-components.md`・`diagrams/m1-registration-sequence.md`） |
