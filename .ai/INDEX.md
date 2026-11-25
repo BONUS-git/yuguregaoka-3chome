@@ -221,3 +221,4 @@
 - `.ai/tickets/YGO-044-r-055-vendor-names-precedence-confirmed.md`
 - `.ai/tickets/YGO-045-g-009-m0-env-promises-a-07.md`
 - `.ai/tickets/YGO-046-g-010-d-rows-decision-adr.md`
+- `.ai/tickets/YGO-047-g-011-req-5-1-points-to-oq.md`
