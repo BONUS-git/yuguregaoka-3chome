@@ -97,9 +97,14 @@
 - [0078 — 手紙の通報は受取人だけ、確かめは条件付きで 1 通](0078-letter-reports-by-recipients-only.md)
 - [0079 — 退去で認証情報とセッションを最初に消す](0079-account-erase-credentials-and-sessions-first.md)（ADR-0085 で置き換え）
 - [0080 — ログインはメールとパスワード、認証の経路は /api/v1](0080-authentication-email-password-api-v1.md)
-- [0081 — セッションはサーバー側、再認証とセッションの API](0081-server-side-sessions-reauth-api.md)
+- [0081 — セッションはサーバー側、再認証とセッションの API](0081-server-side-sessions-reauth-api.md)（ADR-0090 で置き換え）
 - [0082 — 内部 ID と住所を分け、住所は候補か空き家から選ぶ](0082-internal-id-address-from-candidates-or-vacant.md)
 - [0083 — 地図は静的な画像で候補と空き家の印は押せる、API は入居だけ](0083-town-map-static-image-candidate-and-vacant-marks-selectable.md)
 - [0084 — 地図の候補と空き家の印を押して選べ、空き家・入居を全員に見せる](0084-town-map-candidate-and-vacant-marks-selectable-public-occupancy.md)
-- [0085 — 退去で住民を指す行をすべて消すか外す](0085-account-erase-clears-all-resident-references.md)
+- [0085 — 退去で住民を指す行をすべて消すか外す](0085-account-erase-clears-all-resident-references.md)（ADR-0091 で置き換え）
 - [0086 — 外部 LLM の暫定の選定と見積もり、名前と料金を載せる](0086-llm-provisional-selection-names-and-prices-published.md)
+- [0087 — 確認が済まない登録が住所を押さえるのは 24 時間](0087-unverified-registration-holds-address-24h.md)
+- [0088 — 流量の制限の既定の値と対象の経路](0088-rate-limit-defaults-and-target-routes.md)
+- [0089 — セッション・役割・流量の表と TOTP の秘密の置き場](0089-auth-tables-sessions-roles-rate-limits-totp.md)
+- [0090 — セッションと再認証の API、確かめる順と流量](0090-server-side-sessions-reauth-rate-limit-order.md)
+- [0091 — 退去と保持期間で住民・認証の行を消すか外す](0091-erase-and-retention-cover-auth-tables.md)
