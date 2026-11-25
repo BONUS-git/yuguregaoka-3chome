@@ -15,6 +15,7 @@
 | 架空の街の地図（画像・印・入居の層） | `.ai/diagrams/m1-components.md`・`.ai/diagrams/m1-usecases.md` | `.ai/architecture.md` §2 の C1、`.ai/api.md` §7 F-19、ADR-0061・0083・0084 |
 | 年齢と誕生日 | `.ai/diagrams/m1-er.md`・`.ai/diagrams/m1-registration-sequence.md` | `.ai/db.md` §2 の `residents`、`.ai/api.md` §7 F-02、ADR-0093 |
 | M1 の FR の一覧 | — | `.ai/roadmap.md` §4 の「今の M の範囲」、`.ai/mvp.md` (b) |
+| M の分け方と、手紙の一続きが通る M・中心の体験の全体がそろう M | — | `.ai/roadmap.md` §4 の段階、ADR-0022・ADR-0097、`.ai/gaps.md` G-069 |
 | M1 の受け入れ条件 | — | `.ai/roadmap.md` §4 の受け入れ条件（A-01〜A-18） |
 | 要求の原文と区分 | — | `.ai/brief.md`、`.ai/brief-map.md`、`.ai/requirements.md` §3・§4 |
 | ジョブ・定時の処理 | — | `.ai/async.md` §2・§3（配達回の状態と J0、ADR-0094）・§4（審査キューの一意と持ち越し、ADR-0095）・§4（M1 で使うのは J14 の確認が済まない登録と数えの行の削除だけ、ADR-0087・0089。メールを渡すジョブは `.ai/gaps.md` G-049） |
@@ -161,6 +162,7 @@
 - `.ai/adr/0094-delivery-runs-tick-and-close-retry.md`
 - `.ai/adr/0095-moderation-queue-unique-carry-label.md`
 - `.ai/adr/0096-erasure-replay-redo-erase-from-markers.md`
+- `.ai/adr/0097-milestones-keep-m0-m6-m1-address-account.md`
 
 ## レビュー（`.ai/reviews/`）
 
@@ -203,3 +205,4 @@
 - `.ai/tickets/YGO-032-close-retry-pending-letters.md`
 - `.ai/tickets/YGO-033-moderation-queue-unique.md`
 - `.ai/tickets/YGO-034-erasure-replay-redo.md`
+- `.ai/tickets/YGO-035-milestone-split.md`

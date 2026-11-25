@@ -113,3 +113,4 @@
 - [0094 — 配達回は見回りで進め、残った手紙の締め切りを積み直す](0094-delivery-runs-tick-and-close-retry.md)
 - [0095 — 審査キューは投稿と回で一意にし、持ち越しでラベルを継ぐ](0095-moderation-queue-unique-carry-label.md)
 - [0096 — 消去の再生は控えから J7 をやり直す](0096-erasure-replay-redo-erase-from-markers.md)
+- [0097 — M は M0〜M6 のまま、M1 は住所・アカウント](0097-milestones-keep-m0-m6-m1-address-account.md)
