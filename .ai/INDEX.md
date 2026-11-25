@@ -192,3 +192,4 @@
 - `.ai/tickets/YGO-027-m1-k-items.md`
 - `.ai/tickets/YGO-028-mvp-status-confirmed.md`
 - `.ai/tickets/YGO-029-fr-094-api-db-async.md`
+- `.ai/tickets/YGO-030-oq-092-vendor-names-precedence.md`
