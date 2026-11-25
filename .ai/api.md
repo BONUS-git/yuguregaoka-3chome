@@ -360,7 +360,7 @@ MVP では、自分の郵便受けに届いた版だけを見られる（バッ�
 | `GET` | `/api/v1/admin/reports` | 通報一覧（admin のみ）。手紙の通報でも本文は返さない | 200 | FR-077, FR-078 |
 | `GET` | `/api/v1/admin/reports/{id}/letter` | 通報された手紙を 1 通だけ復号して返す（admin のみ）。条件は下に書く | 200, 404 | FR-078, NFR-005, ADR-0072, ADR-0078 |
 | `POST` | `/api/v1/admin/reports/{id}/actions` | 通報に対する操作（approve / reject / dismiss。それ以外は 400（`validation_failed`））。住民への処置（停止・警告など）の操作と値は置かない（ADR-0032。内容は OQ-048）。再認証が要る（401 `reauthentication_required`、ADR-0090 の D5） | 200, 400, 401, 403 | FR-077, FR-081, ADR-0032, ADR-0090 |
-| `GET` | `/api/v1/admin/moderation-queue` | `review` ラベルの審査キュー（admin のみ）。掲示板の投稿だけで、手紙の行は返さない（`moderation_queue` に手紙の行はない、ADR-0069） | 200 | FR-080, ADR-0005, ADR-0072, ADR-0069 |
+| `GET` | `/api/v1/admin/moderation-queue` | `review` ラベルの審査キュー（admin のみ）。掲示板の投稿だけで、手紙の行は返さない（`moderation_queue` に手紙の行はない、ADR-0069）。`board_posts.status = 'awaiting_review'` の投稿ごとに、同じ投稿の行のうちいちばん新しい行（`created_at` が最大、閉じた行かどうかによらない）を 1 行だけ返す（同じ投稿は 1 回だけ出て、持ち越した直後で移し先の回の J1 の前も出る、ADR-0095 の D5）[assumed] | 200 | FR-080, ADR-0005, ADR-0072, ADR-0069, ADR-0095 |
 | `GET` | `/api/v1/admin/held-letters` | 確認待ちの手紙（`held`）の一覧（admin のみ）。本文を含めず、ID・送った日時・当たった規則の ID だけ。呼んだモデレーターが当事者の手紙は出さない。総件数は返さない | 200 | FR-112, ADR-0069 |
 | `GET` | `/api/v1/admin/held-letters/{id}` | 確認待ちの手紙を 1 通だけ復号して返す（admin のみ）。条件は下に書く | 200, 404 | FR-112, NFR-005, ADR-0069 |
 | `POST` | `/api/v1/admin/held-letters/{id}/actions` | 確認待ちの手紙への操作（`approve` / `reject`。それ以外は 400（`validation_failed`））。条件は取得と同じ。再認証が要る（401 `reauthentication_required`、ADR-0090 の D5） | 200, 400, 401, 404 | FR-112, ADR-0069, ADR-0090 |

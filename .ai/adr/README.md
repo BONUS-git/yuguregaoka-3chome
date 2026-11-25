@@ -111,3 +111,4 @@
 - [0092 — 配達回は見回りで進め、持ち越せない回は failed にする](0092-delivery-runs-tick-and-failed-runs.md)（ADR-0094 で置き換え）
 - [0093 — 年齢と誕生日は必須で変えられず、配達済みの手紙で見せる](0093-age-birthday-immutable-shown-for-done-runs.md)
 - [0094 — 配達回は見回りで進め、残った手紙の締め切りを積み直す](0094-delivery-runs-tick-and-close-retry.md)
+- [0095 — 審査キューは投稿と回で一意にし、持ち越しでラベルを継ぐ](0095-moderation-queue-unique-carry-label.md)
