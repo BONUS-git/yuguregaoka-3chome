@@ -574,12 +574,14 @@ UNIQUE(blocker_id, blocked_id)
 | `content_kind` text | board_post（手紙は入れない。手紙は投函のときに API が照合する、ADR-0069） |
 | `content_id` UUID | 審査対象レコードの ID |
 | `delivery_run_id` text FK→delivery_runs | 対象の配達回 |
-| `llm_label` text NULL | ok / review / block（LLM の一次判定） |
+| `llm_label` text NULL | ok / review / block（LLM の一次判定）。持ち越した投稿の行は、J1 が同じ投稿の前の行のうちいちばん新しい行のラベルを写す（判定・規則の ID・ルール表の版は写さない、ADR-0095 の D3）[assumed] |
 | `policy_decision` text NULL | approved / blocked（ルール表との突合後、ADR-0005） |
 | `matched_rule_id` text NULL | 当たった規則の ID（`blocked` のときだけ）。本文の抜き書きは持たない |
 | `rule_version` text NULL | 判定に使ったルール表の版（security.md §5.2） |
-| `processed_at` timestamptz NULL | — |
+| `processed_at` timestamptz NULL | J2 が判定を書いた時刻。投稿を次の配達回に移すトランザクション（J2 の打ち切りの持ち越し・J6 の手順 3）も、前の回の未処理の行にこの列だけを書く。`processed_at` があって `policy_decision` が NULL の行は持ち越した行（ADR-0095 の D2）[assumed]。モデレーターの人の審査は、投稿の今の配達回の行（`delivery_run_id = board_posts.delivery_run_id`）に `policy_decision` とこの列を書き、持ち越した行は変えない。今の配達回の行がまだなければ、`llm_label` を写した行を入れてから書く（ADR-0095 の D2）[assumed] |
+| `created_at` timestamptz | 行を入れた時刻（J1）。`processed_at` が NULL の行の保持の起点（ADR-0095 の D4）[assumed] |
 
+UNIQUE(`content_kind`, `content_id`, `delivery_run_id`) — 1 つの投稿は 1 つの配達回に 1 行だけ。J1 のやり直しで行が重ならず、LLM を二重に呼ばない（ADR-0095 の D1）[assumed]。
 CHECK(`content_kind <> 'letter'`) — 手紙をこのキュー（LLM の経路）に乗せないことを DB でも守る（ADR-0072 の D2）。
 このテーブルにも、ほかのどのテーブルにも、手紙の本文の平文は書かない。
 
@@ -728,7 +730,7 @@ ADR-0060 は「空き家は新規住民の割り当て候補となる」と定�
 | 住所録 | `address_book` | 住民が手動で追加（FR-051） | 住民が手動で削除するまで保持（ADR-0003）。足したもとの投稿・手紙が消えても行は残す（`board_post_id` は NULL になる、ADR-0065 の D6） | 所有者のアカウント削除時に削除 |
 | 住所録の追加の数え | `address_book_daily_counts` | 住所録の追加・住所を変えた更新のとき（API、ADR-0065 の D4） | 今日を含む直近 7 日（JST の暦日。相互にならない追加の判定、ADR-0066 の D5）。エントリを消しても減らさない | `jst_date` が今日（JST）より 7 日以上前の行を次の J14 が削除。アカウント削除時に即時削除（外部キーの CASCADE） |
 | ブロック | `blocks` | ブロック操作時 | ブロック解除まで | ブロック解除時、またはどちらかが退去時 |
-| モデレーション審査 | `moderation_queue` | 締め切り処理時にジョブ経由で登録（掲示板の投稿だけ、ADR-0069） | 審査完了後 1 年保持（ADR-0091）[assumed] | 1 年経過後削除 |
+| モデレーション審査 | `moderation_queue` | 締め切り処理時にジョブ経由で登録（掲示板の投稿だけ、ADR-0069） | 審査完了（持ち越した行は持ち越した時刻）から 1 年保持（ADR-0091）。`processed_at` が NULL の行は入れた時刻（`created_at`）から 1 年（ADR-0095 の D4）[assumed] | `coalesce(processed_at, created_at)` から 1 年経過後に J14 が削除 |
 | モデレーター操作 | `moderation_actions` | モデレーターの操作時 | 1 年保持（ADR-0091）[assumed]。モデレーターの退去では J7 の手順 9 が `moderator_id` を NULL にし、行は同じ期間残す（ADR-0091 の D11） | 1 年経過後削除 |
 | 通報 | `reports` | 住民の通報操作時 | クローズまで保持。クローズ後 1 年保持（ADR-0091）[assumed]。通報者の退去では J7 の手順 9 が `reporter_id` を NULL にし、行は同じ期間残す（ADR-0091 の D11） | クローズから 1 年後に削除 |
 | 画像 | `images` | アップロード時 | 加工した画像は、参照するコンテンツ（手紙・掲示板）が存在する間。元の画像は加工が終わるか失敗するまで（取りこぼしは最長でアップロードから約 48 時間。24 時間 [assumed] を過ぎたあとの次の J14 で消す、ADR-0074 の D5）。上げた住民の退去では J7 の手順 9 が `uploader_id` を NULL にし、行は残す（ADR-0091 の D11） | 元の画像は J13 の加工のあと（失敗でも）に消し、残りは 24 時間を過ぎたあとの次の J14 が消す。加工した画像はコンテンツ削除時にオブジェクトストレージからも削除 |
@@ -860,6 +862,7 @@ stateDiagram-v2
 | 配達の重複防止 | `mailbox_items` の UNIQUE(delivery_run_id, resident_id, kind, item_id)（ADR-0010） |
 | 組版の重複防止 | `newspapers` の UNIQUE(delivery_run_id) と `newspaper_editions` の UNIQUE(newspaper_id, edition_key)（ADR-0039） |
 | 記事の文字の重複防止 | `newspaper_articles` の UNIQUE(delivery_run_id, source_kind, source_id)。あれば LLM を呼ばない（ADR-0055 の D7） |
+| 審査の重複防止 | `moderation_queue` の UNIQUE(content_kind, content_id, delivery_run_id)。持ち越した投稿は前の行の `llm_label` を写し、あれば LLM を呼ばない（ADR-0095 の D1・D3） |
 | 外のニュースの重複防止 | `external_news_items` の UNIQUE(source_key, external_id)。素材はその回の `delivery_run_id` の行だけなので、同じ記事がほかの回に載らない（ADR-0039 の D6） |
 | 新聞は 1 回の配達につき 1 つ | `mailbox_items` の部分一意索引 UNIQUE(delivery_run_id, resident_id) WHERE kind = 'newspaper'（ADR-0039） |
 | 版の選び方の再現 | 興味が複数ある住民の版は `SHA-256(run_id:resident_id)` から決めるので、J4 をやり直しても同じ版（ADR-0039 の D3） |
