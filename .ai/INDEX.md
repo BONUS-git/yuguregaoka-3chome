@@ -164,6 +164,7 @@
 - `.ai/adr/0095-moderation-queue-unique-carry-label.md`
 - `.ai/adr/0096-erasure-replay-redo-erase-from-markers.md`
 - `.ai/adr/0097-milestones-keep-m0-m6-m1-address-account.md`
+- `.ai/adr/0098-newspaper-deterministic-typesetting-holiday.md`
 
 ## レビュー（`.ai/reviews/`）
 
@@ -212,3 +213,4 @@
 - `.ai/tickets/YGO-038-general-rate-limit-routes.md`
 - `.ai/tickets/YGO-039-totp-secret-collected-items.md`
 - `.ai/tickets/YGO-040-requirements-rows-adr.md`
+- `.ai/tickets/YGO-041-oq-020-llm-text-adr-0055.md`
