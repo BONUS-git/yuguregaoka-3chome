@@ -13,6 +13,7 @@
 | 住所の状態・入居の読み方・確認とセッションの状態 | `.ai/diagrams/m1-address-account-states.md` | `.ai/db.md` §2 の `addresses`・§4 の状態遷移図、`.ai/security.md` §3.3・§3.4 |
 | M1 の表と列 | `.ai/diagrams/m1-er.md` | `.ai/db.md` §2 の住民・住所、`.ai/security.md` §3.3 |
 | 架空の街の地図（画像・印・入居の層） | `.ai/diagrams/m1-components.md`・`.ai/diagrams/m1-usecases.md` | `.ai/architecture.md` §2 の C1、`.ai/api.md` §7 F-19、ADR-0061・0083・0084 |
+| 住所の列挙と探り（入居の一覧・プロフィールの 404・流量の制限） | `.ai/diagrams/m1-components.md` | `.ai/security.md` §3.5 の規則の表・§7 の T-05、`.ai/api.md` §7 F-01・F-19、`.ai/roadmap.md` A-12、ADR-0084 の D16・ADR-0088 |
 | 年齢と誕生日 | `.ai/diagrams/m1-er.md`・`.ai/diagrams/m1-registration-sequence.md` | `.ai/db.md` §2 の `residents`、`.ai/api.md` §7 F-02、ADR-0093 |
 | M1 の FR の一覧 | — | `.ai/roadmap.md` §4 の「今の M の範囲」、`.ai/mvp.md` (b) |
 | M の分け方と、手紙の一続きが通る M・中心の体験の全体がそろう M | — | `.ai/roadmap.md` §4 の段階、ADR-0022・ADR-0097、`.ai/gaps.md` G-069 |
@@ -207,3 +208,4 @@
 - `.ai/tickets/YGO-034-erasure-replay-redo.md`
 - `.ai/tickets/YGO-035-milestone-split.md`
 - `.ai/tickets/YGO-036-retro-heading-wording.md`
+- `.ai/tickets/YGO-037-profile-probe-t05.md`
