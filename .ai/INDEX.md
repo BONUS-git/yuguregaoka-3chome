@@ -206,3 +206,4 @@
 - `.ai/tickets/YGO-033-moderation-queue-unique.md`
 - `.ai/tickets/YGO-034-erasure-replay-redo.md`
 - `.ai/tickets/YGO-035-milestone-split.md`
+- `.ai/tickets/YGO-036-retro-heading-wording.md`
