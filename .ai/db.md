@@ -899,6 +899,7 @@ stateDiagram-v2
 | FR-068 | §2 `blocks`・§3 suppressed 処理 |
 | FR-076〜082 | §2 `moderation_queue` / `reports` / `moderation_actions` |
 | FR-112 | §2 `letters`（`held`・`rule_version`・`matched_rule_id`・`decided_at`）・`moderation_actions.letter_id`・§4 手紙の状態遷移と保持（ADR-0069） |
+| FR-094 | 足す表・列はない。年を含む生年月日・保護者の同意・年齢確認の結果の列を置かない。年齢は FR-113 の `residents.age_at_registration` を住民の設定のまま使い、確かめない（ADR-0027 の D1・D2・ADR-0041 の D2・D4・ADR-0073） |
 | FR-113 | §2 `residents.age_at_registration`・`age_base_date`・`birthday_month`・`birthday_day` と今の年齢の式（ADR-0073）・§9（年齢による違いは作らない、ADR-0057） |
 | FR-127 | §2 `residents.birthday_month`・`birthday_day`（CHECK で暦にある月日だけ。書き換えない、ADR-0073 の D3・D5）・§2 `newspaper_editions.edition_key` の `acquaintance:`（誕生日の欄、ADR-0074 の D9）・§2 `newspaper_birthday_entries`（欄の中身。組 1・2 と一緒に作る）・§4・§5（載った住民の退去で消して組み直す） |
 | FR-093, FR-097 | §5 退去処理（ADR-0091） |

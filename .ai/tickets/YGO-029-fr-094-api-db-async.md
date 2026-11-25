@@ -1,5 +1,5 @@
 # YGO-029 R-052 FR-094 が api・db・async に対応していない
-状態: open
+状態: done
 M: M1
 
 ## 目的
@@ -10,10 +10,14 @@ M1 の FR-094 は、未成年の利用を認め、登録に年齢制限・年齢
 - `.ai/api.md` §7 F-02 の `POST /api/v1/registrations` の行の FR / ADR 列に FR-094 を足す。年齢を確かめず制限もしないことの根拠として、ADR-0027 と ADR-0041 の D2 を指す。
 - `.ai/db.md` §8（FR / NFR との対応）と `.ai/async.md` §9（FR / NFR との対応表）に、FR-094 で足す列もジョブもないことを書く。
 - 直したことに合わせて、`.ai/gaps.md` の G-048 の行をそろえる。
+- `.ai/api.md` §10 に FR-094 の行を足す。
+- `.ai/diagrams/m1-registration-sequence.md` の FR の行に FR-094 を足す。
 
 ## 直さないところと理由
 - `requirements.md` の FR-094 の文: 決定（ADR-0027・ADR-0057）のとおりで、変えない。
 - `.ai/status.md`: 秘書が書く。
+- ADR は変えない。ADR-0027 の D1・D2（年齢確認・保護者の同意の部分）と ADR-0041 の D2・D4 は採用のままで、ADR-0041 の D5 は ADR-0073 が置き換えている。FR-094 と食い違わないので、ADR と OQ は足さない（YGO-026 が回した食い違いは、ここで確かめた）。
+- `mvp.md`・`triage.md`・`status.md` は変えない。
 
 ## 受け入れ確認
 1. `.ai/api.md` §7 の `POST /api/v1/registrations` の行の FR / ADR 列に `FR-094` と `ADR-0027` がある。
