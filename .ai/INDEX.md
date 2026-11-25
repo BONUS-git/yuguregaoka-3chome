@@ -211,3 +211,4 @@
 - `.ai/tickets/YGO-037-profile-probe-t05.md`
 - `.ai/tickets/YGO-038-general-rate-limit-routes.md`
 - `.ai/tickets/YGO-039-totp-secret-collected-items.md`
+- `.ai/tickets/YGO-040-requirements-m1-rows-adr.md`
