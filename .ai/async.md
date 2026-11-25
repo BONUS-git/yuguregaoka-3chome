@@ -66,7 +66,7 @@
 | J15 | `notify.delivery` | キュー（新聞は J5 が公開と同じトランザクションで、手紙は J0 が枠の時刻を過ぎてから積む。`singletonKey` は §5） | `{run_id, kind, slot}` | 購読のある住民へ「新聞が配達されました！」か「手紙が配達されました！（N通）」を 1 回送る（ADR-0076・ADR-0035） |
 | J16 | `newspaper.write` | J2 と J17 が終わる（J17 は失敗か取り込みの打ち切りでもよい）か審査の打ち切り後、J0 が判断（M5 から） | `run_id` | 素材（承認済みの投稿・その回の J17 が取り込んだ外のニュース）ごとの見出しと記事の文字（`newspaper_articles`、ADR-0055 の D7） |
 | J17 | `news.fetch` | 01:00 / 14:00 JST 以降、取り込みの打ち切り（04:00 / 16:00）まで、J0 が判断（M5 から） | `run_id` | 取り込んだ外のニュース（`external_news_items`、`delivery_run_id = run_id`、ADR-0039 の D6）。本番のアダプタは OQ-060 のあと |
-| — | `erasure.replay` | 手動（リストアの後） | なし | 消したはずのデータを `erasure_log` を元に消し直す |
+| — | `erasure.replay` | 手動（運用者の CLI。リストアの後、web を止めたまま） | なし | 消去の控え（`erasure/<resident_id>.json`）の住民ごとに J7 を積み直し、`erasure_log` の 3 つの表の残りの行を消し、J14 を 1 回積む（ADR-0096 の D4） |
 | — | `keys.reencrypt` | 手動（運用者の CLI。鍵の新しい版を全プロセスに配り、暗号化の版を切り替えたあと。配達の窓が閉じた直後に始める [assumed]） | `{kind: 'letter' \| 'email', from_version}` | 版 `from_version` で暗号化した手紙の本文（AAD は同じ手紙の ID）か、`credentials` のメールアドレスと TOTP の秘密・`auth_tokens` の変更中の新しいメールアドレスの暗号化した値（`kind: 'email'`。列ごとの版で選ぶ、ADR-0089 の D5・D6）を、1,000 件ずつのトランザクションで今の版に暗号化し直す。残った行から続けられる（冪等）。平文を DB・ログ・ペイロードに書かない（ADR-0021・ADR-0052 の D8、手順は `environment.md` §8.3） |
 
 **毎日のジョブのスケジュール（J9〜J11・J14。J9 は作るときだけ）**: 配達回の窓（01:00〜12:30 JST と 14:00〜21:30 JST。手紙の時間帯の終わりと手紙の通知の期限を含む、ADR-0035）
@@ -493,16 +493,17 @@ J0 が判断し `singletonKey` で積む。
 
 **入力**: `resident_id`
 
-**出力**: ADR-0091 の退去の表に従い消去処理を実行する。消した `credentials`・`sessions`・`auth_tokens`・`residents` の行を `erasure_log` に記録する。`residents` を指す行は、消すか（0〜8）、指す列を NULL にしてから（9）、`residents` を消す（10）
+**出力**: ADR-0091 の退去の表に従い消去処理を実行する。消した `credentials`・`sessions`・`auth_tokens`・`residents` の行を `erasure_log` に記録する。`residents` を指す行は、消すか（0〜8）、指す列を NULL にしてから（9）、`residents` を消す（10）。最初にオブジェクトストレージに消去の控えを置く（ADR-0096 の D3）
 
 **処理の順序**（各項目は独立したトランザクション）:
+- 0 の前: オブジェクトストレージの `erasure/<resident_id>.json` に、`resident_id` と受付の時刻（`residents.deleted_at`）だけを書く（ADR-0096 の D3）。すでにあれば書き換えない（条件付きの書き込み）。書けなければ 0 に進まず、失敗で終えて再試行に任せる
 0. 認証情報とセッションを消す（ADR-0091 の D8。1 つのトランザクションで次の順。外部キーを CASCADE にしないので、指す側から消す）
    1. その住民の通知の購読（`push_subscriptions`）の残りの行と、それを指す送った記録（`delivery_notifications`）を消す（退去の受付で消えていれば何もしない、ADR-0091 の D7）
    2. その住民のセッション（`sessions`）の行をすべて消す（受付で `invalidated_at` を付けた行・期限切れの行も含む）
    3. その住民の確認と再設定のトークン（`auth_tokens`。使った行・期限を過ぎた行・変更中の新しいメールアドレスの行も含む、ADR-0089 の D6）をすべて消す
    4. その住民の認証情報（`credentials`。メールの暗号化した値・検索用の HMAC・パスワードのハッシュ・TOTP の秘密）の行を消す
 
-   同じトランザクションで、消した `sessions`・`auth_tokens`・`credentials` の行を `erasure_log` に記録する（`table_name` は `sessions`・`auth_tokens`・`credentials`、`record_id` は行の ID。`credentials` は `resident_id`）
+   同じトランザクションで、消した `sessions`・`auth_tokens`・`credentials` の行を `erasure_log` に記録する（`table_name` は `sessions`・`auth_tokens`・`credentials`、`record_id` は行の ID。`credentials` は `resident_id`。`ON CONFLICT (table_name, record_id) DO NOTHING`、ADR-0096 の D2）
 1. その住民が送った届いていない手紙（`state = 'pending' / 'scheduled' / 'held' / 'blocked' / 'returned' / 'suppressed'`）を、本文と宛先ごと削除する。`scheduled` の手紙の郵便受けの行（`kind = 'letter'`・`item_id` がその手紙の行。まだ `visible_at` を過ぎていない）も同じトランザクションで削除する（ADR-0091 の退去の表・ADR-0069 の D6。届いていないので受取人のために残す理由がなく、送った人ももう送信済みを見られない）。消した手紙は J5 の手順 3 の確定の対象にならない（行がない）。`delivered` の手紙は残す
 2. 掲示板投稿（掲載前）を `deleted` に変更・`body` を消去し、同じトランザクションで J8 を積む
 3. 掲示板投稿（掲載済み）を `deleted` に変更・`body` を消去し、同じトランザクションで J8 を積む
@@ -513,16 +514,17 @@ J0 が判断し `singletonKey` で積む。
    新聞の誕生日の欄に載った行（`newspaper_birthday_entries`、`resident_id` が本人の行。組 1・2 を作る段階から）を消し、同じトランザクションで、行のあった版の紙面の J8 を積む（ADR-0074 の D9）
 7. 1 つのトランザクションで、`addresses.status` を `vacant_deleted` に変更し、その住民の今の居住記録（`tenancies.is_current = true` の行）の `ended_at` を今の時刻、`is_current` を false にする（ADR-0091 の D10）。このあとに始まる J4 は、その住民を `is_current = true` の全住民に数えず、新聞の行を作らない
 8. その住民が受け取った郵便受けの行（`mailbox_items`、`resident_id` が本人。手紙・新聞・掲示板のすべて）を削除する（ADR-0091 の退去の表。外部キーは CASCADE にしないので、10 の前に消す）。行が消えた手紙には、残りの受取人の行で J14 の条件（ADR-0091 の D3）を当てる
-9. 1 つのトランザクションで、その住民を指す次の 6 つの列を NULL にする（ADR-0091 の D11。外部キーは既定で、`residents` を消す前に外す、D9）。`erasure_log` には記録しない（記録の範囲は `reviews/0001-design-review.md` の R-014）
+9. 1 つのトランザクションで、その住民を指す次の 6 つの列を NULL にする（ADR-0091 の D11。外部キーは既定で、`residents` を消す前に外す、D9）。`erasure_log` には記録しない（リストアのあとは `erasure.replay` が J7 をやり直して NULL にし直す、ADR-0096 の D1）
    - `letters.sender_id`（残っているのは届いた手紙だけ。API では差出人を「退去済み」と示す）
    - `board_posts.author_id`（2・3 で投稿を引いたあと）
    - `reports.reporter_id`
    - `moderation_actions.moderator_id`
    - `images.uploader_id`
    - `tenancies.resident_id`（7 で終わらせたあと。引っ越しで終わった前の行も含め、その住民の行すべて。同じ UPDATE で `resident_erased_at` に今の時刻を書く: `UPDATE tenancies SET resident_id = NULL, resident_erased_at = now() WHERE resident_id = $1`、ADR-0091 の D10。J14 が退去から 1 年で消す）
-10. `residents` を物理削除し、`erasure_log` に記録する（最後に行う。`address_book_daily_counts` は外部キーの CASCADE で一緒に消える）
+10. `residents` を物理削除し、`erasure_log` に記録する（最後に行う。`address_book_daily_counts` は外部キーの CASCADE で一緒に消える。記録は 0 と同じく `ON CONFLICT DO NOTHING`）
 
 **冪等性**:
+- 0 の前の控えは、あれば書き換えないので、やり直しても受付の時刻は最初の値のまま
 - 各ステップは `WHERE resident_id=$1` と `WHERE status=<前の状態>` を組み合わせた
   条件付き UPDATE なので、2 回実行しても安全
 - 0 の削除は `WHERE resident_id=$1` の DELETE。行がなければ何もせず、`erasure_log` にも記録しない
@@ -659,7 +661,7 @@ J0 も `state = 'pending'` の滞留分を拾い直す [assumed]。
 
 **入力**: なし
 
-**出力**: ADR-0091 の保持期間の表で期限を過ぎた行（手紙は D2〜D4、`auth_tokens`・`rate_limit_buckets`・メールの確認が済まない登録は D14 の条件に当たるもの）を削除する。`delivery_runs` の行は消さない（郵便受け・紙面などが外部キーで指し、郵便受けとバックナンバーは `done` の回だけを返すため、ADR-0091）
+**出力**: ADR-0091 の保持期間の表で期限を過ぎた行（手紙は D2〜D4、`auth_tokens`・`rate_limit_buckets`・メールの確認が済まない登録は D14 の条件に当たるもの）を削除する。`delivery_runs` の行は消さない（郵便受け・紙面などが外部キーで指し、郵便受けとバックナンバーは `done` の回だけを返すため、ADR-0091）。J14 の削除は `erasure_log` に記録しない。リストアのあとは `erasure.replay` が J14 を 1 回積み、同じ条件でまた消す（ADR-0091 の D6・ADR-0096 の D1）
 
 **対象**:
 
@@ -678,6 +680,7 @@ J0 も `state = 'pending'` の滞留分を拾い直す [assumed]。
 | `reports` | `closed_at < now() - interval '1 year'` |
 | `tenancies`（退去済み）| `resident_erased_at < now() - interval '1 year'`（ADR-0091 の D10。J7 の手順 9 で `resident_id` を NULL にし、同じ UPDATE で退去の時刻を書いた行。前の引っ越しで終わった行も退去の時刻から数える。住民が残る引っ越しで終わった行は `resident_erased_at` が NULL なので消さない）。1 つのトランザクションで、先にその行を指す `address_book.registered_tenancy_id` と `letter_recipients.registered_tenancy_id` を NULL にしてから `tenancies` の行を消す（ADR-0091 の D12。外部キーは既定なので、指す列を残すと削除が止まる。住所録の行は消さない。NULL の住所録の行は知り合いにならず、宛先が NULL の手紙は J4 の振り分けで差し戻しになる、`db.md` §3）。`erasure_log` に記録しない |
 | `erasure_log` | `erased_at < now() - interval '60 days'` |
+| オブジェクトストレージ（消去の控え `erasure/`） | 中身の受付の時刻が `now() - interval '60 days'` より前（ADR-0096 の D5 [assumed]） |
 | `external_news_items` | `fetched_at < now() - interval '30 days'`（ADR-0091・ADR-0039 [assumed]。OQ-060 の利用の条件で変わる）。載った記事の `newspaper_articles` は紙面と同じだけ残すので、`source_id` の参照は外部キーにしない |
 | `inferred_interests`（段階 2）| `last_matched_at < now() - interval '30 days'`（ADR-0091・ADR-0045 の D5 [assumed]） |
 | `address_book_daily_counts` | `jst_date` が今日（JST）より 7 日以上前（ADR-0066 の D5。相互にならない追加の判定に、今日を含む直近 7 日の数えを使う。1 日の上限（ADR-0065 の D4）は今日の行だけを見る） |
@@ -778,6 +781,29 @@ J0 も `state = 'pending'` の滞留分を拾い直す [assumed]。
 
 ---
 
+### `erasure.replay` — 消去の再生（ADR-0096）
+
+**きっかけ**: 手動。運用者が DB をバックアップから戻したあと、web を止めたまま（worker は動かす）運用者の CLI で積む。
+
+**入力**: なし
+
+**出力**: 退去（J7）と保持期間（J14）で消したものを、戻した DB から消し直す。`erasure_log` に記録しない行（本文の消去・住民を指す列の NULL・J7 の手順 1・4〜8・J14 の削除）も、J7 と J14 をやり直して消し直す（ADR-0096 の D1）
+
+**処理の順序**:
+1. オブジェクトストレージの `erasure/` の消去の控えをすべて読む（DB と一緒に戻らない、ADR-0096 の D3）。控えの住民ごとに、`residents` の行があって `deleted_at` が NULL なら控えの受付の時刻を書き（受付より前の時点に戻したとき）、J7 `account.erase` をその `resident_id` で積む
+2. 戻した DB の `erasure_log` の `table_name` が `sessions`・`auth_tokens`・`credentials` の行について、`record_id` の行が残っていれば、外部キーの向きのとおり消す（`sessions` は指す `push_subscriptions`・`delivery_notifications` を先に。`credentials` は `resident_id` で引く）。控えが欠けたときの守りで、`erasure_log` に記録し直さない
+3. J14 `retention.purge` を 1 回積む（`singletonKey` は `'retention.purge:replay:<日時>'`。その日の毎日の J14 とは別に動く）
+4. 1 の J7 と 3 の J14 がすべて終わったこと（`jobs` の状態）を CLI が示し、運用者が web を戻す
+
+**冪等性**:
+- 1 の J7 と 3 の J14 は 2 回動かして安全（J7・J14 の冪等性）。2 は残っている行だけを消す。`erasure.replay` を 2 回動かしても結果は同じ
+
+**戻らないもの**:
+- 戻した時点より後に住民やモデレーターが行った操作（郵便受けの削除・ログアウト・パスワードの変更・住所録やブロックの変更・処置など）は戻らない。やり直した J7 の手順 9 の `resident_erased_at` はやり直した時刻になる（ADR-0096 の D6、`gaps.md` G-055。M6 で決める）
+- 受付から J7 が控えを置くまでの間（数秒）に受付より前の時点へ戻すと、その退去は抜ける（ADR-0096 の D3）
+
+---
+
 ## §5 pg-boss の設定 [assumed]
 
 worker が 2 台あっても実行は 1 回分になる。`singletonKey` と DB の条件による。
@@ -802,6 +828,7 @@ worker が 2 台あっても実行は 1 回分になる。`singletonKey` と DB 
 | J15 `notify.delivery` | 5 | true | 1800 | `'notify.delivery:<run_id>:newspaper'`・`'notify.delivery:<run_id>:letter:<HHMM>'` |
 | J16 `newspaper.write` | 5 | true | 1800 | `'newspaper.write:<run_id>'` |
 | J17 `news.fetch` | 3 | true | 1800 | `'news.fetch:<run_id>'` |
+| `erasure.replay` | 3 | true | 3600 | `'erasure.replay'`（運用者の CLI が積む。積んだ J7 と J14 は終わりを待たない、ADR-0096 の D4） |
 | `keys.reencrypt` | 5 | true | 3600 | —（`pg_try_advisory_lock` で 1 台だけが動く。1 回のジョブは 50 分で区切り、版 `from_version` の行が残っていれば、ロックを放してから次のジョブを `startAfter` 60 秒の遅れを付けて積んで終わる。ロックが取れなければ失敗にして再試行させる [assumed]。`environment.md` §8.3） |
 
 **時間のかかる工程**（J2・J3・J4・J16）: `pg_try_advisory_lock` で実行する worker を 1 台にする。
@@ -825,7 +852,7 @@ worker が 2 台あっても実行は 1 回分になる。`singletonKey` と DB 
 | 持ち越しの失敗（J6 の再試行が尽きた） | J0 がその回を `failed` にし、`alert=delivery_run_failed` を書く。中身は動かさない。後の回の公開は止めない（ADR-0094 の D5〜D7） | その回の手紙と新聞は郵便受けに出ない（準備済みの `mailbox_items` も、配達回が `done` でないので見せず、年齢の見せる条件にも数えない）。送った人には「投函済み」と見えたまま。後の便は通常どおり届く | `delivery_runs.status = 'failed'`・`finished_at` が NULL・pg-boss のジョブ履歴 |
 | worker が何便分も止まった | 再起動後、J0 が古い配達回から順に持ち越しを実行 | 複数便分が次の 1 便で届く（件数が多い） | 操作ログ |
 | 配達の通知の失敗 | J15 が期限（新聞は公開から・手紙は枠の時刻から 30 分）まで再試行。期限を過ぎたら送らない。404・410 の購読は消す | 通知が届かないことがある。郵便受けは通常どおり（配達回は `done` のまま） | `delivery_notifications.sent_at` が NULL の行・pg-boss のジョブ履歴 |
-| リストアした | `erasure_log` を再生し、削除済みデータを再削除。`erasure.replay` で実行 | 通常通り（データの整合性が回復後は影響なし） | `erasure_log`・操作ログ |
+| リストアした | web を止めたまま `erasure.replay` が、消去の控えの住民ごとに J7 をやり直し、`erasure_log` の 3 つの表の残りの行を消し、J14 を 1 回動かす。ジョブが終わってから web を戻す（ADR-0096 の D4）。戻した時点より後の住民の操作は戻らない（D6） | 再生のあいだは使えない。戻したあとは、戻した時点より後の操作（郵便受けの削除・ログアウトなど）がなかったことになる | 消去の控え（`erasure/`）・`erasure_log`・pg-boss のジョブ履歴・操作ログ |
 
 ---
 
@@ -867,6 +894,7 @@ worker が止まると J0 は書けないので、J0 の心拍がないことは
 | 締め切りのやり直し | J1 を最初の区切りのあと（配達回が `running` になったあと）で止めて再試行を使い切らせたとき、次の J0 が J1 を積み直し、残りの `pending` の手紙が `scheduled` になること。`pending` の手紙が残っている間は J0 が J2〜J5 を積まないこと。積み直した J1 のあとも `moderation_queue` に同じ投稿の行が 1 つだけであること。手紙がすべて `scheduled` になったあと（または手紙のない回）で投稿を審査キューに入れきる前に J1 を止めたとき、J0 が J2 を積まずに J1 を積み直し、残りの投稿が審査キューに入ること。持ち越しの打ち切りまで J1 が失敗し続けると、J6 が残りの `pending` の手紙を `pending` のまま次の便に移し、その便の J1 で `scheduled` になること。`done`・`skipped`・`failed` の回や打ち切りのあとに動いた J1 が何も書かないこと（ADR-0094 の D8） |
 | 審査キューの一意と持ち越し | 同じ投稿・同じ配達回の `moderation_queue` の行を 2 つ入れようとすると UNIQUE 違反になること。モックの LLM が `review` を返した投稿が打ち切りで次の便に移るとき、前の回の行に `processed_at` が入り `policy_decision` が NULL のままであること。移し先の回の J1 の行に前の `llm_label` が写り、`policy_decision`・`rule_version` が NULL であること。移し先の回の J2 でモックの LLM の呼び出しが増えないこと。`processed_at` が NULL で `created_at` が 1 年より前の行を J14 が消すこと。管理画面の一覧に同じ投稿が 1 回だけ出ること。持ち越した直後で移し先の回の J1 の前も、その投稿が前の回の行で一覧に出ること。人の審査が今の配達回の行に `policy_decision` と `processed_at` を書き、持ち越した行を変えないこと（ADR-0095） |
 | 公開と退去の競合 | J5 の実行中に J7 が動いたとき、退去済み住民の `mailbox_items` が削除されること |
+| 消去の再生 | J7 のあとにオブジェクトストレージ（テストは一時ディレクトリのファイルのアダプタ）の `erasure/<resident_id>.json` があり、中身が `resident_id` と受付の時刻だけであること。J7 の前（受付の前も）に取った DB の写しに戻して（リストアを模す）`erasure.replay` を動かすと、その住民の `residents`・`credentials`・`sessions`・`auth_tokens`・届いていない手紙・興味の行がなく、投稿の `body` が消え、住民を指す 6 つの列が NULL になること。31 日目の J14 で消えた手紙が、J14 の前の写しに戻して再生したあとにもないこと。`erasure_log` に同じ `table_name`・`record_id` の行が 1 つだけで、CHECK の外の `table_name` は入らないこと。`erasure.replay` を 2 回動かしても失敗せず結果が同じこと（ADR-0096） |
 | モックの LLM が失敗 | LLM のモックが全件エラーを返したとき、打ち切り後に投稿が次の便に持ち越されること |
 | 通知の重複と期限 | J15 を 2 回動かしてもモックのプッシュ送信が受ける通知が増えないこと。公開の前・`skipped` の便・枠の時刻の前・それぞれの時刻から 30 分のあとには送らないこと。休刊の回にも新聞の通知を送ること。新聞の 30 分は J5 が書いた `finished_at` から数え、その値が同じ回の手紙の `settled_at` と同じこと。J5・J6 を 2 回動かしても `finished_at` が変わらないこと（`roadmap.md` A-15） |
 | 手紙の時刻 | 手紙の `mailbox_items` は `visible_at`（午前 08:00〜11:50・午後 18:00〜20:50 の 10 分刻み）を過ぎるまで郵便受けに出ないこと。J4 を 2 回動かしても `visible_at` が変わらないこと。同じ配達回の同じ受取人の手紙が同じ時刻になること。新聞は手紙の有無にかかわらず全住民に 07:00 / 17:00 に出ること（ADR-0035、`roadmap.md` A-02） |
@@ -955,7 +983,7 @@ worker が止まると J0 は書けないので、J0 の心拍がないことは
 | NFR-030 | §4 J3（失敗時は休刊）|
 | NFR-033 | §4 J7（退去の消去）|
 | NFR-034 | §4 J14（保持期間）|
-| NFR-035 | §4 J7（erasure_log）|
+| NFR-035 | §4 J7（erasure_log・消去の控え）・`erasure.replay`（J7 と J14 のやり直し、ADR-0096）|
 | NFR-038 | §4 J2（LLM がラベルだけ返す）|
 | NFR-039 | §4 J2（ルール表との突合）|
 | NFR-062 | §4 各ジョブの「冪等性」項目 |

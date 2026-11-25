@@ -630,12 +630,14 @@ DB 内には重要な操作の監査レコードのみ保持する（`moderation
 | カラム | 説明 |
 |--------|------|
 | `id` UUID PK | — |
-| `table_name` text | 削除したテーブル名 |
-| `record_id` UUID | 削除したレコードの ID |
+| `table_name` text | 削除したテーブル名。`CHECK (table_name IN ('sessions', 'auth_tokens', 'credentials', 'residents'))`（ADR-0096 の D2） |
+| `record_id` UUID | 削除したレコードの ID（`credentials` と `residents` は住民の ID） |
 | `erased_at` timestamptz | 削除日時 |
 
-バックアップのリストア後にこのログを再生し、削除済みデータが復元されないようにする（§6）。
-60 日経過後に自動削除する（ADR-0091）。
+- `UNIQUE (table_name, record_id)`。記録は `INSERT … ON CONFLICT (table_name, record_id) DO NOTHING` で書く（ADR-0096 の D2）。
+- 記録するのは J7 の手順 0（`sessions`・`auth_tokens`・`credentials`）と手順 10（`residents`）の削除だけ（ADR-0091 の D8）。J7 のほかの手順と J14 の削除・UPDATE は記録しない（ADR-0096 の D1）。
+- リストアのあとは `erasure.replay` が、オブジェクトストレージの消去の控え（`erasure/<resident_id>.json`、J7 が手順 0 の前に置く）から住民ごとに J7 をやり直し、このログの 3 つの表の残りの行を消し、J14 を 1 回動かす（§6、ADR-0096 の D3・D4）。このログは DB と一緒に戻るので、戻した時点より後の退去は控えで拾う。
+- 60 日経過後に自動削除する（ADR-0091）。
 
 ### 住民を指す外部キー（ADR-0091 の D9）
 
@@ -736,7 +738,8 @@ ADR-0060 は「空き家は新規住民の割り当て候補となる」と定�
 | 画像 | `images` | アップロード時 | 加工した画像は、参照するコンテンツ（手紙・掲示板）が存在する間。元の画像は加工が終わるか失敗するまで（取りこぼしは最長でアップロードから約 48 時間。24 時間 [assumed] を過ぎたあとの次の J14 で消す、ADR-0074 の D5）。上げた住民の退去では J7 の手順 9 が `uploader_id` を NULL にし、行は残す（ADR-0091 の D11） | 元の画像は J13 の加工のあと（失敗でも）に消し、残りは 24 時間を過ぎたあとの次の J14 が消す。加工した画像はコンテンツ削除時にオブジェクトストレージからも削除 |
 | ジョブ | `jobs`（pg-boss） | ジョブ enqueue 時 | 完了後 24 時間（pg-boss の設定）[assumed] | pg-boss が自動削除 |
 | ログ（DB 外） | — | 操作・アクセス時 | 30 日保持（ADR-0091）[assumed] | 30 日経過後廃棄（NFR-009） |
-| 消去ログ | `erasure_log` | 物理削除の実行時 | 60 日保持（ADR-0091）[assumed] | 60 日経過後削除 |
+| 消去ログ | `erasure_log` | J7 の手順 0・10 の物理削除の実行時（ADR-0091 の D8） | 60 日保持（ADR-0091）[assumed] | 60 日経過後に J14 が削除 |
+| 消去の控え（DB の外） | オブジェクトストレージの `erasure/<resident_id>.json`（住民の ID と受付の時刻だけ） | J7 が手順 0 の前に置く（ADR-0096 の D3） | 受付の時刻から 60 日（ADR-0096 の D5）[assumed] | 60 日経過後に J14 が削除。DB のリストアでは巻き戻らない |
 
 ### 状態遷移図
 
@@ -846,8 +849,8 @@ stateDiagram-v2
 ## §6 バックアップ
 
 - バックアップは 30 日間保持する（ADR-0091）[assumed]。
-- バックアップからリストアした後は `erasure_log` を順番に再生し、
-  削除済みデータがリストアで復元されていないか確認・再削除する。
+- バックアップからリストアした後は、web を止めたまま `erasure.replay` を動かす（`async.md` §4、ADR-0096 の D4）。消去の控え（§4）の住民ごとに J7 をやり直し、`erasure_log` の `sessions`・`auth_tokens`・`credentials` の残りの行を消し、J14 を 1 回動かす。ジョブがすべて終わってから web を戻す。
+- 再生で戻るのは退去と保持期間による消去だけで、戻した時点より後の住民やモデレーターの操作は戻らない（ADR-0096 の D6、`gaps.md` G-055）。
 - バックアップはマネージドの PostgreSQL の自動のバックアップ（毎日の全体と、その間の時点に戻せる WAL）で取り、別の地域にも写す。復元の練習は検証環境で行う（`environment.md` §6.5、ADR-0052）[assumed]。
 - 古い版の鍵は、再暗号化が終わってもバックアップの保持の 30 日のあいだは復元のためだけに残す（`environment.md` §8.3）。
 
