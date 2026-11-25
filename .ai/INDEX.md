@@ -17,7 +17,7 @@
 | M1 の FR の一覧 | — | `.ai/roadmap.md` §4 の「今の M の範囲」、`.ai/mvp.md` (b) |
 | M1 の受け入れ条件 | — | `.ai/roadmap.md` §4 の受け入れ条件（A-01〜A-18） |
 | 要求の原文と区分 | — | `.ai/brief.md`、`.ai/brief-map.md`、`.ai/requirements.md` §3・§4 |
-| ジョブ・定時の処理 | — | `.ai/async.md` §2・§3（配達回の状態と J0、ADR-0092）・§4（M1 で使うのは J14 の確認が済まない登録と数えの行の削除だけ、ADR-0087・0089。メールを渡すジョブは `.ai/gaps.md` G-049） |
+| ジョブ・定時の処理 | — | `.ai/async.md` §2・§3（配達回の状態と J0、ADR-0094）・§4（M1 で使うのは J14 の確認が済まない登録と数えの行の削除だけ、ADR-0087・0089。メールを渡すジョブは `.ai/gaps.md` G-049） |
 | 認証の表（セッション・ロール・確認と再設定のトークン・TOTP の秘密）・流量の制限の値・確認が済まない登録の期限 | `.ai/diagrams/m1-er.md`・`.ai/diagrams/m1-address-account-states.md` | `.ai/db.md` §2 の `credentials`・`sessions`・`auth_tokens`・`staff_roles`・`rate_limit_buckets`、`.ai/security.md` §3.1・§3.4（確かめる順番）・§3.5 の規則の表、ADR-0087・0088・0089・0090 |
 | 退去と保持期間で消すもの（J7・J14 の正本の表） | — | ADR-0091 の退去の表と保持期間の表、`.ai/security.md` §2.4、`.ai/async.md` J7・J14、`.ai/db.md` §4 |
 | マスターに聞くこと・決まったこと | — | `.ai/open-questions.md` §2（一覧）・§3（要回答） |
@@ -157,6 +157,7 @@
 - `.ai/adr/0091-erase-and-retention-cover-auth-tables.md`
 - `.ai/adr/0092-delivery-runs-tick-and-failed-runs.md`
 - `.ai/adr/0093-age-birthday-immutable-shown-for-done-runs.md`
+- `.ai/adr/0094-delivery-runs-tick-and-close-retry.md`
 
 ## レビュー（`.ai/reviews/`）
 
@@ -196,3 +197,4 @@
 - `.ai/tickets/YGO-029-fr-094-api-db-async.md`
 - `.ai/tickets/YGO-030-oq-092-vendor-names-precedence.md`
 - `.ai/tickets/YGO-031-delivery-run-failed.md`
+- `.ai/tickets/YGO-032-close-retry-pending-letters.md`

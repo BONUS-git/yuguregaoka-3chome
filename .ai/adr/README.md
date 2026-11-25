@@ -108,5 +108,6 @@
 - [0089 — セッション・役割・流量の表と TOTP の秘密の置き場](0089-auth-tables-sessions-roles-rate-limits-totp.md)
 - [0090 — セッションと再認証の API、確かめる順と流量](0090-server-side-sessions-reauth-rate-limit-order.md)
 - [0091 — 退去と保持期間で住民・認証の行を消すか外す](0091-erase-and-retention-cover-auth-tables.md)
-- [0092 — 配達回は見回りで進め、持ち越せない回は failed にする](0092-delivery-runs-tick-and-failed-runs.md)
+- [0092 — 配達回は見回りで進め、持ち越せない回は failed にする](0092-delivery-runs-tick-and-failed-runs.md)（ADR-0094 で置き換え）
 - [0093 — 年齢と誕生日は必須で変えられず、配達済みの手紙で見せる](0093-age-birthday-immutable-shown-for-done-runs.md)
+- [0094 — 配達回は見回りで進め、残った手紙の締め切りを積み直す](0094-delivery-runs-tick-and-close-retry.md)

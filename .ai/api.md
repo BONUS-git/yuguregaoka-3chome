@@ -189,7 +189,7 @@ db.md §4 の状態遷移に合わせる。
 | `GET` | `/api/v1/profiles/{address}` | 住所・ニックネーム・自己紹介だけを返す。空き家も存在しない住所も 404。今の年齢（`age`）は、下の見せる条件を満たすときだけ返し、満たさないときは項目そのものを返さない（`null` も返さない）（ADR-0093 の D4）。誕生日（`birthday`）は、見る住民が誰でも返さない（本人の誕生日は `GET /me` だけが返す。ADR-0093 の D4）。住民ごとの流量の制限を超えると 429（`rate_limited`、security.md §3.5、ADR-0088） | 200, 404, 429 | FR-008, FR-113, FR-127, ADR-0093, ADR-0088 |
 
 年齢の見せる条件（ADR-0093 の D4。OQ-064 → 決定、2026-11-20）: 見る住民がプロフィールの住民本人でないとき、次をすべて満たすときだけ `age` を返す。
-(a) 見る住民の `mailbox_items`（`kind = 'letter'`、行の配達回（`delivery_run_id`）が `done`、`visible_at` を過ぎたもの、`deleted_at IS NULL` の行だけ。郵便受けに出る行と同じ条件で、`failed` の回の行は数えない、ADR-0092 の D7）に、プロフィールの住民が送った手紙が 1 通以上ある。見る住民が郵便受けから削除した手紙は数えない（FR-099・ADR-0091）。
+(a) 見る住民の `mailbox_items`（`kind = 'letter'`、行の配達回（`delivery_run_id`）が `done`、`visible_at` を過ぎたもの、`deleted_at IS NULL` の行だけ。郵便受けに出る行と同じ条件で、`failed` の回の行は数えない、ADR-0094 の D7）に、プロフィールの住民が送った手紙が 1 通以上ある。見る住民が郵便受けから削除した手紙は数えない（FR-099・ADR-0091）。
 (b) その手紙の `created_at` が、プロフィールの住民の今の居住記録（`tenancies.is_current`）の `started_at` 以後である（引っ越す前の手紙では見せない、ADR-0003）。
 (c) 見る住民が、プロフィールの住民をブロックしていない。
 プロフィールの住民が見る住民をブロックしても、`age` の有無は変えない（ブロックを気づかせない、security.md T-06・ADR-0015）。
@@ -246,7 +246,7 @@ db.md §4 の状態遷移に合わせる。
 | メソッド | パス | 要約 | 状態コード | FR / ADR |
 |---|---|---|---|---|
 | `GET` | `/api/v1/mailbox` | 配達済み（配達回が `done`）で、かつ `visible_at` を過ぎたものだけ、削除したものを除いて返す（ADR-0035）。`visible_at` は返さない | 200 | FR-030, FR-105 |
-| `GET` | `/api/v1/mailbox/items/{id}` | 手紙は復号して返す。既読は記録しない。配達回が `done` でない項目（`failed` の回を含む、ADR-0092 の D7）と `visible_at` の前の項目は 404（存在を明かさない）。掲示板の経路の手紙（住所録の住所を見せないエントリ宛て、`letter_recipients.route` が `board_post`・`letter`）は差出人の住所を返さず、`route` と、`board_post` なら届いたもとの自分の投稿の `board_post_id` を返す（ADR-0065 の D15） | 200, 404 | FR-014, FR-017, FR-105, FR-122 |
+| `GET` | `/api/v1/mailbox/items/{id}` | 手紙は復号して返す。既読は記録しない。配達回が `done` でない項目（`failed` の回を含む、ADR-0094 の D7）と `visible_at` の前の項目は 404（存在を明かさない）。掲示板の経路の手紙（住所録の住所を見せないエントリ宛て、`letter_recipients.route` が `board_post`・`letter`）は差出人の住所を返さず、`route` と、`board_post` なら届いたもとの自分の投稿の `board_post_id` を返す（ADR-0065 の D15） | 200, 404 | FR-014, FR-017, FR-105, FR-122 |
 | `DELETE` | `/api/v1/mailbox/items/{id}` | 郵便受けから削除する | 204 | FR-099 |
 
 ### F-04 個人宛の手紙
