@@ -23,7 +23,7 @@
 - [0004 — 配達スケジュール・冪等性・文字数上限](0004-delivery-schedule-and-limits.md)
 - [0005 — モデレーション方針](0005-moderation-policy.md)
 - [0006 — 手紙はサーバー鍵で保存時に暗号化する](0006-letter-encryption-at-rest.md)
-- [0007 — 新聞はテンプレートで決定的に組む](0007-newspaper-deterministic-template.md)
+- [0007 — 新聞はテンプレートで決定的に組む](0007-newspaper-deterministic-template.md)（ADR-0098 で置き換え）
 - [0008 — モジュラーモノリスと 2 プロセス構成](0008-modular-monolith-two-processes.md)
 - [0009 — TypeScript・Fastify・React と Vite](0009-typescript-fastify-react.md)
 - [0010 — PostgreSQL を DB とジョブキューの両方に使う](0010-postgresql-as-db-and-job-queue.md)
@@ -114,3 +114,4 @@
 - [0095 — 審査キューは投稿と回で一意にし、持ち越しでラベルを継ぐ](0095-moderation-queue-unique-carry-label.md)
 - [0096 — 消去の再生は控えから J7 をやり直す](0096-erasure-replay-redo-erase-from-markers.md)
 - [0097 — M は M0〜M6 のまま、M1 は住所・アカウント](0097-milestones-keep-m0-m6-m1-address-account.md)
+- [0098 — 新聞はテンプレートで決定的に組み、組版の失敗は休刊](0098-newspaper-deterministic-typesetting-holiday.md)

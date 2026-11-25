@@ -51,7 +51,7 @@
 | OQ-017 | 未確定 | 決定 | FR-079, NFR-011, NFR-012 | F-08 | async, security |
 | OQ-018 | 不足 | 決定 | FR-068, FR-076 | F-08 | api, security |
 | OQ-019 | 未確定 | 決定 | NFR-017 | F-04 | security, db |
-| OQ-020 | 未確定 | 決定 | FR-033, FR-036, FR-037, NFR-022 | F-06 | async, architecture |
+| OQ-020 | 未確定 | 決定 | FR-033, FR-036, FR-037, FR-111, NFR-022 | F-06 | async, architecture |
 | OQ-021 | リスク | 決定 | FR-033, NFR-030 | F-06 | async |
 | OQ-022 | 未確定 | 決定 | FR-010 | F-01 | db, api |
 | OQ-023 | 未確定 | 決定 | FR-072 | F-16 | db, async, ADR-0060 |
@@ -357,10 +357,10 @@ OQ-077 → 決定（2026-11-21、ADR-0093・ADR-0074）: 誕生日（月日）�
 
 ### OQ-020 — 新聞はテンプレートで決定的に組む（未確定）
 
-**関連**: FR-033, FR-036, FR-037, NFR-022, F-06  
-**決定**: テンプレートエンジンで決定的に生成。LLM による文章生成は行わない。  
-**理由**: 冪等性の保証が容易。LLM なしでテスト可能（NFR-063）。  
-**ADR**: [0007-newspaper-deterministic-template](.ai/adr/0007-newspaper-deterministic-template.md)
+**関連**: FR-033, FR-036, FR-037, FR-111, NFR-022, F-06  
+**決定**: 組版はテンプレートエンジンで決定的に行う。記事の文字（外のニュースの記事の見出しと文・住民の投稿を素材にした記事の見出し）は LLM が作って `newspaper_articles` に保存し、組版（J3・J8）は保存した文字から決定的に行い、組版のやり直しで LLM を呼ばない（ADR-0055 の D7）。LLM の失敗・検査に外れた出力では記事を決まった形で組み、休刊にしない（ADR-0055 の D8）。  
+**理由**: 冪等性（FR-037・NFR-022）は、LLM の出力を保存してから決定的に組むことで保つ。組版は LLM なしでテストできる（NFR-063）。  
+**ADR**: [0098-newspaper-deterministic-typesetting-holiday](.ai/adr/0098-newspaper-deterministic-typesetting-holiday.md)、[0055-newspaper-editions-llm-text-server-typesetting-post-articles-headline-only](.ai/adr/0055-newspaper-editions-llm-text-server-typesetting-post-articles-headline-only.md)
 
 ---
 
@@ -369,7 +369,7 @@ OQ-077 → 決定（2026-11-21、ADR-0093・ADR-0074）: 誕生日（月日）�
 **関連**: FR-033, NFR-030, F-06  
 **決定**: 組版失敗は「休刊」。その配達回は紙面を届けない。（ADR-0035 で補足）郵便受けには休刊の印と手紙が届き、新聞の通知も送る。  
 **理由**: 壊れた紙面を届けるリスクを回避。  
-**ADR**: [0007-newspaper-deterministic-template](.ai/adr/0007-newspaper-deterministic-template.md)
+**ADR**: [0098-newspaper-deterministic-typesetting-holiday](.ai/adr/0098-newspaper-deterministic-typesetting-holiday.md)
 
 ---
 
@@ -1672,7 +1672,7 @@ OQ-086 の答え（2026-11-21）は、要る道具はマスターが用意し、
 | D-001 | OQ-012, OQ-013 | 朝便・夕便の時刻に分割 → 決定済み（ADR-0004） |
 | D-002 | OQ-012, OQ-013 | 締め切り時刻は配達時刻とまとめた → 決定済み（ADR-0004） |
 | D-003 | OQ-013 | 夕刊の組版開始は夕便の時刻に含まれる → 決定済み（ADR-0004） |
-| D-004 | OQ-020 | 新聞の内容・構成 → 決定済み（ADR-0007） |
+| D-004 | OQ-020 | 新聞の内容・構成 → 決定済み（ADR-0098・ADR-0055） |
 | D-005 | OQ-022 | 住所の割り当て方法 → 決定済み（ADR-0082。空き家の印から選ぶことは OQ-089） |
 | D-006 | OQ-023, OQ-024 | 空き家期間・転送期間に分割 → 決定済み（ADR-0002） |
 | D-007 | OQ-028 | 認証方式 → 決定済み（ADR-0080） |

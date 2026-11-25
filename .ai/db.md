@@ -324,7 +324,7 @@ UNIQUE(delivery_run_id, push_subscription_id, kind) — 通知の重複を防ぐ
 | `delivery_run_id` text FK→delivery_runs UNIQUE | この紙面を配達する配達回 |
 | `kind` text | morning / evening |
 | `typeset_at` timestamptz NULL | 組版完了日時 |
-| `is_holiday` bool DEFAULT false | 休刊フラグ（ADR-0007） |
+| `is_holiday` bool DEFAULT false | 休刊フラグ（ADR-0098） |
 
 組版済みの HTML の保存先（もとの `storage_url`）は `newspaper_editions` に移した（ADR-0039）。
 J3 は `newspapers` の行とすべての版の行を 1 つのトランザクションで入れる。休刊は J0 が、休刊の行と `holiday` の版の行を一緒に入れる。

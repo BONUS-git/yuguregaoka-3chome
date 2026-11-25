@@ -312,7 +312,7 @@ J14 が手紙を消す（db.md §4）のは、どれもこの 30 日のあとな
 
 | メソッド | パス | 要約 | 状態コード | FR / ADR |
 |---|---|---|---|---|
-| `GET` | `/api/v1/newspapers/{id}` | 紙面の情報（休刊の印を含む）。`{id}` は版（`newspaper_editions.id`）。どの版か（`edition_key`）は返さない | 200, 404 | FR-031, FR-108, ADR-0007, ADR-0039 |
+| `GET` | `/api/v1/newspapers/{id}` | 紙面の情報（休刊の印を含む）。`{id}` は版（`newspaper_editions.id`）。どの版か（`edition_key`）は返さない | 200, 404 | FR-031, FR-108, ADR-0098, ADR-0055 |
 | `GET` | `/api/v1/newspapers/{id}/page` | web が認証してから C8 の HTML を中継する [assumed] | 200, 404 | FR-033, FR-108 |
 
 MVP では、自分の郵便受けに届いた版だけを見られる（バックナンバーの F-12 は段階 2 で、同じく自分の郵便受けに届いた版だけ）。
