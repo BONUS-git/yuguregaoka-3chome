@@ -4,7 +4,7 @@
 - 日付: 2026-11-19
 - チケット: YGO-006
 - 根拠: `.ai/brief.md`・`.ai/requirements.md`・`.ai/architecture.md`・`.ai/db.md`・`.ai/api.md`
-- 関連 ADR: 0002・0004・0005・0006・0007・0008・0010・0011・0012・0014・0015・0017・0035・0039・0070・0072・0076・0085・0092
+- 関連 ADR: 0002・0004・0005・0006・0007・0008・0010・0011・0012・0014・0015・0017・0035・0039・0070・0072・0076・0085・0094
 
 ---
 
@@ -48,9 +48,9 @@
 
 | ID | キュー名 | きっかけ | 入力 | 出力 |
 |----|---------|---------|------|------|
-| J0 | `delivery.tick` | 定時（5 分ごと）[assumed] | なし | J1〜J6 を必要に応じて積む。J6 の再試行が尽きた回を `failed` にする（ADR-0092 の D5）。公開済みの配達回の手紙の枠の時刻を過ぎたら、枠ごとに J15（`kind = letter`）を積む（ADR-0035） |
-| J1 | `delivery.close` | 01:00 / 14:00 JST 以降、J0 が判断 | `run_id` | 配達回を `running` にする。手紙を `pending` → `scheduled`。`moderation_queue` に投稿の行を入れる（手紙の行は入れない、ADR-0069） |
-| J2 | `moderation.review` | 02:00 / 15:00 JST 以降、J0 が判断 | `run_id` | ラベルと判定。投稿を `approved` / `rejected` にする。手紙は扱わない（投函のときに API が照合する、ADR-0069） |
+| J0 | `delivery.tick` | 定時（5 分ごと）[assumed] | なし | J1〜J6 を必要に応じて積む。J6 の再試行が尽きた回を `failed` にする（ADR-0094 の D5）。`running` の回の締め切りが済んでいなければ（§3 の見分け方）J1 を積み直す（ADR-0094 の D8）。公開済みの配達回の手紙の枠の時刻を過ぎたら、枠ごとに J15（`kind = letter`）を積む（ADR-0035） |
+| J1 | `delivery.close` | 01:00 / 14:00 JST 以降、J0 が判断。`running` の回の締め切りが済んでいなければ J0 が積み直す（ADR-0094 の D8） | `run_id` | 配達回を `running` にする。手紙を `pending` → `scheduled`。`moderation_queue` に投稿の行を入れる（手紙の行は入れない、ADR-0069） |
+| J2 | `moderation.review` | 02:00 / 15:00 JST 以降、締め切りが済んだあと、J0 が判断 | `run_id` | ラベルと判定。投稿を `approved` / `rejected` にする。手紙は扱わない（投函のときに API が照合する、ADR-0069） |
 | J3 | `newspaper.typeset` | J16 完了か記事の打ち切り（04:30 / 16:15）[assumed] 後、J0 が判断（締め切りは 05:00 / 16:30）。M3・M4 は J2 完了か打ち切り後 | `run_id` | 版ごとの静的 HTML と、`newspapers`・`newspaper_editions` の行（ADR-0039）。間に合わなければ休刊 |
 | J4 | `delivery.prepare` | `newspapers` の行ができた後、J0 が判断 | `run_id` | 見せる前の `mailbox_items`（新聞は全住民に版を 1 つずつ・手紙は宛先、行ごとに `visible_at`）。宛先ごとの振り分け。終わりに `prepared_at` を書く |
 | J5 | `delivery.publish` | 07:00 / 17:00 JST、J0 が判断 | `run_id` | 配達回を `done` に（`finished_at` を書く）。手紙と投稿の最終状態を確定。新聞の通知（J15、`kind = newspaper`）を積む（休刊の回も） |
@@ -84,7 +84,7 @@ J13 は段階 2（F-11）。
 
 ---
 
-## §3 配達回の流れ（ADR-0092・ADR-0017 の具体化）
+## §3 配達回の流れ（ADR-0094・ADR-0017 の具体化）
 
 ### 時刻表（JST）
 
@@ -118,7 +118,7 @@ ADR-0004 の表を拡張する。
 | `running` | 締め切り済み。審査・組版・準備の最中 |
 | `done` | 公開完了 |
 | `skipped` | 次の便に持ち越した |
-| `failed` | 持ち越せなかった（J6 の再試行が尽きた）。J0 だけが書く。中身は動かさず、運用者の対応が必要（ADR-0092 の D5・D7） |
+| `failed` | 持ち越せなかった（J6 の再試行が尽きた）。J0 だけが書く。中身は動かさず、運用者の対応が必要（ADR-0094 の D5・D7） |
 
 ```mermaid
 stateDiagram-v2
@@ -135,7 +135,7 @@ stateDiagram-v2
 
 | 工程 | 見分け方 | カラム |
 |------|---------|--------|
-| 締め切り | その配達回に `letters.state = 'pending'` の行が残っていない | `letters.state` |
+| 締め切り | その配達回に `letters.state = 'pending'` の行が残っていない。かつ、その回の審査待ちの投稿（`board_posts.delivery_run_id = run_id` かつ `status = 'awaiting_review'`）のすべてに、同じ `content_id`・`delivery_run_id` の `moderation_queue` の行がある [assumed]（ADR-0094 の D8） | `letters.state`・`board_posts.status`・`moderation_queue.content_id` |
 | 審査 | `moderation_queue.processed_at` が NULL の行が残っていない | `moderation_queue.processed_at` |
 | 外のニュースの取り込み（M5 から） | その回の J17 のジョブが完了か失敗（再試行を使い切った）か、取り込みの打ち切り（04:00 / 16:00）を過ぎた。取り込めなくても組版は止めない | pg-boss のジョブ履歴・時刻 |
 | 記事の文字（M5 から） | 承認済みの投稿（`board_posts.delivery_run_id = run_id`）と、その回に取り込んだ外のニュース（`external_news_items.delivery_run_id = run_id`）のすべてに `newspaper_articles` の行がある。取り込みが済むまでは判定しない | `newspaper_articles`・`external_news_items.delivery_run_id` |
@@ -148,10 +148,12 @@ J0 は 5 分ごとに `delivery_runs` を `run_id` の昇順に調べる。
 
 1. 各配達回について次の工程を 1 つだけ特定する。
 2. `singletonKey = '<キュー名>:<run_id>'` で積む。同じキーのジョブがキューに残っていれば積まない。
-3. 古い配達回がすべて `done`・`skipped`・`failed` のどれかになるまで、後の配達回の J5（公開）を積まない [assumed]（ADR-0092 の D6）。`failed` の回があっても後の回は公開する。
+3. 古い配達回がすべて `done`・`skipped`・`failed` のどれかになるまで、後の配達回の J5（公開）を積まない [assumed]（ADR-0094 の D6）。`failed` の回があっても後の回は公開する。
 4. M5 から、`running` の配達回に J17（外のニュースの取り込み）を取り込みの打ち切りまで積み、審査と取り込みが済んだあとに J16（記事の文字）を挟んでから J3 を積む（ADR-0039）。J16 は、J17 が完了・失敗するか取り込みの打ち切りを過ぎるまで積まない（素材の範囲がそこで決まる）。M3・M4 の J0 は今のまま（J16・J17 を積まない）。
-5. `running` の配達回は、まずその回の J6（`delivery.carry_over:<run_id>`）が再試行を使い切って pg-boss で `failed` になっていないかを見る。なっていれば、ほかの処理と別のトランザクションで `UPDATE delivery_runs SET status='failed' WHERE run_id=$1 AND status='running'` を書き、`alert=delivery_run_failed`（`run_id` を含む）の 1 行をログに書いて、その回にはもう何も積まない [assumed]（ADR-0092 の D5。`failed` を書くのは J0 だけ）。
-   そうでなければ、持ち越しの打ち切り（公開の打ち切り、07:15 / 17:15 JST）を過ぎていれば、どの工程で止まっていても J6 を積み、ほかの工程を積まない [assumed]（ADR-0092 の D4）。この判断を `running` の枝の先頭に置くので、J4 が失敗し続けても J6 に届く。打ち切りの前は、準備が済んでいなければ（`prepared_at` が NULL）J4 を、済んでいれば（NULL でない）公開の時刻のあとに J5 を積む
+5. `running` の配達回は、まずその回の J6（`delivery.carry_over:<run_id>`）が再試行を使い切って pg-boss で `failed` になっていないかを見る。なっていれば、ほかの処理と別のトランザクションで `UPDATE delivery_runs SET status='failed' WHERE run_id=$1 AND status='running'` を書き、`alert=delivery_run_failed`（`run_id` を含む）の 1 行をログに書いて、その回にはもう何も積まない [assumed]（ADR-0094 の D5。`failed` を書くのは J0 だけ）。
+   そうでなければ、持ち越しの打ち切り（公開の打ち切り、07:15 / 17:15 JST）を過ぎていれば、どの工程で止まっていても J6 を積み、ほかの工程を積まない [assumed]（ADR-0094 の D4）。この判断を `running` の枝の先頭に置くので、J4 が失敗し続けても J6 に届く。
+   打ち切りの前は、締め切りが済んでいなければ（上の見分け方。`pending` の手紙か、審査キューに入っていない審査待ちの投稿が残っている。J1 の再試行が尽きた場合を含む）、J1 を `singletonKey = 'delivery.close:<run_id>'` で積み直し、ほかの工程（J2〜J5。M5 からは J16 も、休刊の J3 も）を積まない [assumed]（ADR-0094 の D8。pg-boss で `failed` になった J1 のジョブは `singletonKey` の重なりに数えない）。J17 は締め切りを待たない。
+   締め切りが済んでいれば、準備が済んでいなければ（`prepared_at` が NULL）J4 を、済んでいれば（NULL でない）公開の時刻のあとに J5 を積む
 6. `done` の配達回のうち、手紙の通知の期限がまだ来ていないもの（最後の枠から 30 分以内）について、時刻を過ぎて 30 分以内の枠ごとに J15（`kind = letter`）を積む（ADR-0035 の D11）。
 
 ```
@@ -163,9 +165,14 @@ J0 の判断ロジック（概略）:
       if carry_over_job_failed(run):                -- pg-boss の delivery.carry_over:<run_id> が failed（再試行を使い切った）[assumed]
         in a separate transaction:
           UPDATE delivery_runs SET status='failed' WHERE run_id=run.run_id AND status='running'
-        log 'alert=delivery_run_failed run_id=<run_id>' -- J6 を積み直さない（ADR-0092 の D5）
+        log 'alert=delivery_run_failed run_id=<run_id>' -- J6 を積み直さない（ADR-0094 の D5）
       elif now >= carry_over_cutoff(run):           -- 07:15 / 17:15。どの工程で止まっていても先に当てる [assumed]
         enqueue J6 with singletonKey
+      elif not close_settled(run):                 -- 締め切りが済んでいない（J1 の再試行が尽きた場合を含む）[assumed]
+                                                   -- close_settled = pending の手紙がなく、awaiting_review の投稿がすべて moderation_queue にある
+        enqueue J1 with singletonKey               -- J2〜J5・J16 は積まない（ADR-0094 の D8）
+        if not fetch_settled(run):                 -- M5 から。J17 は締め切りを待たない
+          enqueue J17 with singletonKey
       else:
         -- M5 から（ADR-0039）。fetch_settled = J17 が完了か失敗（再試行を使い切った）か、now >= fetch_cutoff(run)
         -- fetch_cutoff は review_cutoff と同じ時刻（04:00 / 16:00）[assumed]
@@ -185,7 +192,7 @@ J0 の判断ロジック（概略）:
           elif newspapers row exists and run.prepared_at is null:
             enqueue J4 with singletonKey
           elif run.prepared_at is not null and now >= publish_time(run) and prev runs all settled:
-            -- settled = done / skipped / failed（ADR-0092 の D6）
+            -- settled = done / skipped / failed（ADR-0094 の D6）
             enqueue J5 with singletonKey
     elif run.status = 'done':
       for each slot in letter_slots(run):          -- 08:00〜11:50 / 18:00〜20:50 の 10 分ごと
@@ -200,13 +207,17 @@ J0 の判断ロジック（概略）:
 ### J1 — 締め切り（`delivery.close`）
 
 **きっかけ**: 朝便は 01:00 JST、夕便は 14:00 JST 以降。J0 が `singletonKey` で積む。
+`running` の回の締め切りが済んでいなければ（§3 の見分け方）、持ち越しの打ち切りの前まで J0 が積み直す（§3 の J0 の 5、ADR-0094 の D8）。
 
 **入力**: `run_id`（例: `2026-11-19-morning`）
 
 **出力**:
+- 区切りごとのトランザクションは、はじめにこの配達回の `delivery_runs` の行を `FOR UPDATE` で取る [assumed]（ADR-0094 の D8）。
+  `pending` なら `running` にする（下の締め切りのロック手順）。`running` で持ち越しの打ち切り（07:15 / 17:15 JST）の前なら、残りの手紙と投稿を処理する。
+  `done`・`skipped`・`failed` か、打ち切りのあとなら、そのトランザクションでは何も書かず、J1 を成功で終える（J5・J6 の手順 0 の `FOR UPDATE` と直列になる）
 - `delivery_runs.status` を `pending` → `running` に更新し、同じ UPDATE で `started_at` を書く
 - 対象配達回の手紙を `state = 'scheduled'` に更新
-- 対象配達回の掲示板投稿を `moderation_queue` に登録
+- 対象配達回の審査待ちの掲示板投稿（`status = 'awaiting_review'`）のうち、まだ `moderation_queue` にないものを登録。手紙がすべて `scheduled` になったあとの区切りや、手紙のない回でも、投稿が残っていれば登録する
 - 手紙は `moderation_queue` に登録しない。手紙は投函のときに API が照合済みで、配達の前に照合し直さない（ADR-0069 の D2・D3。DB の CHECK 制約 `content_kind <> 'letter'`）。
   `held`（確認待ち）の手紙は `delivery_run_id` が NULL なので、どの配達回の締め切りにも乗らない
 
@@ -214,8 +225,9 @@ J0 の判断ロジック（概略）:
 - `delivery_runs` の行は `INSERT … ON CONFLICT DO NOTHING` で作る（API が作ってなければここで作る）
 - `UPDATE delivery_runs SET status='running' WHERE run_id=$1 AND status='pending'`（1 行だけ動く）
 - 手紙の更新は `UPDATE … WHERE delivery_run_id=$1 AND state='pending'`
-- `moderation_queue` への挿入は `ON CONFLICT DO NOTHING`（重複を弾く UNIQUE 制約はまだない。`reviews/0001-design-review.md` の R-013 で決める）
+- `moderation_queue` への挿入は `INSERT … SELECT … WHERE NOT EXISTS (同じ content_kind・content_id・delivery_run_id の行)` で、積み直した J1 が同じ投稿の行を重ねない [assumed]（ADR-0094 の D8）。重複を弾く UNIQUE 制約はまだない（`triage.md` 仕分け 3 の K-007、`reviews/0001-design-review.md` の R-013 で決める）
 - 1,000 件ずつのトランザクションに分けて処理し、途中で止まっても再開できる
+- 区切りごとに配達回の行を `FOR UPDATE` で取って状態と打ち切りを見るので、積み直した J1 が `done`・`skipped`・`failed` の回や打ち切りのあとの回に書かない
 
 **ADR-0015 §2 の締め切りのロック手順**:
 
@@ -234,9 +246,9 @@ COMMIT;
 ```
 
 **失敗とやり直し**:
-- 途中で止まっても、`delivery_runs.status` が `running` のまま残る
-- J0 が次の見回りで J2 を積む。J1 の残り作業（手紙の `scheduled` への更新）は
-  J1 を再実行するか、J2・J3 が必要な行を参照するときに当然 `pending` のものは無視される
+- 途中で止まっても（再試行が尽きても）、`delivery_runs.status` が `running` のまま残り、その回に `pending` の手紙か、審査キューに入っていない審査待ちの投稿が残る
+- J0 は、その回の締め切りが済むまで（§3 の見分け方）J1 を積み直し、J2〜J5 を積まない（§3 の J0 の 5、ADR-0094 の D8）。積み直した J1 が残りの手紙を `scheduled` にし、残りの投稿を審査キューに入れる
+- 持ち越しの打ち切りまでに締め切りが済まなければ、J0 が J6 を積み、J6 が残りの `pending` の手紙を `pending` のまま、審査待ちの投稿を `awaiting_review` のまま次の受付中の配達回に移す（§4 J6 の手順 2・3）。移し先の回の J1 が手紙を `scheduled` にし、投稿を審査キューに入れる。手紙も投稿もどの回にも入らないまま残らない
 - やり直しで `delivery_runs` の `INSERT` は `ON CONFLICT DO NOTHING` なので重複しない
 - 締め切りが遅れても、API は `nextDeliveryRun(now)` で次の配達回に書くので混入しない [inferred]
 
@@ -244,7 +256,7 @@ COMMIT;
 
 ### J2 — 審査（`moderation.review`）
 
-**きっかけ**: 朝便は 02:00 JST、夕便は 15:00 JST 以降。J0 が `singletonKey` で積む。
+**きっかけ**: 朝便は 02:00 JST、夕便は 15:00 JST 以降で、締め切りが済んだ（その回に `pending` の手紙がなく、審査待ちの投稿がすべて `moderation_queue` にある。§3 の見分け方）あと。J0 が `singletonKey` で積む（ADR-0094 の D2・D8）。
 
 **入力**: `run_id`
 
@@ -387,7 +399,7 @@ M3・M4 は、J2 完了（`moderation_queue` に `processed_at = NULL` の行が
 ### J5 — 公開（`delivery.publish`）
 
 **きっかけ**: 朝便は 07:00 JST、夕便は 17:00 JST。J0 が判断し `singletonKey` で積む。
-前の配達回（古い `run_id`）がすべて `done`・`skipped`・`failed` のどれかになるまで積まない（ADR-0092 の D6）。
+前の配達回（古い `run_id`）がすべて `done`・`skipped`・`failed` のどれかになるまで積まない（ADR-0094 の D6）。
 
 **入力**: `run_id`
 
@@ -446,8 +458,9 @@ J0 が判断し `singletonKey` で積む。
 1. 次の受付中の配達回を `FOR UPDATE` で取る（なければ `INSERT … ON CONFLICT DO NOTHING` で作る）
 2. `letters.delivery_run_id` を次の便に変更（`state = 'scheduled'` のままにする）。`scheduled` の手紙をすべて移す。
    J4 がこの配達回で `returned`・`suppressed` にした手紙（この回の J5 が動かないので `settled_at` が NULL）も、`state = 'scheduled'` に戻して同じく次の便に移す。次の便の J4 が振り分け直し、次の便の J5 が、一緒に移ったほかの手紙と同じ値で `settled_at` を書く（ADR-0091 の D1・D5。`suppressed` の手紙だけが早く 30 日を数え始めて、送信済みから先に消えないため。security.md T-06）。
-   移した手紙を照合し直さず、`moderation_queue` の行も入れない（手紙は投函のときに照合済み、ADR-0069 の D3）
-3. `board_posts.delivery_run_id` を次の便に変更（`status = 'awaiting_review'` のままにする）
+   移した手紙を照合し直さず、`moderation_queue` の行も入れない（手紙は投函のときに照合済み、ADR-0069 の D3）。
+   締め切りが済まないまま打ち切りを過ぎた回（J1 の再試行が尽きた回）に残った `state = 'pending'` の手紙も、同じく次の便に移す。`pending` のままにし、移し先の回の J1 で `scheduled` になる [assumed]（ADR-0094 の D8）
+3. `board_posts.delivery_run_id` を次の便に変更（`status = 'awaiting_review'` のままにする）。締め切りが済まずに審査キューに入らなかった投稿も同じく移し、移し先の回の J1 が審査キューに入れる（ADR-0094 の D8）
 4. この配達回の `mailbox_items`（まだ公開前のもの）を削除する
 5. `delivery_runs.status` を `skipped` にし、同じ UPDATE で `finished_at = now()` を書く [assumed]。これが `skipped` の回の起点（持ち越した時刻）になる。J15 は `skipped` の回に通知を送らないので、この回を指す通知の記録（`delivery_notifications`）はない
 
@@ -457,15 +470,15 @@ J0 が判断し `singletonKey` で積む。
 
 **その他の扱い**:
 - スキップした配達回の紙面は配らない。バックナンバーにも出さない（ADR-0007）[inferred]
-- 移した手紙は `scheduled`（`returned`・`suppressed` から戻したものを含む）。照合し直さない（ADR-0069）
-- `held`・`blocked` の手紙は移さない（`state = 'scheduled'` のものだけを移す。どちらも配達回に入っていない）
+- 移した手紙は `scheduled`（`returned`・`suppressed` から戻したものを含む）か、締め切りが済まなかった回に残った `pending`（`pending` のまま）。照合し直さない（ADR-0069）
+- `held`・`blocked` の手紙は移さない（`state` が `scheduled` か `pending` のものだけを移す。どちらも配達回に入っていない）
 - 何便分も止まっていたときは、古い配達回から順に持ち越す
 - 持ち越し先の `run_id` は `delivery_runs` に持たない `[assumed]`。持ち越し先は「次の受付中の配達回」で、移した手紙と投稿の `delivery_run_id` がその回を指すので、追跡はそれで足りる
 
 **失敗とやり直し**:
 - トランザクションなので全体が冪等に再実行できる。失敗したら例外で終え、pg-boss の再試行に任せる（J6 は `failed` を書かない）
-- 再試行を使い切っても持ち越せない（持ち越し先を作れない・DB の制約違反など）と、次の見回りの J0 がその回を `failed` にし、アラートを出す（§3 の J0 の 5、ADR-0092 の D5）
-- `failed` の回の手紙・投稿・`mailbox_items` は動かさず（J6 のトランザクションが戻ったまま）、`finished_at` は NULL のまま。J4 が準備した `mailbox_items` が残っていても、郵便受けの一覧と項目・プロフィールの年齢の見せる条件は行の配達回が `done` であることを条件にするので、住民には見えず数えない（`api.md` §7 F-01・F-03）。後の回の公開は止めない（ADR-0092 の D6・D7）
+- 再試行を使い切っても持ち越せない（持ち越し先を作れない・DB の制約違反など）と、次の見回りの J0 がその回を `failed` にし、アラートを出す（§3 の J0 の 5、ADR-0094 の D5）
+- `failed` の回の手紙・投稿・`mailbox_items` は動かさず（J6 のトランザクションが戻ったまま）、`finished_at` は NULL のまま。J4 が準備した `mailbox_items` が残っていても、郵便受けの一覧と項目・プロフィールの年齢の見せる条件は行の配達回が `done` であることを条件にするので、住民には見えず数えない（`api.md` §7 F-01・F-03）。後の回の公開は止めない（ADR-0094 の D6・D7）
 - 運用者が直す手順（原因を直したあとに運用者の CLI で持ち越しをやり直す）は暫定で、M3 で決める（`gaps.md` G-053）
 
 ---
@@ -797,6 +810,7 @@ worker が 2 台あっても実行は 1 回分になる。`singletonKey` と DB 
 | 事態 | 何が起きるか | 住民に何が見えるか | 記録 |
 |------|------------|-----------------|------|
 | 締め切りの遅れ | 配達回が `running` にならない。手紙は `pending` のまま。次の J0 で再試行 | 「次の便で届く」と見えるまま（表示は変わらない） | pg-boss のジョブ履歴 |
+| 締め切りが途中で止まる（J1 の再試行が尽きた） | 配達回は `running` のまま、`pending` の手紙か、審査キューに入っていない審査待ちの投稿が残る。J0 が J1 を積み直し、締め切りが済むまで J2〜J5 を積まない。持ち越しの打ち切りまでに済まなければ J6 が `pending` の手紙を `pending` のまま、投稿を `awaiting_review` のまま次の便に移す（ADR-0094 の D8） | 送った人には「投函済み」と見え、手紙はその便か次の便で届く。投稿は「掲載待ち」のまま | pg-boss のジョブ履歴・その回の `letters.state = 'pending'` の行の数・審査キューにない `awaiting_review` の投稿の数 |
 | 審査が間に合わない | 打ち切り時刻に未審査の投稿は次の便に持ち越し。手紙は J2 を待たないので遅れない（ADR-0069） | 投稿が「掲載待ち」のまま継続 | `moderation_queue` の未処理行 |
 | 確認待ちの手紙が確かめられない | `held` のまま残り、配達回に入らない（扱いは OQ-065） | 送った人には「確認中」と見えるまま | `letters.state = 'held'` の行の数と古さ（本文は見ない） |
 | 組版の失敗 | 締め切りまでに直せなければ休刊行を挿入 | その配達回は紙面は届かず、休刊の印と手紙が届く。新聞の通知は送る | `newspapers.is_holiday = true` |
@@ -804,7 +818,7 @@ worker が 2 台あっても実行は 1 回分になる。`singletonKey` と DB 
 | 外のニュースの取り込みの失敗 | 外のニュースなしで組む | 外のニュースの記事がない紙面が届く | pg-boss のジョブ履歴 |
 | 準備が間に合わない | J4 が `prepared_at` を書かないまま公開の打ち切りを過ぎると、J0 は工程によらず J6 を積んで持ち越す（`prepared_at` は NULL のまま） | 配達なし（次の便で届く） | `delivery_runs.status = 'skipped'`・`prepared_at` が NULL |
 | 公開の失敗 | 再試行。打ち切りまでに成功しなければ J6 で持ち越し。打ち切りのあとに動いた J5 は何もしない（手順 0） | 配達なし（次の便で届く） | pg-boss のジョブ履歴 |
-| 持ち越しの失敗（J6 の再試行が尽きた） | J0 がその回を `failed` にし、`alert=delivery_run_failed` を書く。中身は動かさない。後の回の公開は止めない（ADR-0092 の D5〜D7） | その回の手紙と新聞は郵便受けに出ない（準備済みの `mailbox_items` も、配達回が `done` でないので見せず、年齢の見せる条件にも数えない）。送った人には「投函済み」と見えたまま。後の便は通常どおり届く | `delivery_runs.status = 'failed'`・`finished_at` が NULL・pg-boss のジョブ履歴 |
+| 持ち越しの失敗（J6 の再試行が尽きた） | J0 がその回を `failed` にし、`alert=delivery_run_failed` を書く。中身は動かさない。後の回の公開は止めない（ADR-0094 の D5〜D7） | その回の手紙と新聞は郵便受けに出ない（準備済みの `mailbox_items` も、配達回が `done` でないので見せず、年齢の見せる条件にも数えない）。送った人には「投函済み」と見えたまま。後の便は通常どおり届く | `delivery_runs.status = 'failed'`・`finished_at` が NULL・pg-boss のジョブ履歴 |
 | worker が何便分も止まった | 再起動後、J0 が古い配達回から順に持ち越しを実行 | 複数便分が次の 1 便で届く（件数が多い） | 操作ログ |
 | 配達の通知の失敗 | J15 が期限（新聞は公開から・手紙は枠の時刻から 30 分）まで再試行。期限を過ぎたら送らない。404・410 の購読は消す | 通知が届かないことがある。郵便受けは通常どおり（配達回は `done` のまま） | `delivery_notifications.sent_at` が NULL の行・pg-boss のジョブ履歴 |
 | リストアした | `erasure_log` を再生し、削除済みデータを再削除。`erasure.replay` で実行 | 通常通り（データの整合性が回復後は影響なし） | `erasure_log`・操作ログ |
@@ -827,7 +841,7 @@ NFR-027（可用性）・NFR-074（障害通知）に合わせる。
 | 手紙の枠の J15 が枠の時刻から 10 分以上積まれない（ADR-0035） | — | 同上 |
 | J7 が 24 時間以内に完了しない | — | 同上 |
 | pg-boss のジョブが `failed` 状態に積み上がる | J1〜J6・J15 は 1 件でも。ほかのジョブは 24 時間で 10 件以上 [assumed] | 同上 |
-| 配達回が `failed` になった（`alert=delivery_run_failed`、ADR-0092 の D5） | 1 件でも | 同上 |
+| 配達回が `failed` になった（`alert=delivery_run_failed`、ADR-0094 の D5） | 1 件でも | 同上 |
 | J0 の心拍（`heartbeat=delivery.tick`）がない | 15 分（3 回分）| 同上 |
 | 版 `from_version` の行が残っているのに `keys.reencrypt` のジョブ（`created`・`retry`・`active`）がない（再暗号化が止まった。`environment.md` §8.3） | J0 が、今の版（`LETTER_KEY_CURRENT_VERSION` など）より古い版の行があり、そのジョブもないのを 2 回続けて見たら（10 分。暗号化の版を切り替えてから CLI でジョブを積むまでの間を拾わないため）[assumed] | 同上 |
 
@@ -845,7 +859,8 @@ worker が止まると J0 は書けないので、J0 の心拍がないことは
 | API の `FOR SHARE` と締め切りの競合 | 締め切り処理の最中に API が `pending` の手紙を書こうとしたとき、次の便に振り分けられること |
 | 途中停止と再開 | ジョブの実行を途中で止め（プロセス kill）、再起動したとき残りの処理が正しく完了すること |
 | 休刊 | 組版の締め切りまでに J3 が完了しないとき `is_holiday = true` の行が入ること |
-| 持ち越し | 公開の打ち切りまでに J5 が完了しないとき `delivery_runs.status = 'skipped'` になり、次の便に移ること。その回の `finished_at` に J6 の時刻が入ること。J4 が失敗し続けると、打ち切りのあとに `skipped` になり、`prepared_at` は NULL のままであること。`prepared_at` が NULL の間は J0 が J5 を積まないこと。打ち切りのあとに動いた J5 は回を `done` にしないこと。J6 が `skipped` にしたあとに動いた J4 が `mailbox_items` を足さないこと。J6 が再試行を使い切ると、次の J0 がその回を `failed` にして `alert=delivery_run_failed` を 1 行書き、J6 を積み直さないこと。`failed` の回の `finished_at` が NULL で、手紙と `mailbox_items` が動かないこと。J4 が準備し終えた `failed` の回の手紙が、`visible_at` を過ぎても郵便受けに出ず、受取人に送り手の年齢を見せないこと（`api.md` §7 F-01・F-03）。`failed` の回より後の回は J5 で `done` になること（ADR-0092） |
+| 持ち越し | 公開の打ち切りまでに J5 が完了しないとき `delivery_runs.status = 'skipped'` になり、次の便に移ること。その回の `finished_at` に J6 の時刻が入ること。J4 が失敗し続けると、打ち切りのあとに `skipped` になり、`prepared_at` は NULL のままであること。`prepared_at` が NULL の間は J0 が J5 を積まないこと。打ち切りのあとに動いた J5 は回を `done` にしないこと。J6 が `skipped` にしたあとに動いた J4 が `mailbox_items` を足さないこと。J6 が再試行を使い切ると、次の J0 がその回を `failed` にして `alert=delivery_run_failed` を 1 行書き、J6 を積み直さないこと。`failed` の回の `finished_at` が NULL で、手紙と `mailbox_items` が動かないこと。J4 が準備し終えた `failed` の回の手紙が、`visible_at` を過ぎても郵便受けに出ず、受取人に送り手の年齢を見せないこと（`api.md` §7 F-01・F-03）。`failed` の回より後の回は J5 で `done` になること（ADR-0094） |
+| 締め切りのやり直し | J1 を最初の区切りのあと（配達回が `running` になったあと）で止めて再試行を使い切らせたとき、次の J0 が J1 を積み直し、残りの `pending` の手紙が `scheduled` になること。`pending` の手紙が残っている間は J0 が J2〜J5 を積まないこと。積み直した J1 のあとも `moderation_queue` に同じ投稿の行が 1 つだけであること。手紙がすべて `scheduled` になったあと（または手紙のない回）で投稿を審査キューに入れきる前に J1 を止めたとき、J0 が J2 を積まずに J1 を積み直し、残りの投稿が審査キューに入ること。持ち越しの打ち切りまで J1 が失敗し続けると、J6 が残りの `pending` の手紙を `pending` のまま次の便に移し、その便の J1 で `scheduled` になること。`done`・`skipped`・`failed` の回や打ち切りのあとに動いた J1 が何も書かないこと（ADR-0094 の D8） |
 | 公開と退去の競合 | J5 の実行中に J7 が動いたとき、退去済み住民の `mailbox_items` が削除されること |
 | モックの LLM が失敗 | LLM のモックが全件エラーを返したとき、打ち切り後に投稿が次の便に持ち越されること |
 | 通知の重複と期限 | J15 を 2 回動かしてもモックのプッシュ送信が受ける通知が増えないこと。公開の前・`skipped` の便・枠の時刻の前・それぞれの時刻から 30 分のあとには送らないこと。休刊の回にも新聞の通知を送ること。新聞の 30 分は J5 が書いた `finished_at` から数え、その値が同じ回の手紙の `settled_at` と同じこと。J5・J6 を 2 回動かしても `finished_at` が変わらないこと（`roadmap.md` A-15） |
