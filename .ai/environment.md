@@ -44,14 +44,17 @@
 | 道具 | 版の決め方 | 理由 |
 |------|-----------|------|
 | Node.js | 最新の LTS の主版を 1 つに決め、`package.json` の `engines` に書く（M0）| ADR-0009 |
-| npm | Node.js に付くもの。依存はロックファイルで固定する | 依存を変えるときは `scripts/prepare.sh` とマニフェスト・ロックファイルを同じ変更で直す |
+| npm | Node.js に付くもの。依存はロックファイルで固定する | 依存を変えるときは `scripts/prepare.sh` とマニフェスト・ロックファイルを同じ変更で直す。最初のロックファイルは、依存を足す変更の中で `npm install --package-lock-only --ignore-scripts` で作り、`package.json` と同じ変更に入れる（ADR-0103 の D1。作れなければ D2） |
 | PostgreSQL | サーバーの主版を 1 つに決めて（M0）、本番のマネージドサービスでも同じ主版を選ぶ [assumed] | ADR-0010。手元の OS に入れたもの（`initdb`・`pg_ctl`・`psql` がパスにある）を使う。CI とジョブの環境にはマスターが入れる（OQ-086 → 決定） |
 
 コンテナの実行環境（コンテナのエンジンや Compose）は要らない（ADR-0052 の D2）。手元に入れた PostgreSQL を、レポジトリが管理する場所で動かす。
 
 ### §3.2 起動の手順（M0 で台本を作る）
 
-1. `npm ci`（ネットワークを使うのはここだけ。秘書のジョブでは `sh scripts/prepare.sh` が行う。`prepare.sh` は今のレポジトリになく、依存を足す M0 で作る [assumed]）。
+1. `npm ci`（ネットワークを使うのは、`prepare.sh` の `npm ci` と IaC のコードを書いたあとの `tofu init -backend=false`（ADR-0052 の D3・D6）のほかは、例外として最初のロックファイルを作る `npm install --package-lock-only --ignore-scripts`（ADR-0103）だけ）。
+   - 秘書のジョブでは `npm ci` を `sh scripts/prepare.sh` が行う。`prepare.sh` は今のレポジトリになく、依存を足す M0 で作る [assumed]。
+   - `prepare.sh` は、`package.json` があり `package-lock.json` がないときはロックファイルを作らず、「依存を変える変更の中でロックファイルを作ってコミットする」と出して終了コード 1 で止まる。ロックファイルがあるときは `npm ci` だけを動かす（ADR-0103 の D3）。
+   - 例外の `npm install --package-lock-only --ignore-scripts` は、依存を足す変更の中で 1 回試し、できたロックファイルを `package.json` と同じ変更でコミットする。終える前に `sh scripts/prepare.sh` と `sh scripts/check.sh` がどちらも終了コード 0 で終わることを確かめる（ADR-0103 の D1）。作れなかったら、ロックファイルを手で書かず、止まった段とエラーの行をチケットに書いて、それまでのファイルを変更として出す（ADR-0103 の D2）。`sh scripts/check.sh` はネットワークなしのまま（NFR-063）。
 2. 開発の DB を起こす: `sh scripts/dev-db.sh start`。
    - 初めてのときだけ `initdb` で、レポジトリの中の無視するディレクトリ（`.local/pg/`。M0 で `.gitignore` に `.local/` を足す）にデータを作る。
    - 待ち受けはループバック（`127.0.0.1`）と `.local/pg/` の中の Unix ソケットだけ。認証はソケットの `peer` か、ループバックの `scram-sha-256` に偽のパスワード（`EXAMPLE_DB_PASSWORD_DO_NOT_USE`）。
@@ -135,7 +138,7 @@
 ## §5 CI の計画
 
 - **CI の設定のファイルは秘書の変更の外**（NFR-091・CLAUDE.md）。足すのはマスター。ここは計画だけ。
-- CI の仕事は 1 つ: レポジトリを取り出す → `sh scripts/prepare.sh`（依存の取り込み。ネットワークを使うのはここだけ）→ `sh scripts/check.sh`。
+- CI の仕事は 1 つ: レポジトリを取り出す → `sh scripts/prepare.sh`（依存の取り込み。CI でネットワークを使うのはここだけ。CI ではロックファイルを作らず、コミットしたものを `npm ci` で使う。最初のロックファイルを作る例外は依存を足す変更の中だけ、ADR-0103）→ `sh scripts/check.sh`。
   PostgreSQL のサーバーの道具は、CI の実行の環境（イメージ）にあらかじめ入れておく（§4.1）。マスターが入れる（OQ-086 → 決定）。入れた道具は使い終わっても置いたままにする（OQ-090 → 決定、§4.4）。秘書は主版と、IaC の前に `tofu` を伝える。
   `check.sh` の中身は手元と同じで、CI だけの確認を作らない。
 - `check.sh` が起こしたものは `check.sh` 自身が片付ける（§4.4）。CI だけの片付けの手順を作らない。
