@@ -31,7 +31,7 @@
 | マスターに聞くこと・決まったこと | — | `.ai/open-questions.md` §2（一覧）・§3（要回答） |
 | 持ち越し・仕分け | — | `.ai/gaps.md`（冒頭: 今の M の行を 1 行 1 チケットで閉じる決まり）、`.ai/triage.md` |
 | 進み具合・振り返り | — | `.ai/status.md`、`.ai/retros.md` |
-| 環境・秘密・費用 | — | `.ai/environment.md` §3・§4・§8、`.ai/roadmap.md` §9・§4 A-07（M0 の環境の約束の受け入れ条件） |
+| 環境・秘密・費用 | — | `.ai/environment.md` §3・§4・§8（最初のロックファイルとネットワークの例外は §3.1・§3.2 の 1・§5、ADR-0103）、`.ai/roadmap.md` §9・§4 A-07（M0 の環境の約束の受け入れ条件） |
 
 ## 図（`.ai/diagrams/`）
 
@@ -178,6 +178,7 @@
 - `.ai/adr/0100-modular-monolith-process-placement.md` — 採用
 - `.ai/adr/0101-auth-tables-and-pending-mail-values.md` — 置き換え（→ 0102）
 - `.ai/adr/0102-auth-tables-mail-and-registered-email.md` — 採用
+- `.ai/adr/0103-first-lockfile-in-dependency-change.md` — 採用
 
 ## レビュー（`.ai/reviews/`）
 
@@ -249,3 +250,4 @@
 - `.ai/tickets/YGO-060-diagrams-fr-adr-m-lines.md`
 - `.ai/tickets/YGO-061-m1-test-plan.md`
 - `.ai/tickets/YGO-062-m1-test-harness.md`
+- `.ai/tickets/YGO-063-k-018-first-lockfile-procedure.md`
