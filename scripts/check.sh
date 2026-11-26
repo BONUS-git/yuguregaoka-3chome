@@ -48,4 +48,27 @@ if [ -e "$seq" ]; then
     done
 fi
 
+# 確かめ済みの mvp.md に古い参照が残っていないこと（YGO-053、reviews/0003 の R-062、gaps.md G-050）。
+# mvp.md が指す ADR は、どれも状態が「採用」であること。
+mvp=.ai/mvp.md
+if [ -e "$mvp" ]; then
+    adrs=$(grep -oE 'ADR-[0-9]{4}' "$mvp" | sort -u | sed 's/^ADR-//' || true)
+    for n in $adrs; do
+        af=$(ls .ai/adr/"$n"-*.md 2>/dev/null | head -n 1 || true)
+        [ -n "$af" ] || { echo "$mvp が指す ADR-$n のファイルが .ai/adr/ にない" >&2; exit 1; }
+        grep -qxF -- '- 状態: 採用' "$af" || {
+            echo "$mvp が採用でない ADR-$n を指している（$af の状態の行を見て今の ADR に直す）" >&2
+            exit 1
+        }
+    done
+    # mvp.md で「持ち越し」と書いた行の OQ は、open-questions.md の表でも「持ち越し」であること。
+    oqs=$(grep '持ち越し' "$mvp" | grep -oE 'OQ-[0-9]{3}' | sort -u || true)
+    for q in $oqs; do
+        grep -qE "^\| $q \|[^|]*\| 持ち越し \|" .ai/open-questions.md || {
+            echo "$mvp は $q を持ち越しと書いているが、open-questions.md の表では持ち越しでない" >&2
+            exit 1
+        }
+    done
+fi
+
 echo "check: ok"
