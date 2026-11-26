@@ -93,12 +93,16 @@ M0 の残り（使い捨ての PostgreSQL・`scripts/dev-db.sh`・時計・ア�
 18. `.github/workflows/` の下に CI の定義があり、`sh scripts/prepare.sh` → `sh scripts/check.sh` の順に動かす（`.ai/environment.md` §5）。CI が緑かどうかはこの確認に入れず、M1 の達成の確認で CI の結果を見る。
 
 ## 残り
+open のままの理由（変更 20261126-bd8de3 で git の履歴とファイルを確かめた）: 2 行目はこのチケットの履歴で一度も `done` になっておらず、e0d57d・9c5b22 も `open` のまま閉じた（done から戻されたのではない）。
+受け入れ確認が残っている（下の段落の一覧と同じ 2〜4・7・11・13〜18）: 変更 20261126-bd8de3 ではジョブの環境でコマンドを動かせず（`command -v node npm` の実行が、ジョブの道具の許可の拒否 `Permission to use Bash has been denied` で止まった。`node`・`npm` があるかも確かめられていない）、`package.json`・`package-lock.json` を作れず、`check.sh`・`prepare.sh` も動かせない（2〜4・7・11・13〜17）。`.github/` がなく、ジョブはそこを変えられない（18、ADR-0104 の D2・G-079）。
+18 はすでにファイルで確かめる文になっていて、CI が緑かどうかは確認に入れていない。そのため指示の「確かめられない項目だけが残る」の場合にあたらず、`done` にしない。
+
 受け入れ確認を 1 行ずつ、今のファイルと照らした結果（満たす: 5・6・8・9・10・12。行はあるが動かして確かめていない: 13・14）。次が残るため `状態: open` のままにする。
 
 - **7・11・17（と、それに依る 2〜4・15・16）**: `package.json` と `package-lock.json` がない。
-  - 止まった段（ADR-0103 の D2）: 段 2（`package.json` と `package-lock.json` の作成）。エラーの行: `Permission to use Bash has been denied`。
-  - なぜ残るか: `node`・`npm` を動かせず、ロックファイルを作れない。ロックファイルは手で書かない（ADR-0103 の D2）。`package.json` だけを入れると、`check.sh` の最初の段が node がないとして失敗し、検証が通らない。
-  - 片付く条件: マスターが主版 26 の Node.js と npm をジョブの環境に入れる（OQ-086 の決定。新しい OQ は立てない）。そのあと、次の順に進める:
+  - 止まった段（ADR-0103 の D2）: 段 2（`package.json` と `package-lock.json` の作成）の前、`node`・`npm` があるかを確かめる段。エラーの行: `Permission to use Bash has been denied`（ジョブの道具でコマンドを動かす許可が拒まれた。Node.js がないことの証拠ではない）。
+  - なぜ残るか: ジョブがコマンドを動かせず、`node`・`npm` があるかも確かめられず、ロックファイルを作れない。ロックファイルは手で書かない（ADR-0103 の D2）。`package.json` だけを入れると、node がない環境では `check.sh` の最初の段が失敗し、検証が通らない。
+  - 片付く条件: 次の 2 つがそろう。(a) ジョブの環境に主版 26 の Node.js と npm が入っている（OQ-086 の決定。新しい OQ は立てない）。(b) ジョブが、その環境で `node`・`npm`・`sh scripts/prepare.sh`・`sh scripts/check.sh` を動かせる（コマンドを動かす道具の許可がある）。そのあと、次の順に進める:
     1. `package.json` を手で書く: `private`・`"type": "module"`・`"engines": {"node": "26.x"}`（主版は `.ai/environment.md` §3.1）。`dependencies` に `fastify`、`devDependencies` に `vitest`・`typescript`・`@types/node`。どの版も `^`・`~` を付けない固定の版で、実装の時点の安定版にし、`@types/node` は主版 26 のものにする `[assumed]`。
     2. ADR-0103 の D1 のコマンドを引数なしで 1 回動かす: `npm install --package-lock-only --ignore-scripts`。版が見つからないと出たら、`package.json` の版を直して同じコマンドを動かす。
     3. `sh scripts/prepare.sh` と `sh scripts/check.sh` を動かし、受け入れ確認 2〜17 を実際に確かめる（4・13〜16 は、失敗するはずの状態を作って確かめ、元に戻す）。`engines.node` と `.ai/environment.md` §3.1 の主版がそろっていることも確かめる（17）。
