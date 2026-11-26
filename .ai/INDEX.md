@@ -263,3 +263,4 @@
 - `.ai/tickets/YGO-067-triage-10-no-open-k.md`
 - `.ai/tickets/YGO-068-g-077-deploy-readiness.md`
 - `.ai/tickets/YGO-069-g-078-tool-versions-list.md`
+- `.ai/tickets/YGO-070-g-079-ci-prepare-step.md`
