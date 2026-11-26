@@ -10,10 +10,10 @@
 
 ## §1 原則
 
-1. **PostgreSQL が唯一の正本** [explicit]（ADR-0010）: データの正本はすべて PostgreSQL に置く。
+1. **PostgreSQL が唯一の正本** [inferred]（ADR-0010）: データの正本はすべて PostgreSQL に置く。
    ジョブキューも PostgreSQL 上で動かす（pg-boss 相当）。Redis 等の別ブローカは使わない。
 
-2. **主キーは UUID v4** [explicit]（ADR-0082）: すべてのエンティティは UUID v4 の主キーを持つ。
+2. **主キーは UUID v4** [inferred]（ADR-0082）: すべてのエンティティは UUID v4 の主キーを持つ。
    ただし配達回 ID のみ例外として `YYYY-MM-DD-morning` / `YYYY-MM-DD-evening` の形式を使う（ADR-0004）。
 
 3. **時刻は `timestamptz` で保存、スケジュールは JST で計算** [inferred]（architecture.md §7）:
