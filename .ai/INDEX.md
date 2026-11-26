@@ -256,3 +256,4 @@
 - `.ai/tickets/YGO-065-m1-resident-address-schema.md`
 - `.ai/tickets/YGO-066-k-019-ci-prepare-then-check.md`
 - `.ai/tickets/YGO-067-triage-10-no-open-k.md`
+- `.ai/tickets/YGO-068-g-077-deploy-readiness.md`
