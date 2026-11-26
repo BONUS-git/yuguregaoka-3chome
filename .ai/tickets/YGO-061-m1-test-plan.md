@@ -1,5 +1,5 @@
 # YGO-061 M1 の FR ごとのテスト項目書（.ai/tests/test-plan.md）
-状態: open
+状態: done
 M: M1
 
 ## 目的
