@@ -22,23 +22,20 @@ M1 の機能を実装するチケットが、それぞれ TC のテストを足�
 - `.ai/tests/test-plan.md`: テストの名前の頭に `TC-NNN …` を書く決まりがある。TC-033（FR-092、単体）は「ルートの一覧に OAuth と WebAuthn の経路がない」。M1 の TC のうち、DB も FR の機能もなしで確かめられるのはこれだけ。
   ファイルの名前は `test_TC_001_…` の形にする決まりもある。
 - ADR-0103: D1 最初のロックファイルは依存を変える変更の中で `npm install --package-lock-only --ignore-scripts` を 1 回試して作り、`package.json` と同じ変更に入れる。D2 作れなければロックファイルを手で書かず、止まった段とエラーの行をここに書き、それまでの段のファイルを出す。D3 `prepare.sh` はロックファイルを作らない。
-- **止まった段（ADR-0103 の D2）**: 段 2 の `package.json` とロックファイルの作成。今の変更（20261126-672fe0）のジョブではシェルのコマンドを 1 つも動かせなかった（`command -v node npm`・`sh scripts/prepare.sh`・`sh scripts/check.sh` のどれも）。そのため node と npm があるかも、`check.sh` の結果も、このジョブでは確かめていない。秘書の見直しの記録では、この環境の `command -v node npm` は何も返さない（node も npm もない）。
-  - そのため `package.json` と `package-lock.json` はこの変更に入れない。ロックファイルは手で書かない（D2）。`package.json` だけを入れると、`prepare.sh` と `check.sh` が D3 のとおりロックファイルがないとして失敗し、検証が通らない。
-  - 4ca88b22 の見直しの指摘（本文はレポジトリにないため、ファイルを読んでこう読み取った `[assumed]`。秘書の見直しで本文と同じかを確かめる）:
-    - R3-F1（重大）: **一部を直した。中心は残る。**
-      - 直したもの（チケットの記述を実装の事実にそろえた）: 「確かめた事実」を今のファイルの事実（ある・ないの一覧）に、「止まった段」をこのジョブで起きたことだけに、「受け入れ確認の今の状態」を項目ごとに書いた。実装（`check.sh`・`prepare.sh`・`vitest.config.ts`・`src/`・`test/`・`.gitignore`）は受け入れ確認と食い違わないため、変えていない。範囲と受け入れ確認の文も変えていない。
-      - 残るもの（中心）: `package.json`・`package-lock.json` がなく、Vitest の段が動かないこと。node と npm がなく D1 のコマンドを動かせないため、ADR-0103 の D2 のとおり作らない。これが残る間、受け入れ確認 1〜4・7・11・17 は満たさず、13〜16 は動かして確かめられない。R3-F1 は片付いていない。
-    - 中「主版 26 が正本にない」: 直した。`.ai/environment.md` §3.1 の Node.js の行に主版 26 と `engines.node` の `26.x` を書き、範囲の `engines.node` の行は §3.1 を指す。`.ai/tests/test-plan.md` の、TC のテストは別のチケットで書くという記述を、TC-033 のテストはこのチケットが書く形にそろえた。
-  - 次の変更で残るのは段 2 と受け入れ確認だけ。node（主版 26）と npm があり、D1 のコマンド・`prepare.sh`・`check.sh` を動かせる環境で、次の順に進める:
+- **止まった段（ADR-0103 の D2）**: 段 2 の `package.json` とロックファイルの作成。このジョブで `command -v node npm` を動かそうとすると、コマンドを動かすこと自体が許されず（`Permission to use Bash has been denied`）、node と npm があるかも確かめられなかった。そのため D1 のコマンド（`npm install --package-lock-only --ignore-scripts`）も `sh scripts/prepare.sh` も `sh scripts/check.sh` も、このジョブでは動かしていない。
+- **残っている重大の指摘 R3-F1**（4ca88b22 の見直し）: 片付いていない。段 2 の `package.json` と `package-lock.json` がなく、Vitest の段が一度も動いていない。node と npm のない環境では、この 2 つを作れない（ロックファイルは手で書かない。ADR-0103 の D2）。片付ける条件は、主版 26 の node と npm がある環境で、下の手順の 1〜3 を進めること。
+  - そのため `package.json` と `package-lock.json` はこの変更に入れない。ロックファイルは手で書かない（D2）。`package.json` だけを入れると、`check.sh` が最初の段で node がないとして失敗し、検証が通らない。
+  - 前提: OQ-086 の決定のとおり、主版 26 の Node.js（npm を含む）を秘書の実装のジョブ・検証・CI の環境に入れるのはマスター。新しい OQ は立てない。
+  - 残るのは段 2 と受け入れ確認だけ。node（主版 26）と npm があり、D1 のコマンド・`prepare.sh`・`check.sh` を動かせる環境で、次の順に進める:
     1. `package.json` を手で書く: `private`・`"type": "module"`・`"engines": {"node": "26.x"}`（主版は `.ai/environment.md` §3.1）。`dependencies` に `fastify`（実行時に要る）、`devDependencies` に `vitest`・`typescript`・`@types/node`（テストと型だけに要る）。どの版も `^`・`~` を付けない固定の版にする。版は、実装の時点の安定版で、`@types/node` は主版 26 のものにする `[assumed]`。
     2. ADR-0103 の D1 のコマンドを引数なしで 1 回動かす: `npm install --package-lock-only --ignore-scripts`。パッケージの名前を引数に付けない（`package.json` を書き換えず、依存の種類を変えないため）。版が見つからないと出たら、`package.json` の版を直して同じコマンドを動かす。
     3. `sh scripts/prepare.sh` と `sh scripts/check.sh` を動かし、受け入れ確認 1〜17 を実際に確かめる（4・13〜16 は、失敗するはずの状態を作って確かめ、元に戻す）。すべて通ってから `状態: done` にし、`check.sh` をもう一度動かす。
     - `engines.node` を書いたら `.ai/environment.md` §3.1 の Node.js の行と主版がそろっていることを確かめる（受け入れ確認 17）。
-  - 秘書への申し送り: OQ-086 の決定のとおり、主版 26 の Node.js（npm を含む）を、秘書の実装のジョブ・検証・CI の環境にマスターが入れる必要がある。実装のジョブで D1 のコマンドと `prepare.sh` を動かせることも要る。
-- **受け入れ確認の今の状態**（ファイルを読んで突き合わせた）:
+- **受け入れ確認の今の状態**（ファイルを読んで突き合わせた。このジョブではコマンドを動かせず、`check.sh` の結果は秘書の検証で確かめる）:
   - ファイルの事実で満たす: 5（`check.sh` にネットワークのコマンドがなく `npx --no-install vitest run`）・6（`prepare.sh` が `npm ci`）・8（`.gitignore` の 13 行目と 7 行目）・9（`.github/` はない）・10（`.ai/environment.md` に 2 つの語がなく、§4.1 の 6 に `test-results/junit.xml`）・12（「範囲」の節）。
   - 確かめる行は `check.sh`・`prepare.sh` にあるが、`package.json` がないため動かして確かめていない: 13〜16。
   - 満たさない: 1（2 行目が `open`）・2・3（Vitest が動かない）・4（`package.json` がないと Vitest の段に入らない）・7・11・17（`package.json` がない）。§3.1 の主版は 26 に決めてあり、`package.json` を `26.x` で書けば 11・17 はそろう。
+  - ワークフローのファイルがないため、この変更では確かめられない: CI が緑になることと、CI が `prepare.sh` → `check.sh` の順に動かすこと（指示の確かめる点。受け入れ確認 1〜17 には入れていない）。理由: CI の設定は秘書の `.github/workflows/check.yml` で、ジョブは書かず、足すのはマスター（CLAUDE.md・NFR-091・`.ai/environment.md` §5）。ファイルがない間は、マージのあとでも CI は動かない。
 
 ## 範囲
 このチケットが作るのは、`roadmap.md` §4 の M0 の行のうち「Vitest を `check.sh` からつなぐ」と、それに要る `scripts/prepare.sh`・`package.json`（`engines` を含む）だけ。
@@ -79,6 +76,7 @@ M0 の残り（使い捨ての PostgreSQL・`scripts/dev-db.sh`・時計・ア�
 - 前提: この土台は、CI が `prepare.sh` → `check.sh` の順に動かす形であることを前提にする。CI が `check.sh` だけを動かすと、`node_modules/` がなく `check.sh` は失敗する（受け入れ確認 4）。
   CI の形を決めるのは秘書かマスターで、ジョブは確かめも変えもできないため、OQ にせず前提として書く。
   CI がその形になるまで、「CI が緑」はこのチケットの受け入れ確認に入れない（受け入れ確認は `check.sh` をローカルで動かした結果とファイルの中身だけ）。
+  CI のワークフローのファイルはこのレポジトリになく（`.github/` は変更禁止）、ジョブはその中身も確かめられない。マスターが `.ai/environment.md` §5 の形で `.github/workflows/check.yml` を足したあとに、秘書が CI の緑と `prepare.sh` → `check.sh` の順を確かめる。
 - 使い捨ての PostgreSQL の起動と片付け（§4.1 の 4・5、§4.4）: `roadmap.md` §4 の M0 の別のチケットで、初めて DB を使う TC より前に足す。
 - `scripts/dev-db.sh`・時計・アダプタ・2 プロセスの骨組み・キュー・`APP_ENV` と環境変数の読み込み（`roadmap.md` §4 の M0 の行の残り）: M0 の別のチケットで足す。
 - 型の検査と lint（§4.1 の 3）: このチケットでは足さない。
