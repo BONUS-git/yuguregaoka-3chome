@@ -118,3 +118,4 @@
 - [0099 — 段階は 3 つ、MVP は M0〜M6、要回答で止めない](0099-stages-m0-m6-gates-no-blocking-oqs.md)
 - [0100 — モジュラーモノリスと 2 プロセス、ルール表は共有](0100-modular-monolith-process-placement.md)
 - [0101 — 認証の表と、送る前のトークンと前のアドレス](0101-auth-tables-and-pending-mail-values.md)
+- [0102 — 認証の表とメールの受け渡し、使用中のメールの登録](0102-auth-tables-mail-and-registered-email.md)
