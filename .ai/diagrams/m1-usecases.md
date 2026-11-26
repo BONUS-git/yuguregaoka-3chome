@@ -50,4 +50,4 @@ flowchart LR
 ## 読み方
 
 - M1 に入れないもの: 知り合いの家の印（M2）、ほかの住民への年齢の表示（M3）、ニックネームと自己紹介の絶対NG（422 `content_rejected`、M4）、退去 `DELETE /me`（M6）、空き家を候補に戻すこと（段階 3、`roadmap.md` §6 S3-1）。
-- メールを送るのは worker（`environment.md` §8.1 の `MAIL_ADAPTER` は worker だけ）。web から worker にメールを渡すジョブは `async.md` にまだない（`gaps.md` G-049）。
+- メールを送るのは worker（`environment.md` §8.1 の `MAIL_ADAPTER` は worker だけ）。確認・送り直し・再設定・メールアドレスの変更のメールと、変更の確認のあとの前のアドレスへの知らせは、web が要求と同じトランザクションで積むジョブ J18 `mail.send` で worker に渡す（`async.md` §4 J18）。

@@ -3,7 +3,7 @@
 M1 で作る表と、そのあいだの関係。列の正本は `db.md` §2（`residents`・`credentials`・`sessions`・`staff_roles`・`auth_tokens`・`rate_limit_buckets`・`addresses`・`tenancies`）。M1 で使わない列（休眠・転送の列）は描かない。
 
 - FR: FR-001, FR-002, FR-003, FR-008, FR-009, FR-010, FR-092, FR-098, FR-100, FR-113, FR-127
-- ADR: 0080, 0082, 0084, 0087, 0088, 0089, 0090, 0091, 0093
+- ADR: 0080, 0082, 0084, 0087, 0088, 0090, 0091, 0093, 0101
 - 確かめた M: M1
 
 ```mermaid
@@ -67,6 +67,10 @@ erDiagram
         timestamptz created_at
         timestamptz expires_at "確認は登録から 24 時間・再設定は 30 分"
         timestamptz used_at "NULL = まだ"
+        bytea mail_token_encrypted "J18 が送るまで・送ったら NULL"
+        int mail_token_key_version
+        bytea old_email_encrypted "email_change の確認のあと J18 が知らせるまで"
+        int old_email_key_version
     }
     rate_limit_buckets {
         bytea key PK "HMAC（主体の平文を持たない）"
@@ -93,5 +97,6 @@ erDiagram
 ## 読み方
 
 - 街のすべての住所は C3 の住所のプールの静的な定義が持ち、`addresses` の行は初めて割り当てたときに作る（ADR-0084 の D15）。地図の表はない（ADR-0083 の D3）。
-- `rate_limit_buckets` は住民を指さないので、関係の線を引かない。J14 が 1 日たった行を消す（ADR-0089 の D4）。
+- `rate_limit_buckets` は住民を指さないので、関係の線を引かない。J14 が 1 日たった行を消す（ADR-0101 の D4）。
 - メールの確認が済まないまま 24 時間を過ぎた登録は、`auth_tokens` → `resident_interests` → `tenancies` → `addresses` → `credentials` → `residents` の順に行ごと消える（ADR-0087 の D4・ADR-0091 の D14）。期限を過ぎた `auth_tokens` の行も J14 が消す。
+- `auth_tokens` の `mail_token_*` と `old_email_*` は、J18 `mail.send` がリンクのトークンと前のアドレスへの知らせを送り終えるまで、`EMAIL_KEYRING` で暗号化して置く列（ADR-0101 の D7、`async.md` §4 J18）。送ったら J18 が NULL にし、残っていれば行と一緒に消える。

@@ -117,3 +117,4 @@
 - [0098 — 新聞はテンプレートで決定的に組み、組版の失敗は休刊](0098-newspaper-deterministic-typesetting-holiday.md)
 - [0099 — 段階は 3 つ、MVP は M0〜M6、要回答で止めない](0099-stages-m0-m6-gates-no-blocking-oqs.md)
 - [0100 — モジュラーモノリスと 2 プロセス、ルール表は共有](0100-modular-monolith-process-placement.md)
+- [0101 — 認証の表と、送る前のトークンと前のアドレス](0101-auth-tables-and-pending-mail-values.md)

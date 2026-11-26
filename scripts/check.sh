@@ -27,4 +27,25 @@ for id in $ids NFR-013; do
     esac
 done
 
+# M1 の図に「未設計」の受け渡しが残っていないこと。シーケンス図の web と worker のあいだの
+# 受け渡し（図に出るジョブ Jn）が、どれも async.md §2 のジョブの一覧の行にあること
+# （YGO-051、reviews/0003 の R-060）。
+for f in .ai/diagrams/m1-*.md; do
+    [ -e "$f" ] || continue
+    if grep -q '未設計' "$f"; then
+        echo "$f に「未設計」が残っている（ジョブは async.md に設計して図から指す）" >&2
+        exit 1
+    fi
+done
+seq=.ai/diagrams/m1-registration-sequence.md
+if [ -e "$seq" ]; then
+    jobs=$(sed -n '/^```mermaid/,/^```/p' "$seq" | grep -oE 'J[0-9]+' | sort -u || true)
+    for j in $jobs; do
+        grep -qE "^\| $j \| " .ai/async.md || {
+            echo "$seq に出る $j の行が async.md §2 のジョブの一覧にない" >&2
+            exit 1
+        }
+    done
+fi
+
 echo "check: ok"

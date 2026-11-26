@@ -4,7 +4,7 @@
 - 日付: 2026-11-25
 
 ADR-0085 を丸ごと置き換える。ADR-0085 の決定（退去のときの処理・長期不在のときの処理・保持期間・手紙の保持の D1〜D6・退去の受付の D7・J7 の手順 0 の D8・住民を指す外部キーの D9・居住記録の D10〜D12・配達回を消さないこと・新聞の組み直し）は、今の状態に書き直してこの ADR に同じ番号で移した。
-新しく決めたのは、J7 の手順 0 で確認と再設定のトークン（`auth_tokens`、ADR-0089 の D6）も消すこと（D8）、J7 の手順 5 でロール（`staff_roles`）を消すこと（D13）、J14 が流量の制限の数え（`rate_limit_buckets`）・期限を過ぎたトークン・確認が済まない登録を消すこと（D14）。表の定義は ADR-0089、確認が済まない登録の期限と消し方は ADR-0087 による（YGO-027、`triage.md` 仕分け 3 の K-004・K-014）。
+新しく決めたのは、J7 の手順 0 で確認と再設定のトークン（`auth_tokens`、ADR-0101 の D6）も消すこと（D8）、J7 の手順 5 でロール（`staff_roles`）を消すこと（D13）、J14 が流量の制限の数え（`rate_limit_buckets`）・期限を過ぎたトークン・確認が済まない登録を消すこと（D14）。表の定義は ADR-0101、確認が済まない登録の期限と消し方は ADR-0087 による（YGO-027、`triage.md` 仕分け 3 の K-004・K-014）。
 
 ## 背景
 
@@ -19,7 +19,7 @@ OQ-030「アカウント情報の保持期間・削除ポリシー」は `db.md`
 5. 認証情報（`credentials`）・セッション（`sessions`）・確認と再設定のトークン（`auth_tokens`）・ロール（`staff_roles`）をいつ、どの順に消すか。
 6. `residents` を外部キーで指すほかの行（居住記録・手紙の差出人・投稿者・通報者・モデレーター・画像）をどうするか。
 
-`credentials`（メールの暗号化した値・検索用の HMAC・パスワードのハッシュ・TOTP の秘密）・`sessions`・`auth_tokens`・`staff_roles` は、どれも `residents` を外部キーで指す（`db.md` §2、ADR-0089）。
+`credentials`（メールの暗号化した値・検索用の HMAC・パスワードのハッシュ・TOTP の秘密）・`sessions`・`auth_tokens`・`staff_roles` は、どれも `residents` を外部キーで指す（`db.md` §2、ADR-0101）。
 `push_subscriptions` は `sessions` を、`delivery_notifications` は `push_subscriptions` を外部キーで指す。
 J7 が `residents` の行を消す前にこれらの行を消さないと、認証情報とセッションが退去のあとも残り、`residents` の行の削除も外部キーで止まる。
 退去の受付（`DELETE /me`）ではセッションを無効にする（`invalidated_at` を付ける）だけで、行は残る。
@@ -66,10 +66,10 @@ J7 が `residents` の行を消す前にこれらの行を消さないと、認�
 | 対象 | 処理 |
 |------|------|
 | `residents` の行 | J7 の最後の手順（手順 10）で物理削除。`erasure_log` に記録 |
-| 認証情報（`credentials` の行。TOTP の秘密の列を含む、ADR-0089 の D3） | J7 の最初の手順（手順 0）で行ごと消す。`erasure_log` に記録（D8） |
+| 認証情報（`credentials` の行。TOTP の秘密の列を含む、ADR-0101 の D3） | J7 の最初の手順（手順 0）で行ごと消す。`erasure_log` に記録（D8） |
 | セッション（`sessions` の行） | 退去の受付（API）で有効なセッションをすべて無効にする（`invalidated_at`、D7）。行は J7 の手順 0 ですべて（無効にした行も含む）消す。`erasure_log` に記録（D8） |
-| 確認と再設定のトークン（`auth_tokens` の行、ADR-0089 の D6） | J7 の手順 0 で、使った行・期限を過ぎた行も含めてすべて消す。`erasure_log` に記録（D8） |
-| ロール（`staff_roles` の行、ADR-0089 の D2） | J7 の手順 5 で消す。`erasure_log` に記録しない（D13） |
+| 確認と再設定のトークン（`auth_tokens` の行、ADR-0101 の D6） | J7 の手順 0 で、使った行・期限を過ぎた行も含めてすべて消す。`erasure_log` に記録（D8） |
+| ロール（`staff_roles` の行、ADR-0101 の D2） | J7 の手順 5 で消す。`erasure_log` に記録しない（D13） |
 | その住民が送った届いていない手紙（`state = pending / scheduled / held / blocked / returned / suppressed`） | 即時に本文と宛先ごと消す。`scheduled` の手紙の、まだ `visible_at` を過ぎていない郵便受けの行も同じトランザクションで消す（届いていないので受取人のために残す理由がなく、送った人ももう送信済みを見られない。`held`・`blocked` は ADR-0069 の D6） |
 | その住民が受け取った郵便受けの行（`mailbox_items`、`resident_id` が本人。手紙・新聞・掲示板のすべての行） | 手順 8 で消す（`residents` を消す前。外部キーは CASCADE にしない）。行が消えた手紙は、残りの受取人の行で D3 を当てる |
 | 届いた手紙（`state = delivered`） | そのまま残す。手順 9 で `letters.sender_id` を NULL にし（D11）、API では「退去済み」と示す。消し方は下の「手紙の保持」の D3 |
@@ -149,7 +149,7 @@ J7 が `residents` の行を消す前にこれらの行を消さないと、認�
 | アクセスログ・操作ログ（DB の外） | 30 日 |
 | `credentials`（認証情報） | 退去まで。退去で J7 の手順 0 が消す（D8）。メールの確認が済まない行は `created_at` から 24 時間（D14・ADR-0087） |
 | `sessions`（セッション） | 有効期限切れ・ログアウトまで。ログアウトでは API が行を消す。有効期限切れでは J14 が `expires_at < now()` の行を、それを指す `push_subscriptions` と `delivery_notifications` を同じトランザクションで先に消してから削除する `[assumed]`（`security.md` §2.1、`async.md` J14）。退去では受付で無効にし（D7）、J7 の手順 0 が残りの行をすべて消す（D8） |
-| `auth_tokens`（確認と再設定のトークン、ADR-0089 の D6） | `expires_at` まで（使った行も期限まで残し、使い回しは `used_at` で拒む）。J14 が `expires_at < now()` の行を消す（D14）。退去では J7 の手順 0 が消す（D8） |
+| `auth_tokens`（確認と再設定のトークン、ADR-0101 の D6） | `expires_at` まで（使った行も期限まで残し、使い回しは `used_at` で拒む）。J14 が `expires_at < now()` の行を消す（D14）。退去では J7 の手順 0 が消す（D8） |
 | `staff_roles`（ロール） | 剥奪か退去まで。剥奪では運用者の CLI が、退去では J7 の手順 5 が消す（D13） |
 | `rate_limit_buckets`（流量の制限の数え、ADR-0088） | 窓の始まりから 1 日（J14 が `window_start < now() - interval '1 day'` の行を消す、D14） |
 | メールの確認が済まない登録（`residents`・`credentials`・`auth_tokens`・`tenancies`・`addresses`・`resident_interests` の行） | `credentials.created_at` から 24 時間。J14 か、同じ住所・同じメールアドレスの登録の要求が消す（D14・ADR-0087 の D4・D5） |
@@ -254,7 +254,7 @@ J7 が `residents` の行を消す前にこれらの行を消さないと、認�
 
 ## 影響
 
-- DB: `db.md` §2 `credentials`・`sessions`・`auth_tokens`・`staff_roles`・`rate_limit_buckets`（表の定義は ADR-0089）・`tenancies`（`resident_erased_at`、D10）・`address_book.registered_tenancy_id`・`letter_recipients.registered_tenancy_id`（D12）・`letters` の `settled_at`・`mailbox_items.resident_id`・`moderation_actions.moderator_id`・`images.uploader_id` と、§2 の末尾の「住民を指す外部キー」（D9）、§3 の配達の振り分け（`registered_tenancy_id` が NULL のときの差し戻し、D12）、§4 のライフサイクル表と手紙の状態遷移図、§5 の退去の処理は本 ADR を参照する。
+- DB: `db.md` §2 `credentials`・`sessions`・`auth_tokens`・`staff_roles`・`rate_limit_buckets`（表の定義は ADR-0101）・`tenancies`（`resident_erased_at`、D10）・`address_book.registered_tenancy_id`・`letter_recipients.registered_tenancy_id`（D12）・`letters` の `settled_at`・`mailbox_items.resident_id`・`moderation_actions.moderator_id`・`images.uploader_id` と、§2 の末尾の「住民を指す外部キー」（D9）、§3 の配達の振り分け（`registered_tenancy_id` が NULL のときの差し戻し、D12）、§4 のライフサイクル表と手紙の状態遷移図、§5 の退去の処理は本 ADR を参照する。
 - 非同期処理: `async.md` の J5 の手順 3 だけが `settled_at` を書く（J4 は書かない）。J6 の手順 2 は、その回の `returned`・`suppressed` の手紙も `scheduled` に戻して移す。J7 の手順 0 は D8 のとおり購読・セッション・トークン・認証情報を消し、手順 1 は送った手紙のうち届いていないものを消し、手順 5 はロールも消し（D13）、手順 7 は住所を空き家にして居住記録を終わらせ（D10）、手順 8 はその住民の郵便受けの行を消し、手順 9 は住民を指す 6 つの列を NULL にし（D11）、手順 10 は `residents` を消す。J14 の対象に D2・D3・D14 を入れ、`delivery_runs` を入れない。J14 の居住記録の条件は D10、消し方は D12。
 - API: `api.md` §2.4 の退去は D7・D8 に従う。§7 F-04 の送信済みの一覧と詳細は D5 に従う。郵便受けとバックナンバーの条件（`done` の回だけ返す）は変わらない。
 - セキュリティ: `security.md` §2.1 の保持・§2.4 の退去の処理・§3.3 のセッション・T-06 は本 ADR に従う。

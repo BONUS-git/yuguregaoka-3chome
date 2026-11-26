@@ -4,7 +4,7 @@
 - 日付: 2026-11-19
 - チケット: YGO-006
 - 根拠: `.ai/brief.md`・`.ai/requirements.md`・`.ai/architecture.md`・`.ai/db.md`・`.ai/api.md`
-- 関連 ADR: 0002・0004・0005・0006・0007・0010・0011・0012・0014・0015・0017・0035・0039・0070・0072・0076・0085・0094・0100
+- 関連 ADR: 0002・0004・0005・0006・0007・0010・0011・0012・0014・0015・0017・0033・0035・0039・0070・0072・0076・0080・0085・0087・0090・0094・0100・0101
 
 ---
 
@@ -66,13 +66,14 @@
 | J15 | `notify.delivery` | キュー（新聞は J5 が公開と同じトランザクションで、手紙は J0 が枠の時刻を過ぎてから積む。`singletonKey` は §5） | `{run_id, kind, slot}` | 購読のある住民へ「新聞が配達されました！」か「手紙が配達されました！（N通）」を 1 回送る（ADR-0076・ADR-0035） |
 | J16 | `newspaper.write` | J2 と J17 が終わる（J17 は失敗か取り込みの打ち切りでもよい）か審査の打ち切り後、J0 が判断（M5 から） | `run_id` | 素材（承認済みの投稿・その回の J17 が取り込んだ外のニュース）ごとの見出しと記事の文字（`newspaper_articles`、ADR-0055 の D7） |
 | J17 | `news.fetch` | 01:00 / 14:00 JST 以降、取り込みの打ち切り（04:00 / 16:00）まで、J0 が判断（M5 から） | `run_id` | 取り込んだ外のニュース（`external_news_items`、`delivery_run_id = run_id`、ADR-0039 の D6）。本番のアダプタは OQ-060 のあと |
+| J18 | `mail.send` | キュー（M1 から。API が登録・確認のメールの送り直し・パスワードの再設定の依頼・メールアドレスの変更の要求を処理するのと同じトランザクションで、`auth_tokens` の行と送る前のトークンの列（`mail_token_*`）と一緒に積む。メールアドレスの変更の確認（`POST /api/v1/email-verifications`）でも、前のアドレスの列（`old_email_*`）を書くのと同じトランザクションで積む。ADR-0101 の D7、§4 J18） | `{kind, auth_token_id}`（`kind` は `email_verification` / `password_reset` / `email_change` / `email_change_notice`）。トークンとメールアドレスの平文も暗号文も含めない（`security.md` T-03・§2.5） | 確認か再設定のリンクのメールか、前のアドレスへの変更の知らせを 1 通送る（`MAIL_ADAPTER`。テストはモックかローカルの SMTP、本番のサービスはマスターの承認のあと、ADR-0033）。送ったら送った値の列を NULL にする。期限（確認は登録から 24 時間、ADR-0087）を過ぎたトークンには送らない |
 | — | `erasure.replay` | 手動（運用者の CLI。リストアの後、web を止めたまま） | なし | 消去の控え（`erasure/<resident_id>.json`）の住民ごとに J7 を積み直し、`erasure_log` の 3 つの表の残りの行を消し、J14 を 1 回積む（ADR-0096 の D4） |
-| — | `keys.reencrypt` | 手動（運用者の CLI。鍵の新しい版を全プロセスに配り、暗号化の版を切り替えたあと。配達の窓が閉じた直後に始める [assumed]） | `{kind: 'letter' \| 'email', from_version}` | 版 `from_version` で暗号化した手紙の本文（AAD は同じ手紙の ID）か、`credentials` のメールアドレスと TOTP の秘密・`auth_tokens` の変更中の新しいメールアドレスの暗号化した値（`kind: 'email'`。列ごとの版で選ぶ、ADR-0089 の D5・D6）を、1,000 件ずつのトランザクションで今の版に暗号化し直す。残った行から続けられる（冪等）。平文を DB・ログ・ペイロードに書かない（ADR-0021・ADR-0052 の D8、手順は `environment.md` §8.3） |
+| — | `keys.reencrypt` | 手動（運用者の CLI。鍵の新しい版を全プロセスに配り、暗号化の版を切り替えたあと。配達の窓が閉じた直後に始める [assumed]） | `{kind: 'letter' \| 'email', from_version}` | 版 `from_version` で暗号化した手紙の本文（AAD は同じ手紙の ID）か、`credentials` のメールアドレスと TOTP の秘密・`auth_tokens` の変更中の新しいメールアドレス・送る前のトークン・前のメールアドレスの暗号化した値（`kind: 'email'`。列ごとの版で選ぶ、ADR-0101 の D5・D6）を、1,000 件ずつのトランザクションで今の版に暗号化し直す。残った行から続けられる（冪等）。平文を DB・ログ・ペイロードに書かない（ADR-0021・ADR-0052 の D8、手順は `environment.md` §8.3） |
 
 **毎日のジョブのスケジュール（J9〜J11・J14。J9 は作るときだけ）**: 配達回の窓（01:00〜12:30 JST と 14:00〜21:30 JST。手紙の時間帯の終わりと手紙の通知の期限を含む、ADR-0035）
 を避けて置く [assumed]。例: 12:30 JST、23:00 JST など。
 
-**段階**: J10〜J12 は段階 3（F-16）で作る。J9 は OQ-088 の答えで `vacant_expired` への遷移を作るときだけ、その遷移と同じ変更で作る（ADR-0062 の D1・D2、ADR-0060 の D3、`roadmap.md` §6）。MVP で作るのは J0〜J8・J14・J15・J16・J17・`erasure.replay`・`keys.reencrypt`（J14 は M1 で確認が済まない登録（ADR-0087）と `rate_limit_buckets`・`auth_tokens`（ADR-0089 の D4・D6、ADR-0091 の D14）の対象だけを作り、ほかの対象は M6 で足す。J15 は M3、J16・J17 は M5、`keys.reencrypt` は M6、`roadmap.md` §4）。
+**段階**: J10〜J12 は段階 3（F-16）で作る。J9 は OQ-088 の答えで `vacant_expired` への遷移を作るときだけ、その遷移と同じ変更で作る（ADR-0062 の D1・D2、ADR-0060 の D3、`roadmap.md` §6）。MVP で作るのは J0〜J8・J14・J15・J16・J17・J18・`erasure.replay`・`keys.reencrypt`（J18 は M1。J14 は M1 で確認が済まない登録（ADR-0087）と `rate_limit_buckets`・`auth_tokens`（ADR-0101 の D4・D6、ADR-0091 の D14）の対象だけを作り、ほかの対象は M6 で足す。J15 は M3、J16・J17 は M5、`keys.reencrypt` は M6、`roadmap.md` §4）。
 J13 は段階 2（F-11）。
 
 **今の段階で設計しない処理**（理由を添える）:
@@ -500,7 +501,7 @@ J0 が判断し `singletonKey` で積む。
 0. 認証情報とセッションを消す（ADR-0091 の D8。1 つのトランザクションで次の順。外部キーを CASCADE にしないので、指す側から消す）
    1. その住民の通知の購読（`push_subscriptions`）の残りの行と、それを指す送った記録（`delivery_notifications`）を消す（退去の受付で消えていれば何もしない、ADR-0091 の D7）
    2. その住民のセッション（`sessions`）の行をすべて消す（受付で `invalidated_at` を付けた行・期限切れの行も含む）
-   3. その住民の確認と再設定のトークン（`auth_tokens`。使った行・期限を過ぎた行・変更中の新しいメールアドレスの行も含む、ADR-0089 の D6）をすべて消す
+   3. その住民の確認と再設定のトークン（`auth_tokens`。使った行・期限を過ぎた行・変更中の新しいメールアドレスの行も含む、ADR-0101 の D6）をすべて消す（送る前のトークンと前のアドレスの列 `mail_token_*`・`old_email_*` も行と一緒に消える、ADR-0101 の D7）
    4. その住民の認証情報（`credentials`。メールの暗号化した値・検索用の HMAC・パスワードのハッシュ・TOTP の秘密）の行を消す
 
    同じトランザクションで、消した `sessions`・`auth_tokens`・`credentials` の行を `erasure_log` に記録する（`table_name` は `sessions`・`auth_tokens`・`credentials`、`record_id` は行の ID。`credentials` は `resident_id`。`ON CONFLICT (table_name, record_id) DO NOTHING`、ADR-0096 の D2）
@@ -508,7 +509,7 @@ J0 が判断し `singletonKey` で積む。
 2. 掲示板投稿（掲載前）を `deleted` に変更・`body` を消去し、同じトランザクションで J8 を積む
 3. 掲示板投稿（掲載済み）を `deleted` に変更・`body` を消去し、同じトランザクションで J8 を積む
 4. 住所録（所有するもの）を削除する
-5. ブロック（blocker / blocked）を削除する。ロール（`staff_roles`、`resident_id` が本人。モデレーターだけ行がある）を削除する（ADR-0091 の D13・ADR-0089 の D5。`erasure_log` に記録しない）
+5. ブロック（blocker / blocked）を削除する。ロール（`staff_roles`、`resident_id` が本人。モデレーターだけ行がある）を削除する（ADR-0091 の D13・ADR-0101 の D5。`erasure_log` に記録しない）
 6. 通知を送った記録（`delivery_notifications`、`resident_id` が本人）の残りを削除する（ADR-0091・ADR-0076。購読と一緒に受付か 0 で消えていれば何もしない）
    興味（`resident_interests`）と推し量った興味（`inferred_interests`、段階 2）を削除する（ADR-0039 の D5・ADR-0045 の D5）。2・3 で消した投稿から作った記事（`newspaper_articles`）は J8 が消す
    新聞の誕生日の欄に載った行（`newspaper_birthday_entries`、`resident_id` が本人の行。組 1・2 を作る段階から）を消し、同じトランザクションで、行のあった版の紙面の J8 を積む（ADR-0074 の D9）
@@ -673,8 +674,8 @@ J0 も `state = 'pending'` の滞留分を拾い直す [assumed]。
 | `letters`（`state = 'delivered'`）と、その `letter_recipients`・`mailbox_items`（`kind = 'letter'`・`item_id` がその手紙の行） | `settled_at < now() - interval '30 days'`（送信済みに出す期間を過ぎた、ADR-0091 の D5 [assumed]）で、かつその手紙の `mailbox_items` に `deleted_at IS NULL` の行が 1 つもない（受取人全員が削除した。受取人の退去で行が消えたものを含む、ADR-0091 の D3）。3 つの表を同じトランザクションで消す。`reports` の行があれば消さない（D4）。`erasure_log` に記録しない（D6） |
 | `sessions`（期限切れ）と、それを指す `push_subscriptions`・`delivery_notifications` | `expires_at < now()`（ADR-0091 の保持期間 [assumed]）。外部キーを CASCADE にしないので、同じトランザクションで `delivery_notifications` → `push_subscriptions` → `sessions` の順に消す。`erasure_log` に記録しない（D6）。ログアウトしたセッションの行は API が消す（`security.md` §2.1） |
 | メールの確認が済まない登録（`auth_tokens`・`resident_interests`・`tenancies`・`addresses`・`credentials`・`residents`） | `credentials.email_verified_at IS NULL AND credentials.created_at < now() - interval '24 hours'`（ADR-0087 の D1・D4・ADR-0091 の D14 [assumed]。OQ-046 → 決定）。登録ごとに 1 つのトランザクションで、`auth_tokens` → `resident_interests` → `tenancies` → `addresses` → `credentials` → `residents` の順に消す（外部キーを CASCADE にしないので指す側から。`address_book_daily_counts` は `residents` の削除の CASCADE）。確認が済まない登録はログインできないので、ほかに指す行はない。`erasure_log` に記録しない。行が消えた住所は使われたことのない住所として候補に戻る（D6）。J14 は毎日 1 回なので、期限を過ぎた登録の住所は最長で登録から約 48 時間、入居と出る（D7）。同じ住所か同じメールアドレスの登録の要求は、J14 を待たずに同じ順で消す（D5、`api.md` §7 F-02） |
-| `rate_limit_buckets` | `window_start < now() - interval '1 day'`（ADR-0089 の D4・ADR-0091 の D14。いちばん長い窓が 1 日、ADR-0088）。`erasure_log` に記録しない |
-| `auth_tokens`（期限切れ） | `expires_at < now()`（ADR-0089 の D6・ADR-0091 の D14 [assumed]）。使った行も期限まで残す。`erasure_log` に記録しない |
+| `rate_limit_buckets` | `window_start < now() - interval '1 day'`（ADR-0101 の D4・ADR-0091 の D14。いちばん長い窓が 1 日、ADR-0088）。`erasure_log` に記録しない |
+| `auth_tokens`（期限切れ） | `expires_at < now()`（ADR-0101 の D6・ADR-0091 の D14 [assumed]）。使った行も期限まで残す。J18 が送れずに残った `mail_token_*`・`old_email_*` も行と一緒に消える（ADR-0101 の D7）。`erasure_log` に記録しない |
 | `moderation_queue` | `coalesce(processed_at, created_at) < now() - interval '1 year'`（1 年は ADR-0091、起点は ADR-0095 の D4 [assumed]）。持ち越した行は持ち越した時刻から、`processed_at` が NULL のまま残った行は入れた時刻から数える |
 | `moderation_actions` | `created_at < now() - interval '1 year'` |
 | `reports` | `closed_at < now() - interval '1 year'` |
@@ -781,6 +782,55 @@ J0 も `state = 'pending'` の滞留分を拾い直す [assumed]。
 
 ---
 
+### J18 — 確認と再設定のメール（`mail.send`）（M1 から）
+
+メールを送るのは worker だけ（`MAIL_ADAPTER` は worker の変数、`environment.md` §8.1）。web は送らず、このジョブを積むだけ（§1 の 1）。
+
+**きっかけ**: キュー。API が次の 5 つの要求を処理するのと同じトランザクションで、`auth_tokens` の行か列（ADR-0101 の D6・D7）と一緒に `jobs` に積む `[assumed]`。トランザクションが巻き戻れば、値もジョブも残らない（§1 の 2）。`singletonKey` は `'mail.send:<kind>:<auth_token_id>'`（§5）。
+
+| 契機（経路、`api.md` §7 F-02） | `kind` | 積むとき（積まないときも応答は同じ、ADR-0080 の D4・D6・D7） | 同じトランザクションで書く値 | 宛先の値 |
+|---|---|---|---|---|
+| 登録（`POST /api/v1/registrations`） | `email_verification` | 割り当てができて 201 を返すとき。400・409・429 では何も作らないので積まない | `auth_tokens` の行と `mail_token_*` | `credentials.email_encrypted` |
+| 確認のメールの送り直し（`POST /api/v1/email-verification-requests`） | `email_verification` | 確認が済まず、登録から 24 時間を過ぎていない登録があるときだけ（ADR-0087 の D2。新しい行の `expires_at` は登録の行と同じ時刻） | 同上 | `credentials.email_encrypted` |
+| パスワードの再設定の依頼（`POST /api/v1/password-reset-requests`） | `password_reset` | 確認が済んだ住民がいるときだけ（ADR-0080 の D7） | 同上 | `credentials.email_encrypted` |
+| メールアドレスの変更の要求（`PUT /api/v1/me/email`） | `email_change` | 新しいアドレスをほかの住民が使っていないときだけ（ADR-0090 の D7）。401・429 では積まない | 同上 | `auth_tokens.new_email_encrypted` |
+| メールアドレスの変更の確認（`POST /api/v1/email-verifications`、`purpose = 'email_change'` のトークン） | `email_change_notice` | トークンが通り、`credentials` を新しいアドレスに書き換えるとき（ADR-0090 の D7）。400 `token_invalid` では積まない | そのトークンの行の `used_at` と `old_email_*`（前のアドレス） | `auth_tokens.old_email_encrypted` |
+
+リンクのメール（`email_change_notice` 以外の 3 種類）では `kind` は `auth_tokens.purpose` と同じ。同じ住民・同じ `purpose` の前のまだ使っていない `auth_tokens` の行は、同じトランザクションで消す（`db.md` §2 の `auth_tokens`）。行と一緒に `mail_token_*` も消えるので、前の J18 は送らずに終わる（手順 1）。
+
+**入力**: `{kind, auth_token_id}`。ペイロードは、確認・再設定のトークンとメールアドレスの平文も暗号文も含めない（`security.md` T-03・§2.5。§1 の 3 の ID だけ）。
+種類を足すときは、その種類が引く行の ID だけをペイロードに足す（使用中のメールアドレスでの登録の知らせは YGO-052 で扱う）。
+
+**宛先と本文の組み立て**（worker のメモリの中だけで平文にする）:
+- 宛先: `email_verification`・`password_reset` は `auth_tokens.resident_id` の `credentials.email_encrypted` を、`email_change` は `auth_tokens.new_email_encrypted` を、`email_change_notice` は `auth_tokens.old_email_encrypted` を、`EMAIL_KEYRING` で復号する（AAD は `db.md` §2 の各列のとおり）。
+- トークン（リンクのメールだけ）: `auth_tokens.mail_token_encrypted` を `EMAIL_KEYRING` で復号する（AAD は `id` と用途 `auth_token_mail`、ADR-0101 の D7）。`auth_tokens.token_hash` の鍵（`RESET_TOKEN_SIGNING_KEY`）は web だけが持ち、worker はトークンを作りも確かめもしない（`environment.md` §8.1）。
+- 本文: リンクのメールは、`kind` ごとの決まった文面に、リンク（`PUBLIC_BASE_URL` の画面の URL の後ろに `#token=<トークン>`）と期限（`auth_tokens.expires_at` を JST で）を入れる `[assumed]`。トークンは URL のフラグメントに置き、サーバーのアクセスログと `Referer` に出さない。画面（C1）がフラグメントから読んで `POST /api/v1/email-verifications`・`POST /api/v1/password-resets` の本文で送る。`email_change_notice` は、メールアドレスが変わったことと変わった日時（`used_at` を JST で）だけの決まった文面で、リンクも新しいアドレスも載せない `[assumed]`。どの種類も、住所・ニックネーム・年齢・誕生日は載せない。
+- 宛先・トークン・本文を、ログ・例外のメッセージ・ジョブの出力に書かない（`security.md` §2.5）。
+
+**手順**:
+1. `auth_token_id` で `auth_tokens` を引く。送る値（リンクのメールは `mail_token_encrypted`、`email_change_notice` は `old_email_encrypted`）がなければ（送った・前のトークンとして消えた・確認が済まない登録や退去や期限で行が消えた）、何もせずに成功で終わる。
+2. リンクのメールで、`used_at IS NOT NULL`・`expires_at <= now()`・`purpose` が `kind` と違う、のどれかなら、送らずに `mail_token_*` を NULL にして終わる。`email_change_notice` は期限を見ない（確認が通ったあとの知らせのため）。
+3. 宛先と、リンクのメールならトークンを復号し、本文を組み、メールのアダプタで送る。
+4. 送れたら、送った値の 2 列（`mail_token_*` か `old_email_*`）を NULL にする（トークンと前のアドレスの暗号文を DB に残さない）。
+
+**冪等性**:
+- 同じ種類・同じ行の J18 は `singletonKey` で同時に 2 つ走らない。送ったあと 4 の前に落ちると、再試行でまれに 2 通届く。J12・J15 と同じく許容する `[assumed]`。リンクの 2 通は同じトークンなので、使えるのはどちらか 1 回だけ（ADR-0101 の D6）。
+- 送り直しは新しいトークンの行と新しい J18 になる。前のトークンは消えるので、前のメールのリンクは 400 `token_invalid` になる。
+
+**再試行と尽きたとき**:
+- 再試行は §5（5 回、指数の間隔、1 回 300 秒まで）。再設定の 30 分の中で尽きる `[assumed]`。
+- 尽きたら、ジョブは `failed` で終わり、`mail_failed`（`kind` と `auth_token_id` だけ）を 1 行ログに書く。残った `mail_token_*`・`old_email_*` は、J14 が `auth_tokens` の行を消すとき（期限切れのトークンか、確認が済まない登録の削除）に行と一緒に消える（ADR-0101 の D7）。
+- 住民の側は、応答（201・202・204）は変わらず、メールが届かない。リンクのメールは、確認の送り直しか再設定の依頼でやり直せる（流量の制限の中、`security.md` §3.5）。前のアドレスへの知らせはやり直さない `[assumed]`。
+
+**確認の期限との関係**:
+- 期限は `auth_tokens.expires_at` だけで決まり、J18 の遅れ・再試行・送り直しで延びない（確認は登録から 24 時間、ADR-0087 の D2。再設定は発行から 30 分、ADR-0080 の D2）。期限を過ぎたトークンには送らない（手順 2）。
+- 確認が済まないまま 24 時間を過ぎた登録を J14 か同じ住所・同じメールアドレスの登録の要求が消すと（ADR-0087 の D4・D5）、`auth_tokens` の行と一緒に `mail_token_*` も消え、残った J18 は送らずに終わる（手順 1）。
+- `email_change_notice` は、`email_change` のトークンの期限（発行から 24 時間）のあとの J14 が行を消すまでに送る。期限の直前に確認が通り、送れないまま J14 が行を消したときは送らずに終わる（ADR-0101 の D7）。
+
+**送り先**: `MAIL_ADAPTER` のアダプタ（ADR-0033）。開発とテストはモック（`mock`、既定）かローカルの SMTP（`smtp_local`、宛先はループバックだけ）。本番のメール送信サービスは、マスターの事前承認を得て選ぶまで作らない（OQ-049、持ち越し）。M1 はモックのまま。
+
+---
+
 ### `erasure.replay` — 消去の再生（ADR-0096）
 
 **きっかけ**: 手動。運用者が DB をバックアップから戻したあと、web を止めたまま（worker は動かす）運用者の CLI で積む。
@@ -828,6 +878,7 @@ worker が 2 台あっても実行は 1 回分になる。`singletonKey` と DB 
 | J15 `notify.delivery` | 5 | true | 1800 | `'notify.delivery:<run_id>:newspaper'`・`'notify.delivery:<run_id>:letter:<HHMM>'` |
 | J16 `newspaper.write` | 5 | true | 1800 | `'newspaper.write:<run_id>'` |
 | J17 `news.fetch` | 3 | true | 1800 | `'news.fetch:<run_id>'` |
+| J18 `mail.send` | 5 | true（`retryDelay` 30 秒から。間隔の合計は約 15 分で、再設定の 30 分の中で尽きる）| 300 | `'mail.send:<kind>:<auth_token_id>'` |
 | `erasure.replay` | 3 | true | 3600 | `'erasure.replay'`（運用者の CLI が積む。積んだ J7 と J14 は終わりを待たない、ADR-0096 の D4） |
 | `keys.reencrypt` | 5 | true | 3600 | —（`pg_try_advisory_lock` で 1 台だけが動く。1 回のジョブは 50 分で区切り、版 `from_version` の行が残っていれば、ロックを放してから次のジョブを `startAfter` 60 秒の遅れを付けて積んで終わる。ロックが取れなければ失敗にして再試行させる [assumed]。`environment.md` §8.3） |
 
@@ -851,6 +902,7 @@ worker が 2 台あっても実行は 1 回分になる。`singletonKey` と DB 
 | 公開の失敗 | 再試行。打ち切りまでに成功しなければ J6 で持ち越し。打ち切りのあとに動いた J5 は何もしない（手順 0） | 配達なし（次の便で届く） | pg-boss のジョブ履歴 |
 | 持ち越しの失敗（J6 の再試行が尽きた） | J0 がその回を `failed` にし、`alert=delivery_run_failed` を書く。中身は動かさない。後の回の公開は止めない（ADR-0094 の D5〜D7） | その回の手紙と新聞は郵便受けに出ない（準備済みの `mailbox_items` も、配達回が `done` でないので見せず、年齢の見せる条件にも数えない）。送った人には「投函済み」と見えたまま。後の便は通常どおり届く | `delivery_runs.status = 'failed'`・`finished_at` が NULL・pg-boss のジョブ履歴 |
 | worker が何便分も止まった | 再起動後、J0 が古い配達回から順に持ち越しを実行 | 複数便分が次の 1 便で届く（件数が多い） | 操作ログ |
+| 確認と再設定のメールを送れなかった（J18） | J18 が §5 の回数まで再試行する。トークンの期限（確認は登録から 24 時間、ADR-0087）を過ぎたら送らない。尽きたらジョブは `failed`、残った `mail_token_*`・`old_email_*` は `auth_tokens` の行と一緒に J14 が消す（§4 J18） | 応答（201・202・204）は変わらず、メールが届かない。確認の送り直しか再設定の依頼でやり直せる。確認の期限は延びない | `mail_failed` のログの行（`kind` と `auth_token_id` だけ）・pg-boss のジョブ履歴 |
 | 配達の通知の失敗 | J15 が期限（新聞は公開から・手紙は枠の時刻から 30 分）まで再試行。期限を過ぎたら送らない。404・410 の購読は消す | 通知が届かないことがある。郵便受けは通常どおり（配達回は `done` のまま） | `delivery_notifications.sent_at` が NULL の行・pg-boss のジョブ履歴 |
 | リストアした | web を止めたまま `erasure.replay` が、消去の控えの住民ごとに J7 をやり直し、`erasure_log` の 3 つの表の残りの行を消し、J14 を 1 回動かす。ジョブが終わってから web を戻す（ADR-0096 の D4）。戻した時点より後の住民の操作は戻らない（D6） | 再生のあいだは使えない。戻したあとは、戻した時点より後の操作（郵便受けの削除・ログアウトなど）がなかったことになる | 消去の控え（`erasure/`）・`erasure_log`・pg-boss のジョブ履歴・操作ログ |
 
@@ -871,6 +923,7 @@ NFR-027（可用性）・NFR-074（障害通知）に合わせる。
 | J16 で `written_by = 'template'` になった記事の割合（ADR-0039） | 1 配達回で 20% を超える（記事が 10 件より少ない回は数えない）[assumed] | 同上 |
 | 手紙の枠の J15 が枠の時刻から 10 分以上積まれない（ADR-0035） | — | 同上 |
 | J7 が 24 時間以内に完了しない | — | 同上 |
+| J18 の `mail_failed`（再試行が尽きた確認と再設定のメール） | 1 時間に 3 件以上 [assumed] | 同上 |
 | pg-boss のジョブが `failed` 状態に積み上がる | J1〜J6・J15 は 1 件でも。ほかのジョブは 24 時間で 10 件以上 [assumed] | 同上 |
 | 配達回が `failed` になった（`alert=delivery_run_failed`、ADR-0094 の D5） | 1 件でも | 同上 |
 | J0 の心拍（`heartbeat=delivery.tick`）がない | 15 分（3 回分）| 同上 |
@@ -904,6 +957,7 @@ worker が止まると J0 は書けないので、J0 の心拍がないことは
 | 記事の打ち切りのあとの J16 | 記事の打ち切りのあと（J3 が `template` の行を入れて組んだあと）に、動き続けていた J16 がモックの LLM の出力を書こうとしても `newspaper_articles` の行が増えず変わらないこと。そのあとの J3 の再試行と J8 の組み直しで、それぞれの版の HTML がバイト単位で同じになること（ADR-0055 の D8、`roadmap.md` A-05） |
 | 版の決定性と新聞の部分一意索引 | J4 を 2 回動かしても、住民に届く版が同じで、新聞が 1 つだけであること。2 回のあいだに興味を変えても新聞が 2 つにならないこと（`roadmap.md` A-17 (2)） |
 | LLM に渡すもの | モックの文章アダプタが受け取る入力に、手紙の本文・住所・ID・ニックネーム・住民ごとの興味の目印の文字列が入らないこと（`roadmap.md` A-17 (3)） |
+| 確認と再設定のメール（J18） | 登録・送り直し・再設定の依頼・メールアドレスの変更の要求が、同じトランザクションで `auth_tokens` の行（`mail_token_*` を含む）と J18 を 1 つずつ作り、要求が巻き戻ればどれも残らないこと。メールアドレスの変更の確認が、同じトランザクションで `credentials` の書き換え・`old_email_*`・J18（`email_change_notice`）を作り、モックが前のアドレス（`example.com` の偽のアドレス）にリンクのない知らせを 1 通受けること。`jobs` のペイロードと、ログ・例外の出力に、トークンとメールアドレス（テストの値は `example.com` の偽のアドレス）の文字列が出ないこと。モックのメールのアダプタが受けたリンクのトークンで `POST /api/v1/email-verifications` が 204 になること。送ったあと `mail_token_*`・`old_email_*` が NULL になること。J18 を 2 回動かしてもモックが受けるメールが増えないこと。期限を過ぎた・使った・送り直しで消えたトークンの J18 は送らないこと。モックが失敗し続けると再試行が尽きて `mail_failed` を 1 行書き、確認の期限が変わらないこと（ADR-0087） |
 | 投稿の記事は見出しだけ（ADR-0054） | 投稿の素材の `newspaper_articles` の行は `body` が NULL であること（LLM の行も `template` の行も）。モックの文章アダプタが投稿の素材に見出しと一緒に目印の文字列を入れたまとめを返しても、その文字列が DB と紙面の HTML のどこにも出ないこと（`roadmap.md` A-17 (6)） |
 
 ---
@@ -917,6 +971,7 @@ worker が止まると J0 は書けないので、J0 の心拍がないことは
 | 外部の LLM サービス | OQ-008（決定）・OQ-047 | 秘書の暫定の選定で Anthropic API の `claude-haiku-5-5`（ADR-0086）。J2 から 1 件ずつ同期で呼び、一括処理（バッチ）の API は使わない（審査の打ち切りまでに終わる保証がない）。本番のアダプタは承認のあとに作り、テストではモックを使う（ADR-0005・NFR-065）。確定と費用の上限は OQ-047（持ち越し）。J16 の新聞の LLM はこれとは別に OQ-062 で決め、費用の上限は OQ-047 と一緒に聞く（ADR-0039） |
 | 手紙の照合の細部（J7・J14） | OQ-052（決定）・OQ-065・OQ-053 | 手紙は投函のときに API が照合し、worker は照合しない（OQ-052 → 決定、ADR-0069）。J7 は退去した住民の `held`・`blocked` を消し、J14 は `blocked` を 30 日で消す [assumed]。長く確かめられない `held` の扱いは OQ-065（持ち越し、M4 の前に決める）で、それまで J14 は `held` を消さない。年齢で止める項目は変えない（OQ-063 → 決定、2026-11-20、ADR-0057。worker のジョブも年齢で処理を分けない）。違法な物の取引の守りは OQ-053（持ち越し、別のチケット） |
 | 通知の手段（J12） | OQ-039（決定）・OQ-049 | アウトボックス形式で保留（J12 は段階 3）。テスト環境はモックかローカルの SMTP（ADR-0033）。本番のメール送信サービスはマスターの事前承認を得て選び、進め方と費用の上限は OQ-049（持ち越し） |
+| 確認と再設定のメールの送信（J18） | OQ-049・ADR-0033 | M1 はモックのアダプタ。テストはモックかローカルの SMTP（ループバックだけ）。本番のメール送信サービスはマスターの事前承認を得て選び、進め方と費用の上限は OQ-049（持ち越し） |
 | アラートの知らせる先（§7） | OQ-085 | 持ち越し。J0 が `alert=` の行をログに書くまでを作り、知らせる先はデプロイの準備のときにマスターに聞く（`environment.md` §6.6、ADR-0052） |
 | 知り合いの組（J4・J3） | OQ-051（決定）・OQ-058（決定）・OQ-070 | 新聞の中身は決定（2026-11-20、ADR-0039）。組 1・2 の決め方と中身も決定（2026-11-20、ADR-0074。§4 J3・J4）。誕生日の欄も決定（OQ-077、2026-11-21、ADR-0074 の D9。組 1・2 と一緒に作る）。MVP では全住民を知り合い 0 の組として扱う（版は `common` と `interest:<key>` だけ）。組 1・2 と誕生日の欄を作る時期・負荷の見積もり・知り合いの側の同意（投稿や誕生日の欄に載ることを断れるか）は OQ-070（持ち越し） |
 | 検索からの興味（J4・J7・J14） | OQ-059（決定）・OQ-072（決定） | OQ-059 → 決定（2026-11-20、ADR-0045）。段階 2 の過去の新聞の検索で、API が当たった興味の ID だけを `inferred_interests` に書く（照合はジョブにしないので、検索語はジョブのペイロードに入らない）。J4 は選んだ興味と合わせて版を選び、J14 は 30 日、J7 は退去で消す。住民が止められるかは OQ-072 → 決定（2026-11-21、ADR-0053）: 止められない。J4・J7・J14 は変わらない（止めた住民を飛ばす分岐は作らない） |
@@ -960,6 +1015,7 @@ worker が止まると J0 は書けないので、J0 の心拍がないことは
 | FR-079 | §4 J2（LLM の役割、ADR-0005）|
 | FR-080 | §4 J2（配達前に完了）|
 | FR-081 | §4 J2（人の審査はモデレーター、ADR-0020）|
+| FR-092 | §4 J18（確認・送り直し・再設定・メールアドレスの変更のリンクのメールと、前のアドレスへの変更の知らせ、ADR-0080・ADR-0087・ADR-0090・ADR-0101）|
 | FR-093 | §4 J7（退去処理、ADR-0091）|
 | FR-094 | 足すジョブはない。年齢を確かめるジョブも、年齢で登録・機能・配達を変えるジョブも置かない（ADR-0027 の D1・D2・ADR-0041 の D2・ADR-0057）|
 | FR-097 | §4 J14（保持期間による削除）|
