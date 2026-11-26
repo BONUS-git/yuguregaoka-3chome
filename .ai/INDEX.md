@@ -251,3 +251,4 @@
 - `.ai/tickets/YGO-061-m1-test-plan.md`
 - `.ai/tickets/YGO-062-m1-test-harness.md`
 - `.ai/tickets/YGO-063-k-018-first-lockfile-procedure.md`
+- `.ai/tickets/YGO-064-triage-9-no-open-k.md`
