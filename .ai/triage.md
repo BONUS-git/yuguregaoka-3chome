@@ -1,5 +1,12 @@
 # 仕分け
 
+## 仕分け 10（build・M1・2026-11-27）
+| ID | 仕分け | 理由 | 出どころ |
+|---|---|---|---|
+| K-019 | 今決める | CI で依存をどこで取り込むかが文書どうしで食い違う。CLAUDE.md では決まった形の CI（`check.yml`）は `sh scripts/check.sh` だけを動かすが、`environment.md` §5 は `sh scripts/prepare.sh`（`npm ci`）→ `sh scripts/check.sh` の順とし、§4.1 の 6 は `node_modules/` がなければ失敗する。このままでは `package.json` を入れたあと CI に `node_modules/` がなく `check.sh` が失敗し、M1 のすべてのテストの土台（YGO-062）にかかわる（根幹）。候補は 2 つ: (2) M1 のテストを依存なし（Node.js の組み込みのテストと JUnit の出力）にする、(3) マスターに CI へ `prepare.sh` の段を足してもらう（YGO-062 の「残り」の 18 にある「マスターに伝える」と同じ扱い。足すのはマスター）。`check.sh` が `node_modules/` のないときに `prepare.sh`（`npm ci`）を呼ぶ案は、`check.sh` がネットワークを使うことになり、CLAUDE.md（`sh scripts/check.sh` はネットワークなしで通ること）・`environment.md` §5（CI でネットワークを使うのは `prepare.sh` の段だけ）・NFR-063 に反するので選べず、候補から外す。決めたら ADR を書き、`environment.md` §4.1・§5 と YGO-062 を同じ変更でそろえる | YGO-062・`environment.md` §4.1・§5・CLAUDE.md（作り方の節） |
+| G-078 | 暫定 | 道具の主版はどちらも決まっている。Node.js は 26 `[assumed]`（`environment.md` §3.1、YGO-062 の `engines.node`）、PostgreSQL は 18 `[assumed]`（YGO-065 の依存の節。`environment.md` §3.1 の PostgreSQL の行には YGO-065 で書く）。残る論点は、Node.js と npm の主版と PostgreSQL の道具（`initdb`・`pg_ctl`・`psql` の主版 18）の一覧を `environment.md` §3.1・§5 の 1 か所にまとめ、秘書が 1 回でマスターに伝えられるようにすることだけ。主版を新たに決めるものではない文書のまとめで、あとで変えても安いので暫定にする `[assumed]`。道具はマスターが入れる（OQ-086 → 決定）ので新しい OQ は立てない | YGO-062・YGO-065 の依存の節・`environment.md` §3.1・§5・OQ-086 |
+| G-077 | 暫定 | 準備書 `.ai/deploy/readiness.md` がなく、チケットもない。M1 の達成の事実の 1 つ（準備書の「確かめた M」が M1）を満たせない。Node.js がなくても書ける文書で、あとで変えても安い。デプロイしない前提の準備書として作り、`INDEX.md` に載せる `[assumed]` | `.ai/status.md` の達成の事実 |
+
 ## 仕分け 9（build・M1・2026-11-26）
 | ID | 仕分け | 理由 | 出どころ |
 |---|---|---|---|
