@@ -252,3 +252,4 @@
 - `.ai/tickets/YGO-062-m1-test-harness.md`
 - `.ai/tickets/YGO-063-k-018-first-lockfile-procedure.md`
 - `.ai/tickets/YGO-064-triage-9-no-open-k.md`
+- `.ai/tickets/YGO-065-m1-resident-address-schema.md`
