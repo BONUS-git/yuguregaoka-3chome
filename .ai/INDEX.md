@@ -241,3 +241,4 @@
 - `.ai/tickets/YGO-057-g-065-unverified-hold-24h-confirmed.md`
 - `.ai/tickets/YGO-058-g-068-requirements-adr-aligned-confirmed.md`
 - `.ai/tickets/YGO-059-index-complete-no-broken-links.md`
+- `.ai/tickets/YGO-060-diagrams-fr-adr-m-lines.md`

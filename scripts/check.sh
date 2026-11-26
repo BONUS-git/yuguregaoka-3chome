@@ -48,6 +48,33 @@ if [ -e "$seq" ]; then
     done
 fi
 
+# M1 の図のそれぞれに「- FR:」「- ADR:」「- 確かめた M: M1」の行と mermaid のブロックがあり、
+# ADR の行はどれも状態が「採用」の ADR を指し、FR の行は roadmap.md の「- M1: FR-…」の行にあること
+# （YGO-060、条件 4）。
+m1_fr=$(grep -E '^- M1: FR-' .ai/roadmap.md | grep -oE 'FR-[0-9]{3}' || true)
+[ -n "$m1_fr" ] || { echo "roadmap.md に M1 の FR の行（- M1: FR-…）がない" >&2; exit 1; }
+for f in .ai/diagrams/m1-*.md; do
+    [ -e "$f" ] || continue
+    grep -qE '^- FR: FR-[0-9]{3}' "$f" || { echo "$f に「- FR: FR-NNN, …」の行がない" >&2; exit 1; }
+    grep -qE '^- ADR: [0-9]{4}' "$f" || { echo "$f に「- ADR: NNNN, …」の行がない" >&2; exit 1; }
+    grep -qxF -- '- 確かめた M: M1' "$f" || { echo "$f に「- 確かめた M: M1」の行がない" >&2; exit 1; }
+    grep -qxF -- '```mermaid' "$f" || { echo "$f に mermaid のブロックがない" >&2; exit 1; }
+    for n in $(grep -E '^- ADR: ' "$f" | grep -oE '[0-9]{4}' | sort -u); do
+        af=$(ls .ai/adr/"$n"-*.md 2>/dev/null | head -n 1 || true)
+        [ -n "$af" ] || { echo "$f が指す ADR-$n のファイルが .ai/adr/ にない" >&2; exit 1; }
+        grep -qxF -- '- 状態: 採用' "$af" || {
+            echo "$f が採用でない ADR-$n を指している（$af の状態の行を見て今の ADR に直す）" >&2
+            exit 1
+        }
+    done
+    for id in $(grep -E '^- FR: ' "$f" | grep -oE 'FR-[0-9]{3}' | sort -u); do
+        printf '%s\n' "$m1_fr" | grep -qxF -- "$id" || {
+            echo "$f の $id が roadmap.md §4 の M1 の FR にない" >&2
+            exit 1
+        }
+    done
+done
+
 # 確かめ済みの mvp.md に古い参照が残っていないこと（YGO-053、reviews/0003 の R-062、gaps.md G-050）。
 # mvp.md が指す ADR は、どれも状態が「採用」であること。
 mvp=.ai/mvp.md
