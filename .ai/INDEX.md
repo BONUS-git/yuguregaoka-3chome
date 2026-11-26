@@ -242,3 +242,4 @@
 - `.ai/tickets/YGO-058-g-068-requirements-adr-aligned-confirmed.md`
 - `.ai/tickets/YGO-059-index-complete-no-broken-links.md`
 - `.ai/tickets/YGO-060-diagrams-fr-adr-m-lines.md`
+- `.ai/tickets/YGO-061-m1-test-plan.md`
