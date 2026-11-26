@@ -236,3 +236,4 @@
 - `.ai/tickets/YGO-052-r-061-registered-email-response.md`
 - `.ai/tickets/YGO-053-r-062-mvp-stale-adr-refs.md`
 - `.ai/tickets/YGO-054-g-048-fr-094-mapping-confirmed.md`
+- `.ai/tickets/YGO-055-g-049-mail-job-confirmed.md`
