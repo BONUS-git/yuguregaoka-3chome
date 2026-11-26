@@ -43,7 +43,7 @@
 
 | 道具 | 版の決め方 | 理由 |
 |------|-----------|------|
-| Node.js | 最新の LTS の主版を 1 つに決め、`package.json` の `engines` に書く（M0）| ADR-0009。CI とジョブの環境にはマスターが入れる（OQ-086 → 決定）。秘書は `engines.node` の主版をマスターに伝える |
+| Node.js | 主版 26（2026-11 の Active LTS）`[assumed]`。`package.json` の `engines.node` に `26.x` と書く（YGO-062）| ADR-0009。CI とジョブの環境にはマスターが入れる（OQ-086 → 決定）。秘書は `engines.node` の主版をマスターに伝える |
 | npm | Node.js に付くもの。依存はロックファイルで固定する | 依存を変えるときは `scripts/prepare.sh` とマニフェスト・ロックファイルを同じ変更で直す。最初のロックファイルは、依存を足す変更の中で `npm install --package-lock-only --ignore-scripts` で作り、`package.json` と同じ変更に入れる（ADR-0103 の D1。作れなければ D2） |
 | PostgreSQL | サーバーの主版を 1 つに決めて（M0）、本番のマネージドサービスでも同じ主版を選ぶ [assumed] | ADR-0010。手元の OS に入れたもの（`initdb`・`pg_ctl`・`psql` がパスにある）を使う。CI とジョブの環境にはマスターが入れる（OQ-086 → 決定） |
 
