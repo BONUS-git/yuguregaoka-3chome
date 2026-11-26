@@ -5,6 +5,7 @@
 | `INDEX.md` | 地図（知りたいこと → 図 → 文書の節）と、`.ai/` のすべてのファイルの一覧。最初に読む |
 | `diagrams/<題>.md` | 図（Mermaid。1 図 1 ファイル。各図に対応する FR・ADR と確かめた M） |
 | `tests/test-plan.md` | テスト項目書（今の M の FR ごとの TC。テストの名前に TC-NNN を入れる） |
+| `deploy/readiness.md` | デプロイの準備書（デプロイしない前提。サーバー側の項目の状態と、計画の正本 `environment.md` の節・持ち越しの OQ の対応。確かめた M） |
 | `brief.md` | マスターの構想の原文（変えない） |
 | `requirements.md` | プロダクト要求仕様書（機能要件・非機能要件。各要求に [explicit]（構想にある）・[inferred]・[assumed] の区別） |
 | `features.md` | 機能一覧と優先順位（最初に動かす最小の範囲と、その後） |

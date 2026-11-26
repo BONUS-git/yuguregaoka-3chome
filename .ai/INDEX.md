@@ -32,6 +32,7 @@
 | 持ち越し・仕分け | — | `.ai/gaps.md`（冒頭: 今の M の行を 1 行 1 チケットで閉じる決まり）、`.ai/triage.md` |
 | 進み具合・振り返り | — | `.ai/status.md`、`.ai/retros.md` |
 | 環境・秘密・費用 | — | `.ai/environment.md` §3・§4・§8（最初のロックファイルとネットワークの例外は §3.1・§3.2 の 1・§5、ADR-0103。CI の順（`prepare.sh` → `check.sh`）と段を足す人は §4.1 の 6・§5、ADR-0104。`check.sh` の流れと JUnit XML の出力先は §4.1）、`.ai/roadmap.md` §9・§4 A-07（M0 の環境の約束の受け入れ条件） |
+| デプロイの準備（デプロイしない前提） | — | `.ai/deploy/readiness.md`、`.ai/environment.md` §5〜§10、`.ai/roadmap.md` §9 |
 
 ## 図（`.ai/diagrams/`）
 
@@ -46,6 +47,10 @@
 ## テスト（`.ai/tests/`）
 
 - `.ai/tests/test-plan.md` — M1 の FR ごとのテスト項目書（TC-001〜TC-065。テストの名前に TC-NNN を入れる）
+
+## デプロイの準備書（`.ai/deploy/`）
+
+- `.ai/deploy/readiness.md` — デプロイしない前提（L0）の準備書（確かめた M: M1。サーバー側の項目の状態と `environment.md` §5〜§9 の節・持ち越しの OQ の対応）
 
 ## 文書（`.ai/` の直下）
 
