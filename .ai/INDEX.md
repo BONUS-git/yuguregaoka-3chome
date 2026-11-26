@@ -21,9 +21,10 @@
 | 要回答で止まる M・FR があるか | — | `.ai/roadmap.md` §8、ADR-0099 の D6、`.ai/open-questions.md` §2（一覧） |
 | M1 の受け入れ条件 | — | `.ai/roadmap.md` §4 の受け入れ条件（A-01〜A-18） |
 | 要求の原文と区分 | — | `.ai/brief.md`、`.ai/brief-map.md`、`.ai/requirements.md` §3・§4 |
-| ジョブ・定時の処理 | — | `.ai/async.md` §2・§3（配達回の状態と J0、ADR-0094）・§4（審査キューの一意と持ち越し、ADR-0095）・§4（M1 で使うのは J14 の確認が済まない登録と数えの行の削除と、J18 の確認と再設定のメール、ADR-0087・0101） |
-| 確認と再設定のメールを web から worker に渡す（J18） | `.ai/diagrams/m1-registration-sequence.md`・`.ai/diagrams/m1-components.md` | `.ai/async.md` §2 の J18 の行・§4 J18・§5・§6、`.ai/db.md` §2 の `auth_tokens`（送る前のトークンと前のアドレスの列）、`.ai/api.md` §2.4・§7 F-02、`.ai/environment.md` §8.1、ADR-0033・0087・0090 の D7・0101 |
-| 認証の表（セッション・ロール・確認と再設定のトークン・TOTP の秘密）・流量の制限の値・確認が済まない登録の期限 | `.ai/diagrams/m1-er.md`・`.ai/diagrams/m1-address-account-states.md` | `.ai/db.md` §2 の `credentials`・`sessions`・`auth_tokens`・`staff_roles`・`rate_limit_buckets`、`.ai/security.md` §2.1・§3.1・§3.4（確かめる順番）・§3.5 の規則の表、`.ai/api.md` §5 の 429・§7 F-06、ADR-0087・0088・0090・0101 |
+| ジョブ・定時の処理 | — | `.ai/async.md` §2・§3（配達回の状態と J0、ADR-0094）・§4（審査キューの一意と持ち越し、ADR-0095）・§4（M1 で使うのは J14 の確認が済まない登録と数えの行の削除と、J18 の確認と再設定のメール、ADR-0087・0102） |
+| 確認と再設定のメールを web から worker に渡す（J18） | `.ai/diagrams/m1-registration-sequence.md`・`.ai/diagrams/m1-components.md` | `.ai/async.md` §2 の J18 の行・§4 J18・§5・§6、`.ai/db.md` §2 の `auth_tokens`（送る前のトークンと前のアドレスの列）、`.ai/api.md` §2.4・§7 F-02、`.ai/environment.md` §8.1、ADR-0033・0087・0090 の D7・0102 の D7 |
+| 使用中のメールアドレスで登録したときの応答と知らせ | `.ai/diagrams/m1-registration-sequence.md`（使用中のメールアドレスの分岐） | `.ai/api.md` §7 F-02 の `POST /api/v1/registrations`・認証の経路、`.ai/async.md` §4 J18（`registration_attempt_notice`）、`.ai/security.md` §3.1、ADR-0080 の D4・0087 の D5・0102 の D8 |
+| 認証の表（セッション・ロール・確認と再設定のトークン・TOTP の秘密）・流量の制限の値・確認が済まない登録の期限 | `.ai/diagrams/m1-er.md`・`.ai/diagrams/m1-address-account-states.md` | `.ai/db.md` §2 の `credentials`・`sessions`・`auth_tokens`・`staff_roles`・`rate_limit_buckets`、`.ai/security.md` §2.1・§3.1・§3.4（確かめる順番）・§3.5 の規則の表、`.ai/api.md` §5 の 429・§7 F-06、ADR-0087・0088・0090・0102 |
 | 退去と保持期間で消すもの（J7・J14 の正本の表） | — | ADR-0091 の退去の表と保持期間の表、`.ai/security.md` §2.4、`.ai/async.md` J7・J14、`.ai/db.md` §4 |
 | リストアのあとの消し直し（消去の控えと `erasure.replay`） | — | ADR-0096、`.ai/async.md` §4 `erasure.replay`、`.ai/db.md` §2 の `erasure_log`・§6、`.ai/environment.md` §6.5、`.ai/gaps.md` G-055 |
 | マスターに聞くこと・決まったこと | — | `.ai/open-questions.md` §2（一覧）・§3（要回答） |
@@ -171,6 +172,7 @@
 - `.ai/adr/0099-stages-m0-m6-gates-no-blocking-oqs.md`
 - `.ai/adr/0100-modular-monolith-process-placement.md`
 - `.ai/adr/0101-auth-tables-and-pending-mail-values.md`
+- `.ai/adr/0102-auth-tables-mail-and-registered-email.md`
 
 ## レビュー（`.ai/reviews/`）
 
