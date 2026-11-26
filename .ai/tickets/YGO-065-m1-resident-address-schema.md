@@ -14,11 +14,11 @@ M1 の FR を実装する最初の 1 単位として、`.ai/db.md` §2「住民�
 ## 依存
 - YGO-062（M1 のテストの土台）が `状態: done` であること。`package.json`・`package-lock.json`・Vitest の段が `check.sh` で動くことを前提にする。
   YGO-062 が `open` のあいだは、このチケットを始めない（`package.json` がないと Vitest の段が飛び、TC-005 のテストが動いたことを確かめられない）。
-- PostgreSQL のサーバーの主版は **18** `[assumed]`（このチケットで決める。`.ai/environment.md` §3.1 の「主版を 1 つに決めて（M0）」の 1 つ。本番のマネージドサービスでも同じ主版を選ぶ、ADR-0010）。
+- PostgreSQL のサーバーの主版は **18** `[assumed]`（`.ai/environment.md` §5.1 の一覧の `initdb`・`pg_ctl`・`psql` の行と §3.1 の PostgreSQL の行にある。本番のマネージドサービスでも同じ主版を選ぶ、ADR-0010）。
   OQ-086 → 決定と `roadmap.md` §4 の M0 の依存の順（主版を決める → 秘書がマスターに伝える → 道具があることを確かめる → DB のテストを足す）に従い、次の 2 つがそろうまで、このチケットを始めない:
   1. 秘書が、主版 18 をマスターに伝えている。
-  2. CI の実行の環境と秘書のジョブの環境で、`initdb --version`・`pg_ctl --version`・`psql --version` が主版 18 を返す（道具はマスターが入れる。OQ-086 → 決定、`.ai/environment.md` §4.1 の 4・§5）。
-  主版を 18 から変えるときは、このチケットを始める前に、この節と範囲の主版を直し、秘書が改めて伝える。
+  2. CI の実行の環境と秘書のジョブの環境で、`initdb --version`・`pg_ctl --version`・`psql --version` が主版 18 を返す（道具はマスターが入れる。OQ-086 → 決定、`.ai/environment.md` §4.1 の 4・§5.1）。
+  主版を 18 から変えるときは、このチケットを始める前に、`.ai/environment.md` §3.1・§5.1 の主版を直し、秘書が改めて伝える。
 
 ## 範囲
 対象の FR と TC:
@@ -37,7 +37,7 @@ M1 の FR を実装する最初の 1 単位として、`.ai/db.md` §2「住民�
   - `initdb`・`pg_ctl`・`psql` がなければ、理由を出して失敗する（飛ばさない）。
   - マイグレーションを当てたひな型の DB `yuguregaoka_template` を作り、テストのファイルごとに `CREATE DATABASE ... TEMPLATE yuguregaoka_template` で DB を作る `[assumed]`。
   - 接続は `.ai/environment.md` §4.2 のとおり `DATABASE_URL` を使う。`check.sh` がテストに渡すのは、ソケットのディレクトリとひな型の DB の名前だけ。テストの準備のコード（`test/setup.ts` など）が、それを使ってファイルごとの DB を作り、その DB を指す `DATABASE_URL` を組み立てる。`.env*` のファイルは使わない（§4.2）。
-  - 依存の節で決めて伝えた主版（18）を `.ai/environment.md` §3.1 の表の PostgreSQL の行に書く。`check.sh` は `initdb --version` の主版がそれと合うかを確かめ、合わなければ要る主版を出して失敗する。
+  - `check.sh` は `initdb --version` の主版が `.ai/environment.md` §3.1 の PostgreSQL の行の主版（§5.1 の一覧と同じ 18）と合うかを確かめ、合わなければ要る主版を出して失敗する。
 - **DB のドライバ**: `pg` を `dependencies`、`@types/pg` を `devDependencies` に固定の版で足し、ロックファイルを直す `[assumed]`。
   - ADR-0103 の D1 のネットワークの例外は「最初のロックファイル」だけで、依存を足す変更の根拠にならない。そのため ADR-0105 を作り、「依存を足す・変える変更ごとに、その変更の中でロックファイルを直す」として D1〜D3 を丸ごと書き直し、ADR-0103 の状態を `置き換え（→ 0105）` にする。
   - 今の状態を書く文書（`.ai/environment.md` など）と `scripts/` に残る `ADR-0103` の参照を、同じ変更で `ADR-0105` に直す。
@@ -48,7 +48,7 @@ M1 の FR を実装する最初の 1 単位として、`.ai/db.md` §2「住民�
   - 値は偽の値（住所は `夕暮ヶ丘三丁目 2-5` など、メールは `test@example.invalid`。`.ai/environment.md` §4.2）。
 - **文書をそろえる**（同じ変更で今の状態に書き直す）:
   - `.ai/environment.md` §4.1: 4・5 をこのチケットで作ったものとして書き、3（型の検査と lint）だけを M0 の別のチケットで足すものとして残す。「この順に足す」の文言は消す。
-  - `.ai/environment.md` §3.1: PostgreSQL の行に主版（18 `[assumed]`）と、`check.sh` が `initdb --version` で確かめることを書く。
+  - `.ai/environment.md` §3.1: PostgreSQL の行に、`check.sh` が `initdb --version` の主版を確かめることを書く（主版 18 `[assumed]` は §3.1・§5.1 にある）。
   - `.ai/db.md` §2 の「DDL は書かない」を、DDL の正本は `migrations/` とする記述に直す。
   - `.ai/INDEX.md`: ADR-0105 の行を足し、ADR-0103 の行の末尾を状態に合わせる。
 
@@ -76,5 +76,5 @@ M1 の FR を実装する最初の 1 単位として、`.ai/db.md` §2「住民�
 12. ADR-0105 があり 3 行目が `- 状態: 採用`、ADR-0103 の 3 行目が `- 状態: 置き換え（→ 0105）`。`.ai/INDEX.md` の両方の ADR の行の末尾が状態と同じ。
 13. `.ai/environment.md` §4.1 の 4・5 が作ったものとして書かれ、3 だけが M0 の別のチケットで足すものとして残っていて、「この順に」の文言がない。`.ai/db.md` §2 に「DDL は書かない」が残っていない。
 14. `.ai/`（チケットを除く）と `scripts/` に、今の決定として `ADR-0103` を指す記述が残っていない（ADR-0105 と ADR-0103 の本文、経緯を書く `retros.md`・`triage.md` を除く）。
-15. `.ai/environment.md` §3.1 の PostgreSQL の行に、このチケットの依存の節と同じ主版（`[assumed]` 付き）が書かれ、`scripts/check.sh` に `initdb --version` の主版をそれと比べ、合わなければ終了コード 0 以外で終わる段がある。
+15. `scripts/check.sh` に、`initdb --version` の主版を `.ai/environment.md` §3.1 の PostgreSQL の行の主版（§5.1 の一覧と同じ 18）と比べ、合わなければ終了コード 0 以外で終わる段がある。
 16. テストの準備のコード（`test/setup.ts` など）がファイルごとの DB を指す `DATABASE_URL` を組み立て、`scripts/check.sh` が渡す環境変数はソケットのディレクトリとひな型の DB の名前だけ。
