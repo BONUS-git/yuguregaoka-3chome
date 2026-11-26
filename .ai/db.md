@@ -4,7 +4,7 @@
 - 日付: 2026-11-19
 - 根拠: `.ai/brief.md`・`.ai/requirements.md`・`.ai/features.md`・`.ai/architecture.md`
 - チケット: YGO-004
-- 関連 ADR: 0001〜0012, 0039, 0069, 0070, 0072, 0076, 0078, 0080, 0085, 0087, 0088, 0089, 0090
+- 関連 ADR: 0001〜0012, 0039, 0069, 0070, 0072, 0076, 0078, 0080, 0085, 0087, 0088, 0090, 0101
 
 ---
 
@@ -81,7 +81,7 @@ DDL は書かない。主なカラムと一意制約のみを示す。
 | `email_hmac_key_version` int NOT NULL | `email_hmac` を計算した HMAC の鍵の版。HMAC の鍵の入れ替え（`environment.md` §8.3）で、どの行を作り直し済みかを示す |
 | `password_hash` text NOT NULL | Argon2id のハッシュ（パラメータを含む文字列、`security.md` §3.2） |
 | `email_verified_at` timestamptz NULL | メールアドレスを確かめた日時。NULL = まだ。NULL のまま `created_at` から 24 時間を過ぎた登録は J14 が行ごと消す（ADR-0087） |
-| `totp_secret_encrypted` bytea NULL | モデレーターの二要素認証（TOTP）の秘密（ADR-0089 の D3・ADR-0090 の D6）。AES-256-GCM で、鍵はメールアドレスと同じ鍵輪（`EMAIL_KEYRING`）、AAD は `resident_id` と用途 `totp` を合わせたもの。平文は持たない。モデレーターでない住民は NULL |
+| `totp_secret_encrypted` bytea NULL | モデレーターの二要素認証（TOTP）の秘密（ADR-0101 の D3・ADR-0090 の D6）。AES-256-GCM で、鍵はメールアドレスと同じ鍵輪（`EMAIL_KEYRING`）、AAD は `resident_id` と用途 `totp` を合わせたもの。平文は持たない。モデレーターでない住民は NULL |
 | `totp_key_version` int NULL | `totp_secret_encrypted` を暗号化した鍵の版。`keys.reencrypt`（`kind: 'email'`）が版 `from_version` の行を選ぶ（`environment.md` §8.3） |
 | `totp_enabled_at` timestamptz NULL | 二要素認証を有効にした日時（`POST /api/v1/me/second-factor/confirmation`）。秘密があって NULL なら、登録したがまだ有効にしていない |
 | `totp_last_step` bigint NULL | 最後に通したコードの時間の刻み。同じ刻みか前の刻みのコードは通さない `[assumed]`（使い回しを拒む） |
@@ -89,12 +89,12 @@ DDL は書かない。主なカラムと一意制約のみを示す。
 | `updated_at` timestamptz | — |
 
 - 一意: UNIQUE(`email_hmac_key_version`, `email_hmac`)。
-- CHECK: `totp_secret_encrypted` と `totp_key_version` は、どちらも NULL か、どちらも値がある。`totp_enabled_at` は秘密があるときだけ値を持てる（ADR-0089 の D3）。二要素認証の作り直しと解除（運用者の CLI）は TOTP の 4 列を NULL にする。HMAC の鍵の入れ替えのあいだは、ログインと登録の重複の確かめで、鍵輪の新旧の両方の版の HMAC を (版, 値) の組で引く（`environment.md` §8.3）。
+- CHECK: `totp_secret_encrypted` と `totp_key_version` は、どちらも NULL か、どちらも値がある。`totp_enabled_at` は秘密があるときだけ値を持てる（ADR-0101 の D3）。二要素認証の作り直しと解除（運用者の CLI）は TOTP の 4 列を NULL にする。HMAC の鍵の入れ替えのあいだは、ログインと登録の重複の確かめで、鍵輪の新旧の両方の版の HMAC を (版, 値) の組で引く（`environment.md` §8.3）。
 - 索引: (`email_key_version`) と (`email_hmac_key_version`)。再暗号化と HMAC の作り直しが、古い版の残りの行を 1,000 件ずつ引くため。
 - 退去で行ごと消す（J7 の最初の手順、`security.md` §2.4・ADR-0091）。バックアップから戻したときは `erasure.replay` が消す（§6）。
 - 索引: (`totp_key_version`)（再暗号化が古い版の残りの行を引くため。NULL の行は引かない部分索引）。
 
-#### `sessions` — セッション（ADR-0089 の D1・ADR-0090）
+#### `sessions` — セッション（ADR-0101 の D1・ADR-0090）
 
 1 つのログインに 1 行。無効にする方法と消し方は `security.md` §3.3・§4 のライフサイクル表。
 
@@ -114,7 +114,7 @@ DDL は書かない。主なカラムと一意制約のみを示す。
 - 索引: (`resident_id`)（一覧・すべて消す・J7）と (`expires_at`)（J14）。
 - IP アドレスと端末の情報の列は置かない（ADR-0090 の D3）。
 
-#### `auth_tokens` — 確認と再設定のトークン（ADR-0089 の D6・ADR-0080 の D2）
+#### `auth_tokens` — 確認と再設定のトークン（ADR-0101 の D6・ADR-0080 の D2）
 
 メールの確認・パスワードの再設定・メールアドレスの変更の確認に送るリンクのトークン。1 回の発行に 1 行。
 
@@ -129,13 +129,19 @@ DDL は書かない。主なカラムと一意制約のみを示す。
 | `created_at` timestamptz NOT NULL | 発行した日時 |
 | `expires_at` timestamptz NOT NULL | `email_verification` は `credentials.created_at + interval '24 hours'`（ADR-0087 の D2。送り直しの行も同じ時刻）、`password_reset` は発行から 30 分（ADR-0080 の D2）、`email_change` は発行から 24 時間 `[assumed]` |
 | `used_at` timestamptz NULL | 使った日時。NULL = まだ |
+| `mail_token_encrypted` bytea NULL | J18 `mail.send` が送るまで置く、リンクのトークン（32 バイトの乱数）の暗号文（AES-256-GCM、鍵輪は `EMAIL_KEYRING`、AAD は `id` と用途 `auth_token_mail`、ADR-0101 の D7）。行を作る API のトランザクションで書き、J18 が送ったあと（送らないと決めたときも）NULL にする |
+| `mail_token_key_version` int NULL | `mail_token_encrypted` を暗号化した鍵の版 |
+| `old_email_encrypted` bytea NULL | `email_change` の確認が通ったとき、`credentials` を新しいアドレスに書き換えるのと同じトランザクションで書く、前のメールアドレスの暗号文（AAD は `id` と用途 `email_change_notice`）。J18 `kind = email_change_notice` が前のアドレスに知らせたあと NULL にする（ADR-0090 の D7・ADR-0101 の D7） |
+| `old_email_key_version` int NULL | `old_email_encrypted` を暗号化した鍵の版 |
 
-- CHECK: `purpose = 'email_change'` のときだけ、`new_email_encrypted` と `new_email_key_version` のどちらにも値がある。
+- CHECK: `purpose = 'email_change'` のときだけ、`new_email_encrypted` と `new_email_key_version` のどちらにも値がある。`mail_token_*` と `old_email_*` は、それぞれ 2 列どちらも NULL か、どちらも値がある。`old_email_*` は `purpose = 'email_change'` かつ `used_at IS NOT NULL` の行だけが持てる。
 - 確かめ: `token_hash` で引き、`purpose` が経路に合い、`used_at IS NULL` かつ `expires_at > now()` の行だけを通す（外れればどれも 400 `token_invalid`）。通したら同じトランザクションで `used_at` を書く。
 - 同じ住民・同じ `purpose` の新しい行を作るときは、同じトランザクションでまだ使っていない前の行を消す `[assumed]`。
-- 索引: (`resident_id`) と (`expires_at`)。J14 が `expires_at < now()` の行を消す。退去では J7 の手順 0 が消す（ADR-0091 の D8・D14）。
+- 索引: (`resident_id`) と (`expires_at`)。J14 が `expires_at < now()` の行を消す。退去では J7 の手順 0 が消す（ADR-0091 の D8・D14）。`mail_token_*`・`old_email_*` は行と一緒に消える（ADR-0101 の D7。CASCADE も別の手順も使わない）。
+- 行を作るのと同じトランザクションで `mail_token_*` を書き、J18 `mail.send` を積む（`async.md` §4 J18）。`token_hash` の鍵は web だけが持つので、worker はトークンを作れず、この列を復号して読む。
+- `keys.reencrypt`（`kind: 'email'`）は、`mail_token_key_version`・`old_email_key_version` が版 `from_version` の行も暗号化し直す。
 
-#### `staff_roles` — ロールの付与（ADR-0089 の D2・ADR-0020）
+#### `staff_roles` — ロールの付与（ADR-0101 の D2・ADR-0020）
 
 | カラム | 説明 |
 |--------|------|
@@ -147,7 +153,7 @@ DDL は書かない。主なカラムと一意制約のみを示す。
 - PK (`resident_id`, `role`)。
 - 付与は運用者の CLI が行を入れ、剥奪は行を消す。API・C2 のどの経路もこの表に書かない（ADR-0020）。退去では J7 の手順 5 が行を消す。
 
-#### `rate_limit_buckets` — 流量の制限の数え（ADR-0089 の D4・ADR-0088）
+#### `rate_limit_buckets` — 流量の制限の数え（ADR-0101 の D4・ADR-0088）
 
 | カラム | 説明 |
 |--------|------|
@@ -283,7 +289,7 @@ CHECK (status <> 'done' OR prepared_at IS NOT NULL) — 公開した回は準備
 
 ### 通知
 
-配達完了の通知（ADR-0076、FR-028・FR-102）。`sessions` の表は §2 の住民・住所の節（ADR-0089 の D1）。退去では、受付（API）でその住民のセッションをすべて無効にし（`invalidated_at`）、同じトランザクションでその購読と送った記録を消す。J7 の手順 0 が、購読と送った記録の残り → `sessions` の行すべて → `credentials` の行の順に消す（ADR-0091 の D7・D8）。
+配達完了の通知（ADR-0076、FR-028・FR-102）。`sessions` の表は §2 の住民・住所の節（ADR-0101 の D1）。退去では、受付（API）でその住民のセッションをすべて無効にし（`invalidated_at`）、同じトランザクションでその購読と送った記録を消す。J7 の手順 0 が、購読と送った記録の残り → `sessions` の行すべて → `credentials` の行の順に消す（ADR-0091 の D7・D8）。
 
 #### `push_subscriptions` — 通知の購読（端末ごと）
 
@@ -618,6 +624,7 @@ CHECK(`num_nonnulls(report_id, letter_id) = 1`) — 1 つの行は通報か確�
 
 pg-boss が管理するテーブル。DDL は pg-boss に委ねる。
 ペイロードには対象レコードの ID のみを含め、本文等の大きなデータは含めない（§1 原則 6）。
+確認と再設定のメールの J18 も `{kind, auth_token_id}` だけで、トークンとメールアドレスの平文を含めない（`async.md` §4 J18、`security.md` T-03）。
 
 #### ログ
 
@@ -706,11 +713,12 @@ ADR-0060 は「空き家は新規住民の割り当て候補となる」と定�
 | データ種別 | テーブル | 作る | 保つ | 消す |
 |-----------|---------|------|------|------|
 | 住民 | `residents` | 新規登録時に作成 | アカウント削除まで。メールの確認が済まない登録は登録から 24 時間まで（ADR-0087） | 削除申請で即時物理削除（ADR-0091）→ erasure_log に記録。確認が済まないまま 24 時間を過ぎた登録は J14 か同じ住所・同じメールアドレスの登録の要求が削除し、erasure_log に記録しない（ADR-0087 の D4・D5） |
-| 認証情報 | `credentials` | 新規登録時に `residents` と同じトランザクションで作成。TOTP の秘密の列はモデレーターが二要素認証を登録したとき（API、ADR-0089 の D3） | アカウント削除まで。メールの確認が済まない行は `created_at` から 24 時間まで（ADR-0087）。鍵の入れ替えでは行を残したまま暗号化（メールアドレスと TOTP の秘密）と HMAC を新しい版で作り直す（`environment.md` §8.3） | 退去で J7 の手順 0 が、`sessions` の行のあとに行ごと削除し、`erasure_log` に記録（`security.md` §2.4、ADR-0091 の D8）。確認が済まないまま 24 時間を過ぎた行は J14 か登録の要求が `residents` の前に削除（ADR-0087 の D4・D5）。TOTP の列は二要素認証の作り直しと解除で運用者の CLI が NULL にする |
-| セッション | `sessions` | ログイン時（API） | 有効期限（`expires_at`）が切れるか、ログアウトするまで。再認証（`reauthenticated_at`）と二要素認証を済ませた時刻はこの行に書く（ADR-0090 の D5・D6）。退去の受付では `invalidated_at` を付けて無効にする（`invalidated_at` を付けるのは退去の受付だけ、ADR-0091 の D7・ADR-0090 の D4） | ログアウト・セッションの取り消し・パスワードの再設定の完了（その住民のすべて）・パスワードの変更（今のセッションのほかすべて）では API が削除し、強制ログアウトと二要素認証の解除では運用者の CLI がその住民の行をすべて削除する（それを指す `push_subscriptions` と `delivery_notifications` も同じトランザクションで先に消す、ADR-0090 の D4・D6）。有効期限切れでは J14 が `expires_at < now()` の行を、それを指す `push_subscriptions` と `delivery_notifications` を同じトランザクションで先に消してから削除する [assumed]（security.md §2.1、async.md J14、ADR-0091 の保持期間）。退去で J7 の手順 0 が、無効にした行も含めてその住民の行をすべて削除し、`erasure_log` に記録（ADR-0091 の D8）。表の定義は §2 の `sessions`（ADR-0089 の D1） |
-| ロール | `staff_roles` | 運用者の CLI がロールを付与したとき（ADR-0020・ADR-0089 の D2） | 剥奪されるまで | 剥奪で運用者の CLI が削除。退去で J7 の手順 5 が削除（`erasure_log` に記録しない、ADR-0091 の D13） |
-| 確認と再設定のトークン | `auth_tokens` | 登録・確認のメールの送り直し・再設定の申し込み・メールアドレスの変更のとき（API、ADR-0089 の D6） | `expires_at` まで（使った行も期限まで残す） | `expires_at < now()` の行を J14 が削除（ADR-0091 の D14）。退去で J7 の手順 0 が削除し、`erasure_log` に記録（ADR-0091 の D8）。確認が済まない登録を消すときは最初に削除（ADR-0087 の D4） |
-| 流量の制限の数え | `rate_limit_buckets` | 流量の制限の対象の要求のとき（API、ADR-0088） | 窓の始まりから 1 日 | `window_start < now() - interval '1 day'` の行を J14 が削除（ADR-0089 の D4・ADR-0091 の D14）。住民を指さないので退去では消さない |
+| 認証情報 | `credentials` | 新規登録時に `residents` と同じトランザクションで作成。TOTP の秘密の列はモデレーターが二要素認証を登録したとき（API、ADR-0101 の D3） | アカウント削除まで。メールの確認が済まない行は `created_at` から 24 時間まで（ADR-0087）。鍵の入れ替えでは行を残したまま暗号化（メールアドレスと TOTP の秘密）と HMAC を新しい版で作り直す（`environment.md` §8.3） | 退去で J7 の手順 0 が、`sessions` の行のあとに行ごと削除し、`erasure_log` に記録（`security.md` §2.4、ADR-0091 の D8）。確認が済まないまま 24 時間を過ぎた行は J14 か登録の要求が `residents` の前に削除（ADR-0087 の D4・D5）。TOTP の列は二要素認証の作り直しと解除で運用者の CLI が NULL にする |
+| セッション | `sessions` | ログイン時（API） | 有効期限（`expires_at`）が切れるか、ログアウトするまで。再認証（`reauthenticated_at`）と二要素認証を済ませた時刻はこの行に書く（ADR-0090 の D5・D6）。退去の受付では `invalidated_at` を付けて無効にする（`invalidated_at` を付けるのは退去の受付だけ、ADR-0091 の D7・ADR-0090 の D4） | ログアウト・セッションの取り消し・パスワードの再設定の完了（その住民のすべて）・パスワードの変更（今のセッションのほかすべて）では API が削除し、強制ログアウトと二要素認証の解除では運用者の CLI がその住民の行をすべて削除する（それを指す `push_subscriptions` と `delivery_notifications` も同じトランザクションで先に消す、ADR-0090 の D4・D6）。有効期限切れでは J14 が `expires_at < now()` の行を、それを指す `push_subscriptions` と `delivery_notifications` を同じトランザクションで先に消してから削除する [assumed]（security.md §2.1、async.md J14、ADR-0091 の保持期間）。退去で J7 の手順 0 が、無効にした行も含めてその住民の行をすべて削除し、`erasure_log` に記録（ADR-0091 の D8）。表の定義は §2 の `sessions`（ADR-0101 の D1） |
+| ロール | `staff_roles` | 運用者の CLI がロールを付与したとき（ADR-0020・ADR-0101 の D2） | 剥奪されるまで | 剥奪で運用者の CLI が削除。退去で J7 の手順 5 が削除（`erasure_log` に記録しない、ADR-0091 の D13） |
+| 確認と再設定のトークン | `auth_tokens` | 登録・確認のメールの送り直し・再設定の申し込み・メールアドレスの変更のとき（API、ADR-0101 の D6） | `expires_at` まで（使った行も期限まで残す） | `expires_at < now()` の行を J14 が削除（ADR-0091 の D14）。退去で J7 の手順 0 が削除し、`erasure_log` に記録（ADR-0091 の D8）。確認が済まない登録を消すときは最初に削除（ADR-0087 の D4） |
+| 送る前のトークンと前のアドレス | `auth_tokens` の `mail_token_*`・`old_email_*` の列 | トークンは `auth_tokens` の行と同じトランザクション、前のアドレスは `email_change` の確認と同じトランザクション（API、ADR-0101 の D7、`async.md` §4 J18） | J18 が送り終えるまで | J18 が送ったあとか送らないと決めたときに NULL にする。残っていれば `auth_tokens` の行と一緒に消える（上の行のとおり） |
+| 流量の制限の数え | `rate_limit_buckets` | 流量の制限の対象の要求のとき（API、ADR-0088） | 窓の始まりから 1 日 | `window_start < now() - interval '1 day'` の行を J14 が削除（ADR-0101 の D4・ADR-0091 の D14）。住民を指さないので退去では消さない |
 | 住所 | `addresses` | 住民登録時・新規割り当て時 | 居住中は保持。空き家後も保持し、段階 3 から割り当て候補に戻す（ADR-0062） | 管理者が廃棄するまで削除しない（住所のプールを維持）。ただし、メールの確認が済まないまま 24 時間を過ぎた登録の行は、J14 か同じ住所・同じメールアドレスの登録の要求が `tenancies` のあとに削除し、住所は使われたことのない住所に戻る（ADR-0087 の D4〜D6） |
 | 居住記録 | `tenancies` | 住所割り当て時・転入時 | 歴史として保持（配達先解決に使う）。住民の退去では J7 の手順 7 が、住所を `vacant_deleted` にするのと同じトランザクションで今の行の `ended_at` を書いて `is_current` を false にし、手順 9 が引っ越しで終わった前の行も含めて `resident_id` を NULL にし、同じ UPDATE で `resident_erased_at` を書く（ADR-0091 の D10・D11） | `resident_erased_at < now() - interval '1 year'` の行を J14 が削除（退去から 1 年、ADR-0091 の D10）。同じトランザクションで、先にその行を指す `address_book.registered_tenancy_id`・`letter_recipients.registered_tenancy_id` を NULL にする（ADR-0091 の D12）。メールの確認が済まないまま 24 時間を過ぎた登録の行は、J14 か登録の要求が `addresses` の前に削除（指す行はない、ADR-0087 の D4） |
 | 手紙（本体） | `letters` | 送信時（`pending` 状態。確認を頼まれた手紙は `held`、ADR-0069。照合に当たって送った人が n を選んだ手紙は作らない） | 配達後も保持。送信者が削除されても届いた手紙の `body_encrypted` は残す（受取人保護）。`sender_id` は J7 の手順 9 が NULL にし、API では「退去済み」と示す（ADR-0091 の D11）。`held` はモデレーターが操作するまで保持（長く確かめられないときは OQ-065） | J14 が本文と宛先ごと削除する（ADR-0091 の D2〜D4）[assumed]。`delivered` は、`settled_at` から 30 日を過ぎ、受取人全員が郵便受けから削除した（`kind = 'letter'` のその手紙の `mailbox_items` に `deleted_at IS NULL` の行が 1 つもない）あとの次の J14。`returned`・`suppressed` は `settled_at` から 30 日後。`blocked` は `decided_at` から 30 日後（ADR-0069 の D6）。`reports`（`content_kind = 'letter'`）の行がある手紙は消さず、通報がクローズから 1 年で消えたあとの J14 で同じ条件を当てる。`erasure_log` には記録しない。どの削除も、送った人の送信済みに出す期間（確定から 30 日、api.md §7 F-04・ADR-0091 の D5）のあと。送信者の退去で、その住民の届いていない手紙（`pending`・`scheduled`・`held`・`blocked`・`returned`・`suppressed`）は J7 が即時削除（§5） |
@@ -871,6 +879,7 @@ stateDiagram-v2
 | 版の選び方の再現 | 興味が複数ある住民の版は `SHA-256(run_id:resident_id)` から決めるので、J4 をやり直しても同じ版（ADR-0039 の D3） |
 | 配達の通知の重複防止 | `delivery_notifications` の UNIQUE(delivery_run_id, push_subscription_id, kind)（ADR-0076・ADR-0035） |
 | 手紙の時刻の再現 | `mailbox_items.visible_at` は `SHA-256(run_id:resident_id)` から決めるので、J4 をやり直しても同じ値（ADR-0035 の D9） |
+| 確認と再設定のメールの重複防止 | J18 の `singletonKey`（`kind` と `auth_token_id`）と、送ったら `mail_token_*`・`old_email_*` の列を NULL にすること。値がなければ J18 は送らない（送ったあと NULL にする前に落ちたときだけ、まれに 2 通、`async.md` §4 J18） |
 
 ジョブのペイロードには ID のみを含める（§1 原則 6）。
 本文など大きなデータをペイロードに入れると、ジョブ再実行時に古い内容が使われる恐れがあるため。
@@ -944,5 +953,5 @@ stateDiagram-v2
 | OQ-082（マッチング・商店・団体との手紙、転送のときの知り合い） | 仮置きなし（どれも MVP の外）。転送中の相手を知り合いとみなすなら、§3 の振り分けと知り合いの求め方（`tenancies` の転送の行）を直す |
 | OQ-060（外のニュースの配信元・利用の条件） | `external_news_items` の保持は 30 日 [assumed]。条件で保持期間と `url` の扱いが変わる |
 | OQ-030（アカウント情報の保持期間） | ADR-0091 の数値（logs 30 日, moderation 1 年, reports クローズ後 1 年, backups 30 日, erasure_log 60 日、手紙の `blocked`・`returned`・`suppressed`・`delivered` と送信済みに出す期間の 30 日）を `[assumed]` として仮置き。確定したら新しい ADR で決め、ADR-0091 を置き換える |
-| OQ-031（管理者・モデレーター役割）→ 決定 | ロールは住民とモデレーターの 2 つ（ADR-0020）。`moderation_actions.moderator_id` は `residents` の FK として保持し、モデレーターのロールを持つ住民だけが書ける。権限の規則表は `security.md` §4。ロールは `staff_roles` の表に持つ（§2、ADR-0089 の D2） |
+| OQ-031（管理者・モデレーター役割）→ 決定 | ロールは住民とモデレーターの 2 つ（ADR-0020）。`moderation_actions.moderator_id` は `residents` の FK として保持し、モデレーターのロールを持つ住民だけが書ける。権限の規則表は `security.md` §4。ロールは `staff_roles` の表に持つ（§2、ADR-0101 の D2） |
 | OQ-037（違反した住民への処置）→ 決定 | 処置の内容はマスターが後で決める（2026-11-19、ADR-0032）。決まるまで、住民の停止・警告を表す列や状態（`residents` の列、`moderation_actions.action` の値）を置かない。内容は OQ-048（持ち越し）で、答えのあとに `moderation_actions.action` の値と §4 のライフサイクルを直す |

@@ -1,6 +1,6 @@
 # 0089 — セッション・役割・流量の表と TOTP の秘密の置き場
 
-- 状態: 採用
+- 状態: 置き換え（→ 0101）
 - 日付: 2026-11-25
 
 `db.md` §2 に `sessions`・`staff_roles`・`rate_limit_buckets`・`auth_tokens` の表と、TOTP の秘密の置き場を定義する（K-014、`triage.md` 仕分け 3。`reviews/0001-design-review.md` の R-025）。

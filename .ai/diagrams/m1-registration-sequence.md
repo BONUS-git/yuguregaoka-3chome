@@ -3,7 +3,7 @@
 M1 の中心の一続き（候補と入居を見る → 地図で選ぶ → 登録 → メールの確認 → ログイン → 地図で自分の家を見る）。経路と状態コードは `api.md` §7 F-01・F-02・F-19。
 
 - FR: FR-001, FR-002, FR-007, FR-010, FR-091, FR-092, FR-094, FR-098, FR-103, FR-113, FR-114, FR-115, FR-124, FR-127
-- ADR: 0030, 0062, 0070, 0080, 0082, 0083, 0084, 0087, 0088, 0089, 0090, 0093
+- ADR: 0030, 0033, 0062, 0070, 0080, 0082, 0083, 0084, 0087, 0088, 0090, 0093, 0101
 - 確かめた M: M1
 
 ```mermaid
@@ -38,18 +38,20 @@ sequenceDiagram
         C1-->>V: 決まった文を出し、選択を外して候補と入居の一覧を取り直す
     else 割り当てられる
         C2->>C3: 住所を割り当てる（候補かどうかは確かめない）
-        C3->>C7: 1 つのトランザクションで、同じ住所・同じメールアドレスの期限切れの登録を消し（ADR-0087 の D5）、residents・credentials・addresses（active）・tenancies を作る
-        C2--)C4: 確認のメールを送る（渡し方は未設計、gaps.md G-049）
+        C3->>C7: 1 つのトランザクションで、同じ住所・同じメールアドレスの期限切れの登録を消し（ADR-0087 の D5）、residents・credentials・addresses（active）・tenancies を作る<br/>同じトランザクションで auth_tokens（token_hash と暗号化したトークン mail_token_encrypted、ADR-0101 の D7）を作り、<br/>J18 mail.send（kind は email_verification と auth_token_id だけ）を jobs に積む（async.md §4 J18。トークンとメールアドレスは積まない、T-03）
         C2-->>C1: 201
     end
-    C4-->>V: 確認のメール（M1 はモック）
-    V->>C1: 確認のリンクを開く
+    C7--)C4: J18 mail.send（jobs、async.md §4 J18）
+    C4->>C7: auth_tokens・credentials を引く（mail_token_encrypted がない・使った・登録から 24 時間を過ぎたなら送らない）
+    C4-->>V: トークンとメールアドレスを復号し、確認のメールを送る（M1 はモックのメール、ADR-0033）
+    C4->>C7: mail_token_encrypted・mail_token_key_version を NULL にする（J18 の手順 4）
+    V->>C1: 確認のリンクを開く（トークンは URL のフラグメント）
     C1->>C2: POST /api/v1/email-verifications（token）
     C2->>C7: credentials.email_verified_at を書く
     C2-->>C1: 204（違う・切れた（登録から 24 時間）・使ったトークンは 400 token_invalid）
     V->>C1: ログインする
     C1->>C2: POST /api/v1/sessions（email・password）
-    C2->>C7: 流量の制限を数える（メールアドレスごとに 10 回／15 分・IP ごとに 50 回／15 分、ADR-0088）<br/>sessions の行を作る（token_hash・reauthenticated_at・expires_at、ADR-0089 の D1）
+    C2->>C7: 流量の制限を数える（メールアドレスごとに 10 回／15 分・IP ごとに 50 回／15 分、ADR-0088）<br/>sessions の行を作る（token_hash・reauthenticated_at・expires_at、ADR-0101 の D1）
     C2-->>C1: 200 と Cookie（確認が済んでいなければパスワードの誤りと同じ 401）
     C1->>C2: GET /api/v1/me
     C2->>C3: 今の年齢を誕生日の回数で時計から計算する
@@ -60,5 +62,6 @@ sequenceDiagram
 ## 読み方
 
 - 確認が済まない登録が住所を押さえる期限と、確認のリンクの期限は、どちらも登録から 24 時間（ADR-0087、OQ-046 → 決定）。送り直しても延びない。期限を過ぎた登録は J14 が行ごと消す。
+- web（C2）から worker（C4）への受け渡しは J18 `mail.send` の 1 つだけ（`async.md` §2 の J18 の行・§4 J18）。web はメールを送らず、worker はトークンを作らない。送り直し・再設定の依頼・メールアドレスの変更の要求と、変更の確認のあとの前のアドレスへの知らせ（`kind = email_change_notice`）も、同じ J18 で送る（`api.md` §7 F-02）。
 - 流量の制限の値と対象の経路は `security.md` §3.5 の表（ADR-0088）。
 - 登録の画面が呼ぶ API は候補と入居の一覧の 2 つだけ。地図の画面は `me`・候補・入居の一覧と、M2 から住所録を呼ぶ（ADR-0084 の D4・D5）。

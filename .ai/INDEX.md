@@ -21,8 +21,9 @@
 | 要回答で止まる M・FR があるか | — | `.ai/roadmap.md` §8、ADR-0099 の D6、`.ai/open-questions.md` §2（一覧） |
 | M1 の受け入れ条件 | — | `.ai/roadmap.md` §4 の受け入れ条件（A-01〜A-18） |
 | 要求の原文と区分 | — | `.ai/brief.md`、`.ai/brief-map.md`、`.ai/requirements.md` §3・§4 |
-| ジョブ・定時の処理 | — | `.ai/async.md` §2・§3（配達回の状態と J0、ADR-0094）・§4（審査キューの一意と持ち越し、ADR-0095）・§4（M1 で使うのは J14 の確認が済まない登録と数えの行の削除だけ、ADR-0087・0089。メールを渡すジョブは `.ai/gaps.md` G-049） |
-| 認証の表（セッション・ロール・確認と再設定のトークン・TOTP の秘密）・流量の制限の値・確認が済まない登録の期限 | `.ai/diagrams/m1-er.md`・`.ai/diagrams/m1-address-account-states.md` | `.ai/db.md` §2 の `credentials`・`sessions`・`auth_tokens`・`staff_roles`・`rate_limit_buckets`、`.ai/security.md` §2.1・§3.1・§3.4（確かめる順番）・§3.5 の規則の表、`.ai/api.md` §5 の 429・§7 F-06、ADR-0087・0088・0089・0090 |
+| ジョブ・定時の処理 | — | `.ai/async.md` §2・§3（配達回の状態と J0、ADR-0094）・§4（審査キューの一意と持ち越し、ADR-0095）・§4（M1 で使うのは J14 の確認が済まない登録と数えの行の削除と、J18 の確認と再設定のメール、ADR-0087・0101） |
+| 確認と再設定のメールを web から worker に渡す（J18） | `.ai/diagrams/m1-registration-sequence.md`・`.ai/diagrams/m1-components.md` | `.ai/async.md` §2 の J18 の行・§4 J18・§5・§6、`.ai/db.md` §2 の `auth_tokens`（送る前のトークンと前のアドレスの列）、`.ai/api.md` §2.4・§7 F-02、`.ai/environment.md` §8.1、ADR-0033・0087・0090 の D7・0101 |
+| 認証の表（セッション・ロール・確認と再設定のトークン・TOTP の秘密）・流量の制限の値・確認が済まない登録の期限 | `.ai/diagrams/m1-er.md`・`.ai/diagrams/m1-address-account-states.md` | `.ai/db.md` §2 の `credentials`・`sessions`・`auth_tokens`・`staff_roles`・`rate_limit_buckets`、`.ai/security.md` §2.1・§3.1・§3.4（確かめる順番）・§3.5 の規則の表、`.ai/api.md` §5 の 429・§7 F-06、ADR-0087・0088・0090・0101 |
 | 退去と保持期間で消すもの（J7・J14 の正本の表） | — | ADR-0091 の退去の表と保持期間の表、`.ai/security.md` §2.4、`.ai/async.md` J7・J14、`.ai/db.md` §4 |
 | リストアのあとの消し直し（消去の控えと `erasure.replay`） | — | ADR-0096、`.ai/async.md` §4 `erasure.replay`、`.ai/db.md` §2 の `erasure_log`・§6、`.ai/environment.md` §6.5、`.ai/gaps.md` G-055 |
 | マスターに聞くこと・決まったこと | — | `.ai/open-questions.md` §2（一覧）・§3（要回答） |
@@ -55,7 +56,7 @@
 | `.ai/architecture.md` | アーキテクチャ（C1〜C13） |
 | `.ai/db.md` | DB 設計 |
 | `.ai/api.md` | API 設計 |
-| `.ai/async.md` | 非同期処理（J0〜J17） |
+| `.ai/async.md` | 非同期処理（J0〜J18） |
 | `.ai/security.md` | セキュリティ設計 |
 | `.ai/environment.md` | 開発・検証環境 |
 | `.ai/open-questions.md` | 未確定事項（OQ） |
@@ -169,11 +170,13 @@
 - `.ai/adr/0098-newspaper-deterministic-typesetting-holiday.md`
 - `.ai/adr/0099-stages-m0-m6-gates-no-blocking-oqs.md`
 - `.ai/adr/0100-modular-monolith-process-placement.md`
+- `.ai/adr/0101-auth-tables-and-pending-mail-values.md`
 
 ## レビュー（`.ai/reviews/`）
 
 - `.ai/reviews/0001-design-review.md` — 設計のレビュー（R-001〜）
 - `.ai/reviews/0002-phase-evaluation-2026-11-25.md` — 段階の評価（2026-11-25）
+- `.ai/reviews/0003-phase-evaluation-2026-11-26.md` — 段階の評価（2026-11-26、R-060〜R-064）
 
 ## チケット（`.ai/tickets/`）
 
@@ -227,3 +230,5 @@
 - `.ai/tickets/YGO-048-g-012-oq-headings-match-table.md`
 - `.ai/tickets/YGO-049-g-013-adr-0100-process-placement.md`
 - `.ai/tickets/YGO-050-g-014-architecture-inferred-tags.md`
+- `.ai/tickets/YGO-051-r-060-registration-mail-job.md`
+- `.ai/tickets/YGO-052-r-061-registered-email-response.md`

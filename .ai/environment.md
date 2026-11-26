@@ -302,18 +302,19 @@ infra/
 | `APP_ENV` | §2 の環境 | web・worker | いいえ | `development` / `test` |
 | `DATABASE_URL` | PostgreSQL への接続 | web・worker | はい | ループバックか Unix ソケットの `yuguregaoka_dev`（パスワードは `EXAMPLE_DB_PASSWORD_DO_NOT_USE`）|
 | `SESSION_SIGNING_KEY` | セッションの Cookie の署名の鍵 | web | はい | `EXAMPLE_KEY_DO_NOT_USE` |
-| `RESET_TOKEN_SIGNING_KEY` | 確認と再設定のトークンの鍵付きハッシュ（`auth_tokens.token_hash` の HMAC、ADR-0089 の D6）の鍵 | web | はい | `EXAMPLE_KEY_DO_NOT_USE` |
+| `RESET_TOKEN_SIGNING_KEY` | 確認と再設定のトークンの鍵付きハッシュ（`auth_tokens.token_hash` の HMAC、ADR-0101 の D6）の鍵 | web | はい | `EXAMPLE_KEY_DO_NOT_USE` |
 | `RATE_LIMIT_HMAC_KEY` | 流量の制限の数えの `key` の HMAC の鍵（ADR-0088 の D3） | web | はい | `EXAMPLE_KEY_DO_NOT_USE` |
 | `LETTER_KEYRING` | 手紙の鍵の版の一覧（本番は鍵管理で包んだデータ鍵）| web・worker | はい | 偽の鍵（§3.3）|
 | `LETTER_KEY_CURRENT_VERSION` | いま暗号化に使う版 | web・worker | いいえ | `1` |
-| `EMAIL_KEYRING`・`EMAIL_KEY_CURRENT_VERSION` | メールアドレスと TOTP の秘密の暗号化の鍵（版付き。`credentials` の暗号化の列に使う、ADR-0089 の D3）| web・worker | はい（版の番号は いいえ）| 偽の鍵・`1` |
+| `EMAIL_KEYRING`・`EMAIL_KEY_CURRENT_VERSION` | メールアドレスと TOTP の秘密の暗号化の鍵（版付き。`credentials`・`auth_tokens` の暗号化の列に使う。J18 が送る前のトークンと前のメールアドレスの列 `auth_tokens.mail_token_encrypted`・`old_email_encrypted` も含む、ADR-0101 の D3・D7・`async.md` §4 J18）| web・worker | はい（版の番号は いいえ）| 偽の鍵・`1` |
 | `EMAIL_HMAC_KEYRING`・`EMAIL_HMAC_KEY_CURRENT_VERSION` | メールアドレスの検索の HMAC の鍵（版付き。入れ替えのあいだだけ 2 つの版を持つ）| web | はい（版の番号は いいえ）| 偽の鍵・`1` |
 | `KMS_KEY_ID` | データ鍵を包む鍵管理の鍵 | web・worker | いいえ | なし（偽の鍵を使う）|
 | `OBJECT_STORAGE_BUCKET` | バケットの名前 | web・worker | いいえ | なし（ファイルのアダプタ。`.local/storage/`）|
 | `VAPID_PUBLIC_KEY` | Web Push の公開鍵 | web・worker | いいえ | `EXAMPLE_VAPID_KEY_DO_NOT_USE` |
 | `VAPID_PRIVATE_KEY` | Web Push の署名の鍵 | worker | はい | `EXAMPLE_VAPID_KEY_DO_NOT_USE` |
 | `PUSH_ALLOWED_HOSTS` | プッシュサービスの許可のホスト（§6.4）| web・worker | いいえ | `push.example.invalid` |
-| `MAIL_ADAPTER` | `mock` / `smtp_local` | worker | いいえ | `mock` |
+| `MAIL_ADAPTER` | `mock` / `smtp_local`（J18 `mail.send` が使う、`async.md` §4 J18） | worker | いいえ | `mock` |
+| `PUBLIC_BASE_URL` | 確認と再設定のメールのリンクの先（web の画面の起点の URL、J18）`[assumed]` | worker | いいえ | `https://town.example.com` |
 | `SMTP_HOST`・`SMTP_PORT` | ローカルの SMTP の宛先（ループバックだけ、ADR-0033）| worker | いいえ | `127.0.0.1`・`1025` |
 | `LLM_API_KEY` | 外部の LLM の API キー | worker | はい | 置かない（モック）。承認のあと |
 | `NEWS_SOURCE_CREDENTIALS` | 外のニュースの配信元の認証情報 | worker | はい | 置かない（偽の記事）。OQ-060 のあと |
@@ -341,7 +342,7 @@ infra/
 1. **新しい版を足す**: 運用者が鍵管理で新しいデータ鍵（版 N+1）を作り、`LETTER_KEYRING` に足す。`LETTER_KEY_CURRENT_VERSION` は N のまま。web と worker を順に入れ替え、すべてのプロセスが N+1 を復号できるようにする。
 2. **暗号化を新しい版に切り替える**: `LETTER_KEY_CURRENT_VERSION` を N+1 にして、もう一度入れ替える。（1 と 2 を分けるのは、N+1 を知らないプロセスが、ほかのプロセスが N+1 で書いた手紙を読めなくなるのを避けるため。）
 3. **再暗号化**: 運用者の CLI で `keys.reencrypt` のジョブを積む（入力は `{kind: 'letter' | 'email', from_version: N}`、`async.md` §2）。
-   - worker が、版 N の行を **1,000 件ずつ** 1 つのトランザクションで読み（`FOR UPDATE SKIP LOCKED`）、N で復号して N+1 で暗号化し直す。AAD は同じ手紙の ID（ADR-0021）。`kind: 'email'` は、`credentials` のメールアドレス（`email_key_version`）と TOTP の秘密（`totp_key_version`）、`auth_tokens` の変更中の新しいメールアドレス（`new_email_key_version`）のうち、版 N の列を暗号化し直す（AAD は `resident_id` と、TOTP と新しいメールアドレスは用途を合わせたもの、ADR-0089 の D3・D5・D6）。
+   - worker が、版 N の行を **1,000 件ずつ** 1 つのトランザクションで読み（`FOR UPDATE SKIP LOCKED`）、N で復号して N+1 で暗号化し直す。AAD は同じ手紙の ID（ADR-0021）。`kind: 'email'` は、`credentials` のメールアドレス（`email_key_version`）と TOTP の秘密（`totp_key_version`）、`auth_tokens` の変更中の新しいメールアドレス（`new_email_key_version`）・送る前のトークン（`mail_token_key_version`）・前のメールアドレス（`old_email_key_version`、`async.md` §4 J18）のうち、版 N の列を暗号化し直す（AAD は `resident_id` と、TOTP と新しいメールアドレスは用途を合わせたもの、ADR-0101 の D3・D5・D6。送る前のトークンと前のメールアドレスは行の `id` と用途 `auth_token_mail`・`email_change_notice`、D7）。
    - 版 N の行がなくなるまで繰り返す。途中で止まっても、残った版 N の行から続きができる（冪等）。
    - 動くのは `pg_try_advisory_lock` を取った worker 1 台だけ。1 回のジョブは 50 分で区切り（ジョブの期限 1 時間の中に収める）、版 N の行が残っていれば、**ロックを放してから** 次のジョブを `startAfter` 60 秒の遅れを付けて積んで終わる（`async.md` §5）[assumed]。
    - ロックが取れなかった `keys.reencrypt` は、ほかの工程と違って何もせずに成功にはせず、**失敗にして再試行させる**（`async.md` §5）。前のジョブがまだロックを持っているうちに次のジョブが拾われても、続きのジョブが消えない。
@@ -356,7 +357,7 @@ infra/
   運用者の CLI がその作業の間だけ HMAC の鍵とメールアドレスの鍵を読める権限で動き、復号したメールアドレスから新しい HMAC を 1,000 件ずつ作り直す。
   終わるまで、web のログインは鍵輪の新旧の両方の版の HMAC で引く。終わったら古い版を鍵輪から外す [assumed]。
 - セッションの署名の鍵と VAPID の鍵は `security.md` §6.3 のとおり（入れ替えると既存のセッション・購読が無効になる）。
-- 流量の制限の HMAC の鍵（`RATE_LIMIT_HMAC_KEY`）は版を持たない。入れ替えると `rate_limit_buckets` の数えが窓の途中から始め直しになるだけで、作り直しはしない（古い `key` の行は J14 が 1 日で消す、ADR-0089 の D4）。
+- 流量の制限の HMAC の鍵（`RATE_LIMIT_HMAC_KEY`）は版を持たない。入れ替えると `rate_limit_buckets` の数えが窓の途中から始め直しになるだけで、作り直しはしない（古い `key` の行は J14 が 1 日で消す、ADR-0101 の D4）。
 
 ---
 
