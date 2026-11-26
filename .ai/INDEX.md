@@ -239,3 +239,4 @@
 - `.ai/tickets/YGO-055-g-049-mail-job-confirmed.md`
 - `.ai/tickets/YGO-056-g-051-registered-email-201-confirmed.md`
 - `.ai/tickets/YGO-057-g-065-unverified-hold-24h-confirmed.md`
+- `.ai/tickets/YGO-058-g-068-requirements-adr-aligned-confirmed.md`
