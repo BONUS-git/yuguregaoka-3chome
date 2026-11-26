@@ -248,3 +248,4 @@
 - `.ai/tickets/YGO-059-index-complete-no-broken-links.md`
 - `.ai/tickets/YGO-060-diagrams-fr-adr-m-lines.md`
 - `.ai/tickets/YGO-061-m1-test-plan.md`
+- `.ai/tickets/YGO-062-m1-test-harness.md`
