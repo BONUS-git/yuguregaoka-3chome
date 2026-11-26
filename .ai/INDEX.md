@@ -68,111 +68,111 @@
 
 ## ADR（`.ai/adr/`）
 
-状態は各ファイルの 3 行目。`置き換え（→ NNNN）` のものは、矢印の先を読む。
+各行の末尾は状態（各ファイルの 3 行目と同じ）。`置き換え（→ NNNN）` のものは、矢印の先を読む。
 
 - `.ai/adr/README.md`
-- `.ai/adr/0001-internal-id-separate-from-address.md`
-- `.ai/adr/0002-vacancy-requires-explicit-deletion.md`
-- `.ai/adr/0003-no-auto-update-address-book-on-move.md`
-- `.ai/adr/0004-delivery-schedule-and-limits.md`
-- `.ai/adr/0005-moderation-policy.md`
-- `.ai/adr/0006-letter-encryption-at-rest.md`
-- `.ai/adr/0007-newspaper-deterministic-template.md`
-- `.ai/adr/0008-modular-monolith-two-processes.md`
-- `.ai/adr/0009-typescript-fastify-react.md`
-- `.ai/adr/0010-postgresql-as-db-and-job-queue.md`
-- `.ai/adr/0011-newspaper-template-engine.md`
-- `.ai/adr/0012-assumed-scale.md`
-- `.ai/adr/0013-account-deletion-and-retention.md`
-- `.ai/adr/0014-api-no-immediacy-no-counts.md`
-- `.ai/adr/0015-api-db-batch-boundary.md`
-- `.ai/adr/0016-delivery-run-pipeline-and-tick.md`
-- `.ai/adr/0017-delivery-prepare-then-publish.md`
-- `.ai/adr/0018-authentication-email-password.md`
-- `.ai/adr/0019-server-side-sessions-and-reauth.md`
-- `.ai/adr/0020-staff-roles-and-permission-table.md`
-- `.ai/adr/0021-encryption-key-versioning.md`
-- `.ai/adr/0022-roadmap-stages-and-gates.md`
-- `.ai/adr/0023-dormancy-and-address-reuse-in-stage-3.md`
-- `.ai/adr/0024-matching-not-romance-no-contact-sharing.md`
-- `.ai/adr/0025-delivery-notification-web-push-with-count.md`
-- `.ai/adr/0026-closed-letters-rule-only-moderation.md`
-- `.ai/adr/0027-minors-no-age-restriction.md`
-- `.ai/adr/0028-town-map-static-image-in-mvp.md`
-- `.ai/adr/0029-shop-and-group-accounts-created-by-operators.md`
-- `.ai/adr/0030-open-registration.md`
-- `.ai/adr/0031-llm-service-provisional-selection-and-cost-estimate.md`
-- `.ai/adr/0032-resident-sanctions-deferred-to-master.md`
-- `.ai/adr/0033-email-mock-or-local-smtp-in-test-production-by-approval.md`
-- `.ai/adr/0034-contact-sharing-ban-outside-contacts-in-matching-only.md`
-- `.ai/adr/0035-newspaper-for-all-letters-random-am-pm-separate-notifications.md`
-- `.ai/adr/0036-reported-letters-viewable-by-moderators-protections-not-self-removable.md`
-- `.ai/adr/0037-town-map-shared-monochrome-image.md`
-- `.ai/adr/0038-shops-real-businesses-communities-by-residents.md`
-- `.ai/adr/0039-newspaper-editions-by-group-and-interest-llm-text-server-typesetting.md`
-- `.ai/adr/0040-letters-checked-at-send-sender-confirms-moderator-reviews.md`
-- `.ai/adr/0041-age-self-declared-protections-vary-by-age.md`
-- `.ai/adr/0042-town-map-marks-own-home-candidates-acquaintances.md`
-- `.ai/adr/0043-shops-contract-fee-memo-fictional-shops-vacancy-posters-staff-post.md`
-- `.ai/adr/0044-newspaper-acquaintance-groups-mutual-board-posts-per-resident-images-no-original.md`
-- `.ai/adr/0045-interests-from-past-newspaper-search-notice-no-consent-no-view.md`
-- `.ai/adr/0046-newspaper-no-ai-label-posts-verbatim-llm-text-not-shown-as-residents.md`
-- `.ai/adr/0047-no-age-based-differences-common-rules-for-all.md`
-- `.ai/adr/0048-age-required-immutable-advances-yearly-shown-to-letter-recipients.md`
-- `.ai/adr/0049-letters-only-to-acquaintances-mutual-add-or-board-open-requests-hidden.md`
-- `.ai/adr/0050-fictional-shops-stage-3-vacancy-poster-no-posting-newspaper-tenant-ads.md`
-- `.ai/adr/0051-town-map-acquaintance-marks-all-address-book-entries-definitions-split.md`
-- `.ai/adr/0052-local-dev-and-check-env-opentofu-iac-design-only.md`
-- `.ai/adr/0053-inferred-interests-from-search-cannot-be-stopped.md`
-- `.ai/adr/0054-newspaper-post-articles-llm-headline-only-no-summary.md`
-- `.ai/adr/0055-newspaper-editions-llm-text-server-typesetting-post-articles-headline-only.md`
-- `.ai/adr/0056-letters-reject-tier-and-review-tier.md`
-- `.ai/adr/0057-no-age-differences-same-rules-for-all.md`
-- `.ai/adr/0058-town-map-static-image-occupancy-route-only.md`
-- `.ai/adr/0059-town-map-marks-and-public-occupancy.md`
-- `.ai/adr/0060-dormant-stays-occupied-no-expiry-until-oq-088.md`
-- `.ai/adr/0061-town-map-shared-monochrome-base-image.md`
-- `.ai/adr/0062-stage-3-dormancy-reuse-expiry-by-oq-088.md`
-- `.ai/adr/0063-town-map-static-image-candidate-marks-selectable.md`
-- `.ai/adr/0064-town-map-candidate-marks-selectable-public-occupancy.md`
-- `.ai/adr/0065-letters-acquaintances-only-board-open-per-post.md`
-- `.ai/adr/0066-address-book-adds-stopped-when-not-mutual.md`
-- `.ai/adr/0067-shop-accounts-created-by-operator-cli-only.md`
-- `.ai/adr/0068-clean-up-tools-after-use.md`
-- `.ai/adr/0069-letters-reject-and-review-tiers-real-info.md`
-- `.ai/adr/0070-reject-tier-and-no-emoji-for-all-writes.md`
-- `.ai/adr/0071-outside-contacts-banned-in-all-writes.md`
-- `.ai/adr/0072-closed-letters-reviewed-no-llm-limited-decryption.md`
-- `.ai/adr/0073-age-and-birthday-required-immutable.md`
-- `.ai/adr/0074-newspaper-acquaintance-editions-posts-and-birthdays.md`
-- `.ai/adr/0075-account-deletion-and-retention-keep-delivery-runs.md`
-- `.ai/adr/0076-delivery-notification-web-push-retention-30-days.md`
-- `.ai/adr/0077-letters-purged-after-settling-or-recipient-deletion.md`
-- `.ai/adr/0078-letter-reports-by-recipients-only.md`
-- `.ai/adr/0079-account-erase-credentials-and-sessions-first.md`
-- `.ai/adr/0080-authentication-email-password-api-v1.md`
-- `.ai/adr/0081-server-side-sessions-reauth-api.md`
-- `.ai/adr/0082-internal-id-address-from-candidates-or-vacant.md`
-- `.ai/adr/0083-town-map-static-image-candidate-and-vacant-marks-selectable.md`
-- `.ai/adr/0084-town-map-candidate-and-vacant-marks-selectable-public-occupancy.md`
-- `.ai/adr/0085-account-erase-clears-all-resident-references.md`
-- `.ai/adr/0086-llm-provisional-selection-names-and-prices-published.md`
-- `.ai/adr/0087-unverified-registration-holds-address-24h.md`
-- `.ai/adr/0088-rate-limit-defaults-and-target-routes.md`
-- `.ai/adr/0089-auth-tables-sessions-roles-rate-limits-totp.md`
-- `.ai/adr/0090-server-side-sessions-reauth-rate-limit-order.md`
-- `.ai/adr/0091-erase-and-retention-cover-auth-tables.md`
-- `.ai/adr/0092-delivery-runs-tick-and-failed-runs.md`
-- `.ai/adr/0093-age-birthday-immutable-shown-for-done-runs.md`
-- `.ai/adr/0094-delivery-runs-tick-and-close-retry.md`
-- `.ai/adr/0095-moderation-queue-unique-carry-label.md`
-- `.ai/adr/0096-erasure-replay-redo-erase-from-markers.md`
-- `.ai/adr/0097-milestones-keep-m0-m6-m1-address-account.md`
-- `.ai/adr/0098-newspaper-deterministic-typesetting-holiday.md`
-- `.ai/adr/0099-stages-m0-m6-gates-no-blocking-oqs.md`
-- `.ai/adr/0100-modular-monolith-process-placement.md`
-- `.ai/adr/0101-auth-tables-and-pending-mail-values.md`
-- `.ai/adr/0102-auth-tables-mail-and-registered-email.md`
+- `.ai/adr/0001-internal-id-separate-from-address.md` — 置き換え（→ 0082）
+- `.ai/adr/0002-vacancy-requires-explicit-deletion.md` — 置き換え（→ 0060）
+- `.ai/adr/0003-no-auto-update-address-book-on-move.md` — 採用
+- `.ai/adr/0004-delivery-schedule-and-limits.md` — 採用
+- `.ai/adr/0005-moderation-policy.md` — 採用
+- `.ai/adr/0006-letter-encryption-at-rest.md` — 採用
+- `.ai/adr/0007-newspaper-deterministic-template.md` — 置き換え（→ 0098）
+- `.ai/adr/0008-modular-monolith-two-processes.md` — 置き換え（→ 0100）
+- `.ai/adr/0009-typescript-fastify-react.md` — 採用
+- `.ai/adr/0010-postgresql-as-db-and-job-queue.md` — 採用
+- `.ai/adr/0011-newspaper-template-engine.md` — 採用
+- `.ai/adr/0012-assumed-scale.md` — 採用
+- `.ai/adr/0013-account-deletion-and-retention.md` — 置き換え（→ 0075）
+- `.ai/adr/0014-api-no-immediacy-no-counts.md` — 採用
+- `.ai/adr/0015-api-db-batch-boundary.md` — 採用
+- `.ai/adr/0016-delivery-run-pipeline-and-tick.md` — 置き換え（→ 0092）
+- `.ai/adr/0017-delivery-prepare-then-publish.md` — 採用
+- `.ai/adr/0018-authentication-email-password.md` — 置き換え（→ 0080）
+- `.ai/adr/0019-server-side-sessions-and-reauth.md` — 置き換え（→ 0081）
+- `.ai/adr/0020-staff-roles-and-permission-table.md` — 採用
+- `.ai/adr/0021-encryption-key-versioning.md` — 採用
+- `.ai/adr/0022-roadmap-stages-and-gates.md` — 置き換え（→ 0099）
+- `.ai/adr/0023-dormancy-and-address-reuse-in-stage-3.md` — 置き換え（→ 0062）
+- `.ai/adr/0024-matching-not-romance-no-contact-sharing.md` — 採用
+- `.ai/adr/0025-delivery-notification-web-push-with-count.md` — 置き換え（→ 0076）
+- `.ai/adr/0026-closed-letters-rule-only-moderation.md` — 置き換え（→ 0072）
+- `.ai/adr/0027-minors-no-age-restriction.md` — 採用
+- `.ai/adr/0028-town-map-static-image-in-mvp.md` — 置き換え（→ 0058）
+- `.ai/adr/0029-shop-and-group-accounts-created-by-operators.md` — 置き換え（→ 0067）
+- `.ai/adr/0030-open-registration.md` — 採用
+- `.ai/adr/0031-llm-service-provisional-selection-and-cost-estimate.md` — 置き換え（→ 0086）
+- `.ai/adr/0032-resident-sanctions-deferred-to-master.md` — 採用
+- `.ai/adr/0033-email-mock-or-local-smtp-in-test-production-by-approval.md` — 採用
+- `.ai/adr/0034-contact-sharing-ban-outside-contacts-in-matching-only.md` — 置き換え（→ 0071）
+- `.ai/adr/0035-newspaper-for-all-letters-random-am-pm-separate-notifications.md` — 採用
+- `.ai/adr/0036-reported-letters-viewable-by-moderators-protections-not-self-removable.md` — 置き換え（→ 0078）
+- `.ai/adr/0037-town-map-shared-monochrome-image.md` — 置き換え（→ 0061）
+- `.ai/adr/0038-shops-real-businesses-communities-by-residents.md` — 採用
+- `.ai/adr/0039-newspaper-editions-by-group-and-interest-llm-text-server-typesetting.md` — 置き換え（→ 0055）
+- `.ai/adr/0040-letters-checked-at-send-sender-confirms-moderator-reviews.md` — 置き換え（→ 0056）
+- `.ai/adr/0041-age-self-declared-protections-vary-by-age.md` — 採用
+- `.ai/adr/0042-town-map-marks-own-home-candidates-acquaintances.md` — 置き換え（→ 0059）
+- `.ai/adr/0043-shops-contract-fee-memo-fictional-shops-vacancy-posters-staff-post.md` — 採用
+- `.ai/adr/0044-newspaper-acquaintance-groups-mutual-board-posts-per-resident-images-no-original.md` — 置き換え（→ 0074）
+- `.ai/adr/0045-interests-from-past-newspaper-search-notice-no-consent-no-view.md` — 採用
+- `.ai/adr/0046-newspaper-no-ai-label-posts-verbatim-llm-text-not-shown-as-residents.md` — 置き換え（→ 0054）
+- `.ai/adr/0047-no-age-based-differences-common-rules-for-all.md` — 置き換え（→ 0057）
+- `.ai/adr/0048-age-required-immutable-advances-yearly-shown-to-letter-recipients.md` — 置き換え（→ 0073）
+- `.ai/adr/0049-letters-only-to-acquaintances-mutual-add-or-board-open-requests-hidden.md` — 置き換え（→ 0065）
+- `.ai/adr/0050-fictional-shops-stage-3-vacancy-poster-no-posting-newspaper-tenant-ads.md` — 採用
+- `.ai/adr/0051-town-map-acquaintance-marks-all-address-book-entries-definitions-split.md` — 採用
+- `.ai/adr/0052-local-dev-and-check-env-opentofu-iac-design-only.md` — 採用
+- `.ai/adr/0053-inferred-interests-from-search-cannot-be-stopped.md` — 採用
+- `.ai/adr/0054-newspaper-post-articles-llm-headline-only-no-summary.md` — 採用
+- `.ai/adr/0055-newspaper-editions-llm-text-server-typesetting-post-articles-headline-only.md` — 採用
+- `.ai/adr/0056-letters-reject-tier-and-review-tier.md` — 置き換え（→ 0069）
+- `.ai/adr/0057-no-age-differences-same-rules-for-all.md` — 採用
+- `.ai/adr/0058-town-map-static-image-occupancy-route-only.md` — 置き換え（→ 0063）
+- `.ai/adr/0059-town-map-marks-and-public-occupancy.md` — 置き換え（→ 0064）
+- `.ai/adr/0060-dormant-stays-occupied-no-expiry-until-oq-088.md` — 採用
+- `.ai/adr/0061-town-map-shared-monochrome-base-image.md` — 採用
+- `.ai/adr/0062-stage-3-dormancy-reuse-expiry-by-oq-088.md` — 採用
+- `.ai/adr/0063-town-map-static-image-candidate-marks-selectable.md` — 置き換え（→ 0083）
+- `.ai/adr/0064-town-map-candidate-marks-selectable-public-occupancy.md` — 置き換え（→ 0084）
+- `.ai/adr/0065-letters-acquaintances-only-board-open-per-post.md` — 採用
+- `.ai/adr/0066-address-book-adds-stopped-when-not-mutual.md` — 採用
+- `.ai/adr/0067-shop-accounts-created-by-operator-cli-only.md` — 採用
+- `.ai/adr/0068-clean-up-tools-after-use.md` — 採用
+- `.ai/adr/0069-letters-reject-and-review-tiers-real-info.md` — 採用
+- `.ai/adr/0070-reject-tier-and-no-emoji-for-all-writes.md` — 採用
+- `.ai/adr/0071-outside-contacts-banned-in-all-writes.md` — 採用
+- `.ai/adr/0072-closed-letters-reviewed-no-llm-limited-decryption.md` — 採用
+- `.ai/adr/0073-age-and-birthday-required-immutable.md` — 置き換え（→ 0093）
+- `.ai/adr/0074-newspaper-acquaintance-editions-posts-and-birthdays.md` — 採用
+- `.ai/adr/0075-account-deletion-and-retention-keep-delivery-runs.md` — 置き換え（→ 0077）
+- `.ai/adr/0076-delivery-notification-web-push-retention-30-days.md` — 採用
+- `.ai/adr/0077-letters-purged-after-settling-or-recipient-deletion.md` — 置き換え（→ 0079）
+- `.ai/adr/0078-letter-reports-by-recipients-only.md` — 採用
+- `.ai/adr/0079-account-erase-credentials-and-sessions-first.md` — 置き換え（→ 0085）
+- `.ai/adr/0080-authentication-email-password-api-v1.md` — 採用
+- `.ai/adr/0081-server-side-sessions-reauth-api.md` — 置き換え（→ 0090）
+- `.ai/adr/0082-internal-id-address-from-candidates-or-vacant.md` — 採用
+- `.ai/adr/0083-town-map-static-image-candidate-and-vacant-marks-selectable.md` — 採用
+- `.ai/adr/0084-town-map-candidate-and-vacant-marks-selectable-public-occupancy.md` — 採用
+- `.ai/adr/0085-account-erase-clears-all-resident-references.md` — 置き換え（→ 0091）
+- `.ai/adr/0086-llm-provisional-selection-names-and-prices-published.md` — 採用
+- `.ai/adr/0087-unverified-registration-holds-address-24h.md` — 採用
+- `.ai/adr/0088-rate-limit-defaults-and-target-routes.md` — 採用
+- `.ai/adr/0089-auth-tables-sessions-roles-rate-limits-totp.md` — 置き換え（→ 0101）
+- `.ai/adr/0090-server-side-sessions-reauth-rate-limit-order.md` — 採用
+- `.ai/adr/0091-erase-and-retention-cover-auth-tables.md` — 採用
+- `.ai/adr/0092-delivery-runs-tick-and-failed-runs.md` — 置き換え（→ 0094）
+- `.ai/adr/0093-age-birthday-immutable-shown-for-done-runs.md` — 採用
+- `.ai/adr/0094-delivery-runs-tick-and-close-retry.md` — 採用
+- `.ai/adr/0095-moderation-queue-unique-carry-label.md` — 採用
+- `.ai/adr/0096-erasure-replay-redo-erase-from-markers.md` — 採用
+- `.ai/adr/0097-milestones-keep-m0-m6-m1-address-account.md` — 採用
+- `.ai/adr/0098-newspaper-deterministic-typesetting-holiday.md` — 採用
+- `.ai/adr/0099-stages-m0-m6-gates-no-blocking-oqs.md` — 採用
+- `.ai/adr/0100-modular-monolith-process-placement.md` — 採用
+- `.ai/adr/0101-auth-tables-and-pending-mail-values.md` — 置き換え（→ 0102）
+- `.ai/adr/0102-auth-tables-mail-and-registered-email.md` — 採用
 
 ## レビュー（`.ai/reviews/`）
 
@@ -240,3 +240,4 @@
 - `.ai/tickets/YGO-056-g-051-registered-email-201-confirmed.md`
 - `.ai/tickets/YGO-057-g-065-unverified-hold-24h-confirmed.md`
 - `.ai/tickets/YGO-058-g-068-requirements-adr-aligned-confirmed.md`
+- `.ai/tickets/YGO-059-index-complete-no-broken-links.md`
