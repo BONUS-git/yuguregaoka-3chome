@@ -52,7 +52,7 @@
 ### §3.2 起動の手順（M0 で台本を作る）
 
 1. `npm ci`（ネットワークを使うのは、`prepare.sh` の `npm ci` と IaC のコードを書いたあとの `tofu init -backend=false`（ADR-0052 の D3・D6）のほかは、例外として最初のロックファイルを作る `npm install --package-lock-only --ignore-scripts`（ADR-0103）だけ）。
-   - 秘書のジョブでは `npm ci` を `sh scripts/prepare.sh` が行う。`prepare.sh` は今のレポジトリになく、依存を足す M0 で作る [assumed]。
+   - 秘書のジョブでは `npm ci` を `sh scripts/prepare.sh` が行う（YGO-062）。`package.json` がないときは何も入れずに終了コード 0 で終わる。`npm` がないときは「検証の環境に Node.js を入れる」と出して止まる。
    - `prepare.sh` は、`package.json` があり `package-lock.json` がないときはロックファイルを作らず、「依存を変える変更の中でロックファイルを作ってコミットする」と出して終了コード 1 で止まる。ロックファイルがあるときは `npm ci` だけを動かす（ADR-0103 の D3）。
    - 例外の `npm install --package-lock-only --ignore-scripts` は、依存を足す変更の中で 1 回試し、できたロックファイルを `package.json` と同じ変更でコミットする。終える前に `sh scripts/prepare.sh` と `sh scripts/check.sh` がどちらも終了コード 0 で終わることを確かめる（ADR-0103 の D1）。作れなかったら、ロックファイルを手で書かず、止まった段とエラーの行をチケットに書いて、それまでのファイルを変更として出す（ADR-0103 の D2）。`sh scripts/check.sh` はネットワークなしのまま（NFR-063）。
 2. 開発の DB を起こす: `sh scripts/dev-db.sh start`。
@@ -92,9 +92,10 @@
 
 ### §4.1 `check.sh` の流れ（コードができてから足す）
 
-今の `check.sh` は文書の確認だけ。M0 でコードとテストを足すとき、次の順に広げる。
+`check.sh` は 1・2・6・7 を動かす（YGO-062）。1 と 6 は `package.json` があるときだけ動く。3〜5 は M0 の別のチケットで、この順に足す。
 
 1. **Node.js を確かめる**（YGO-062）: `node` のコマンドがあるかと、その主版が `package.json` の `engines.node` と合うかを確かめる。足りなければ、要る主版と「検証の環境に Node.js を入れる」を出して**失敗する**（飛ばさない）。
+   - 続けて、`package-lock.json` があることと、`package.json` の依存の名前がどれもロックファイルにあり版に `^`・`~` がないことを確かめる（ADR-0103）。
    - Node.js は `check.sh` を動かす機械（手元・CI・秘書のジョブの環境）にあらかじめ入っていることを前提にする。CI とジョブの環境にはマスターが入れる（OQ-086 → 決定）。
      秘書は `engines.node` の主版をマスターに伝え、Vitest を `check.sh` からつなぐ前に node があることを確かめる（`roadmap.md` §4 の M0 の依存）。
 2. 文書の確認（今のまま）。
@@ -108,7 +109,7 @@
      秘書は M0 で主版を伝え、DB のテストを足す前に道具があることを確かめる（`roadmap.md` §4 の M0 の依存）。
      `prepare.sh` は npm の依存だけを入れ（IaC のあとは `tofu init` も）、OS の道具は入れない [assumed]。
 5. マイグレーションを当てたデータベースを 1 つ作り、それをひな型（`CREATE DATABASE ... TEMPLATE`）にして、テストのファイルごとにデータベースを作る [assumed]。テストどうしが互いのデータを見ない。
-6. Vitest を動かす（ADR-0009）。単体・統合（DB）・API（Fastify の `inject`。ポートを開かない）・組版のスナップショット・C1 の部品のテスト（Vitest と Testing Library）。
+6. Vitest を動かす（ADR-0009）。`node_modules/` がなければ `sh scripts/prepare.sh` を先に動かすよう出して失敗する。`npx --no-install vitest run` で動かし、結果を JUnit XML で `test-results/junit.xml` に書く（標準の出力の報告も残す）。XML がない・`skipped`（skip と todo）がある・名前に TC-NNN のないテストがある、のどれでも失敗する。単体・統合（DB）・API（Fastify の `inject`。ポートを開かない）・組版のスナップショット・C1 の部品のテスト（Vitest と Testing Library）。
 7. 最後に `check: ok` を出す。
 
 ブラウザを動かす端から端までのテストは `check.sh` に入れない（ブラウザの取り込みにネットワークが要る。範囲は NFR-064 のとおり実装の段階で決める）。
@@ -133,7 +134,7 @@
 - **`check.sh`** [assumed]: 片付けの関数を `trap` で EXIT・INT・TERM・HUP に掛ける。`pg_ctl stop -m fast` で止め、止まらなければ `-m immediate` で止めてから一時ディレクトリを消す。
   関数は何度呼んでも同じに動く。止められない・消せないときは理由を出して失敗する。
 - **ジョブ** [assumed]: 開発の DB やプロセスを起こしたら、ジョブの終わりまでに止め、`sh scripts/dev-db.sh clean` を動かす（§3.2）。
-- **片付けないもの**: マスターが入れた道具（NFR-091。使い終わっても置いたままにする、OQ-090 → 決定）・ジョブの間の `node_modules/` [assumed]・マスターの手元の `.local/pg/` [assumed]。
+- **片付けないもの**: マスターが入れた道具（NFR-091。使い終わっても置いたままにする、OQ-090 → 決定）・ジョブの間の `node_modules/` [assumed]・`check.sh` の結果の `test-results/`（次の `check.sh` の始めに消して作り直す。コミットしない）[assumed]・マスターの手元の `.local/pg/` [assumed]。
 - 受け入れ確認は `roadmap.md` の A-01。
 
 ---

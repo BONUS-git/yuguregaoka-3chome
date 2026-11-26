@@ -4,6 +4,45 @@
 set -eu
 cd "$(dirname "$0")/.."
 
+# 1. Node.js とロックファイルを確かめる（YGO-062、.ai/environment.md §4.1 の 1、ADR-0103）。
+# package.json があるときだけ。node がない・主版が engines.node と違うときは、要る主版を出して止まる。
+if [ -e package.json ]; then
+    need=$(sed -n 's/.*"node"[[:space:]]*:[[:space:]]*"\([0-9][0-9]*\)\..*/\1/p' package.json | head -n 1)
+    [ -n "$need" ] || { echo "package.json の engines.node に主版（例: \"26.x\"）がない" >&2; exit 1; }
+    command -v node >/dev/null 2>&1 || {
+        echo "node がない: 検証の環境に Node.js $need を入れる（package.json の engines.node）" >&2
+        exit 1
+    }
+    have=$(node -p 'process.versions.node.split(".")[0]')
+    [ "$have" = "$need" ] || {
+        echo "node の主版が $have で engines.node の $need と違う: 検証の環境に Node.js $need を入れる" >&2
+        exit 1
+    }
+    [ -e package-lock.json ] || {
+        echo "package-lock.json がない: 依存を変える変更の中でロックファイルを作ってコミットする（ADR-0103）" >&2
+        exit 1
+    }
+    # package.json の依存の名前がどれもロックファイルにあり、版に範囲の記号（^・~）がないこと。
+    node -e '
+const fs = require("fs");
+const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
+const lock = JSON.parse(fs.readFileSync("package-lock.json", "utf8"));
+const deps = { ...(pkg.dependencies || {}), ...(pkg.devDependencies || {}) };
+let bad = 0;
+for (const [name, ver] of Object.entries(deps)) {
+  if (!lock.packages || !lock.packages["node_modules/" + name]) {
+    console.error("package.json の " + name + " が package-lock.json にない（依存を変えたらロックファイルも直す）");
+    bad = 1;
+  }
+  if (/^[\^~]/.test(ver)) {
+    console.error("package.json の " + name + " の版 " + ver + " に範囲の記号がある（版は固定する）");
+    bad = 1;
+  }
+}
+process.exit(bad);
+'
+fi
+
 test -s .ai/brief.md
 test -s LICENSE
 for f in .ai/*.md .ai/adr/*.md .ai/reviews/*.md; do
@@ -117,6 +156,31 @@ if [ -e "$idx" ]; then
             exit 1
         }
     done
+fi
+
+# YGO-062 を done にしたなら、その範囲のファイルがそろっていること（retros.md 2026-11-26 の 2 回目）。
+t062=.ai/tickets/YGO-062-m1-test-harness.md
+if [ -e "$t062" ] && grep -qxF '状態: done' "$t062"; then
+    for f in package.json package-lock.json scripts/prepare.sh; do
+        [ -e "$f" ] || { echo "$t062 は done なのに $f がない" >&2; exit 1; }
+    done
+fi
+
+# 6. Vitest を動かす（ADR-0009、.ai/environment.md §4.1 の 6）。ネットワークは使わない。
+# 結果は test-results/junit.xml。skip・todo は通っていないと数え、名前に TC-NNN のないテストも失敗にする。
+if [ -e package.json ]; then
+    [ -d node_modules ] || { echo "node_modules/ がない: 先に sh scripts/prepare.sh を動かす" >&2; exit 1; }
+    rm -rf test-results
+    npx --no-install vitest run
+    xml=test-results/junit.xml
+    [ -s "$xml" ] || { echo "$xml ができていない（vitest.config.ts の junit の報告を見る）" >&2; exit 1; }
+    grep -q '<testcase' "$xml" || { echo "$xml にテストが 1 つもない" >&2; exit 1; }
+    if grep -q '<skipped' "$xml"; then
+        echo "$xml に skip か todo のテストがある（通っていないと数える）" >&2
+        exit 1
+    fi
+    nontc=$(grep -oE '<testcase[^>]*>' "$xml" | grep -vE ' name="[^"]*TC-[0-9]{3}' || true)
+    [ -z "$nontc" ] || { echo "名前に TC-NNN のないテストがある: $nontc" >&2; exit 1; }
 fi
 
 echo "check: ok"
