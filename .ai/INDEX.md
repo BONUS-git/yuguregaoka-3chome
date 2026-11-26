@@ -20,6 +20,7 @@
 | M の分け方と、手紙の一続きが通る M・中心の体験の全体がそろう M | — | `.ai/roadmap.md` §4 の段階、ADR-0099・ADR-0097、`.ai/gaps.md` G-069 |
 | 要回答で止まる M・FR があるか | — | `.ai/roadmap.md` §8、ADR-0099 の D6、`.ai/open-questions.md` §2（一覧） |
 | M1 の受け入れ条件 | — | `.ai/roadmap.md` §4 の受け入れ条件（A-01〜A-18） |
+| M1 の FR ごとのテスト項目（TC） | — | `.ai/tests/test-plan.md`、`.ai/roadmap.md` §4 の受け入れ条件、`.ai/async.md` §7 のテスト、`.ai/environment.md` §4 |
 | 要求の原文と区分 | — | `.ai/brief.md`、`.ai/brief-map.md`、`.ai/requirements.md` §3・§4 |
 | ジョブ・定時の処理 | — | `.ai/async.md` §2・§3（配達回の状態と J0、ADR-0094）・§4（審査キューの一意と持ち越し、ADR-0095）・§4（M1 で使うのは J14 の確認が済まない登録と数えの行の削除と、J18 の確認と再設定のメール、ADR-0087・0102） |
 | 確認と再設定のメールを web から worker に渡す（J18） | `.ai/diagrams/m1-registration-sequence.md`・`.ai/diagrams/m1-components.md` | `.ai/async.md` §2 の J18 の行・§4 J18・§5・§6、`.ai/db.md` §2 の `auth_tokens`（送る前のトークンと前のアドレスの列）、`.ai/api.md` §2.4・§7 F-02、`.ai/environment.md` §8.1、ADR-0033・0087・0090 の D7・0102 の D7 |
@@ -41,6 +42,10 @@
 | `.ai/diagrams/m1-registration-sequence.md` | シーケンス図（主な流れ） | M1 |
 | `.ai/diagrams/m1-address-account-states.md` | 状態遷移図 | M1 |
 | `.ai/diagrams/m1-er.md` | ER 図 | M1 |
+
+## テスト（`.ai/tests/`）
+
+- `.ai/tests/test-plan.md` — M1 の FR ごとのテスト項目書（TC-001〜TC-065。テストの名前に TC-NNN を入れる）
 
 ## 文書（`.ai/` の直下）
 
