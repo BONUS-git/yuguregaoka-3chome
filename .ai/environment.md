@@ -43,9 +43,9 @@
 
 | 道具 | 版の決め方 | 理由 |
 |------|-----------|------|
-| Node.js | 主版 26（2026-11 の Active LTS）`[assumed]`。`package.json` の `engines.node` に `26.x` と書く（YGO-062）| ADR-0009。CI とジョブの環境にはマスターが入れる（OQ-086 → 決定）。秘書は `engines.node` の主版をマスターに伝える |
+| Node.js | 主版 26（2026-11 の Active LTS）`[assumed]`。`package.json` の `engines.node` に `26.x` と書く（YGO-062）| ADR-0009。CI とジョブの環境にはマスターが入れる（OQ-086 → 決定）。秘書は §5.1 の一覧の主版をマスターに伝える |
 | npm | Node.js に付くもの。依存はロックファイルで固定する | 依存を変えるときは `scripts/prepare.sh` とマニフェスト・ロックファイルを同じ変更で直す。最初のロックファイルは、依存を足す変更の中で `npm install --package-lock-only --ignore-scripts` で作り、`package.json` と同じ変更に入れる（ADR-0103 の D1。作れなければ D2） |
-| PostgreSQL | サーバーの主版を 1 つに決めて（M0）、本番のマネージドサービスでも同じ主版を選ぶ [assumed] | ADR-0010。手元の OS に入れたもの（`initdb`・`pg_ctl`・`psql` がパスにある）を使う。CI とジョブの環境にはマスターが入れる（OQ-086 → 決定） |
+| PostgreSQL | サーバーの主版 18 `[assumed]`。本番のマネージドサービスでも同じ主版を選ぶ（§5.1 の一覧） | ADR-0010。手元の OS に入れたもの（`initdb`・`pg_ctl`・`psql` がパスにある）を使う。CI とジョブの環境にはマスターが入れる（OQ-086 → 決定） |
 
 コンテナの実行環境（コンテナのエンジンや Compose）は要らない（ADR-0052 の D2）。手元に入れた PostgreSQL を、レポジトリが管理する場所で動かす。
 
@@ -97,7 +97,7 @@
 1. **Node.js を確かめる**（YGO-062）: `node` のコマンドがあるかと、その主版が `package.json` の `engines.node` と合うかを確かめる。足りなければ、要る主版と「検証の環境に Node.js を入れる」を出して**失敗する**（飛ばさない）。
    - 続けて、`package-lock.json` があることと、`package.json` の依存の名前がどれもロックファイルにあり版に `^`・`~` がないことを確かめる（ADR-0103）。
    - Node.js は `check.sh` を動かす機械（手元・CI・秘書のジョブの環境）にあらかじめ入っていることを前提にする。CI とジョブの環境にはマスターが入れる（OQ-086 → 決定）。
-     秘書は `engines.node` の主版をマスターに伝え、Vitest を `check.sh` からつなぐ前に node があることを確かめる（`roadmap.md` §4 の M0 の依存）。
+     秘書は §5.1 の一覧の主版をマスターに伝え、Vitest を `check.sh` からつなぐ前に node があることを確かめる（`roadmap.md` §4 の M0 の依存）。
 2. 文書の確認（今のまま）。
 3. 型の検査と lint。
 4. **使い捨ての PostgreSQL を起こす**:
@@ -106,7 +106,7 @@
    - 片付けの `trap` を EXIT・INT・TERM・HUP に掛け、成功・失敗・中断のどれでも PostgreSQL を止めて一時ディレクトリを消す。止められない・消せないときは失敗する（§4.4）。
    - `initdb`・`pg_ctl` が見つからないときは、理由を出して**失敗する**（飛ばさない）。DB を使うテストは受け入れ条件（`roadmap.md` A-01〜A-19）なので、飛ばすと通ったように見えてしまう。
    - そのため、PostgreSQL のサーバーの道具は、`check.sh` を動かす機械（手元・CI・秘書のジョブの環境）にあらかじめ入っていることを前提にする。CI とジョブの環境にはマスターが入れる（OQ-086 → 決定、2026-11-21）。
-     秘書は M0 で主版を伝え、DB のテストを足す前に道具があることを確かめる（`roadmap.md` §4 の M0 の依存）。
+     秘書は §5.1 の一覧の主版を伝え、DB のテストを足す前に道具があることを確かめる（`roadmap.md` §4 の M0 の依存）。
      `prepare.sh` は npm の依存だけを入れ（IaC のあとは `tofu init` も）、OS の道具は入れない [assumed]。
 5. マイグレーションを当てたデータベースを 1 つ作り、それをひな型（`CREATE DATABASE ... TEMPLATE`）にして、テストのファイルごとにデータベースを作る [assumed]。テストどうしが互いのデータを見ない。
 6. Vitest を動かす（ADR-0009）。`node_modules/` がなければ `sh scripts/prepare.sh` を先に動かすよう出して失敗する。`check.sh` は `prepare.sh` も `npm ci` も呼ばず、依存は CI と手元で `check.sh` の前に `prepare.sh` が入れる（ADR-0104 の D1・D3）。`npx --no-install vitest run` で動かし、結果を JUnit XML で `test-results/junit.xml` に書く（標準の出力の報告も残す）。XML がない・`skipped`（skip と todo）がある・名前に TC-NNN のないテストがある、のどれでも失敗する。単体・統合（DB）・API（Fastify の `inject`。ポートを開かない）・組版のスナップショット・C1 の部品のテスト（Vitest と Testing Library）。
@@ -143,13 +143,28 @@
 
 - **CI の設定のファイルは秘書の変更の外**（NFR-091・CLAUDE.md）。足すのはマスター。ここは計画だけ。
 - CI の仕事は 1 つ: レポジトリを取り出す → `sh scripts/prepare.sh`（依存の取り込み。CI でネットワークを使うのはここだけ。CI ではロックファイルを作らず、コミットしたものを `npm ci` で使う。最初のロックファイルを作る例外は依存を足す変更の中だけ、ADR-0103）→ `sh scripts/check.sh`。この順は ADR-0104 の D1 で、M1 のテストは Vitest と npm の依存で書くため、`prepare.sh` の段がないと `check.sh` は `node_modules/` がないとして失敗する。
-  秘書は、`package.json` を入れる変更（YGO-062 の実装）の前に、CI の定義に `sh scripts/prepare.sh` の段を `sh scripts/check.sh` の前に足すことをマスターに伝える。足すのはマスター（ADR-0104 の D2）。段があるまでは `.ai/gaps.md` の G-079 で追い、G-078 の一覧（§3.1・§5）を作るときはこの段もその一覧に入れる。
-  Node.js と PostgreSQL のサーバーの道具は、CI の実行の環境（イメージ）にあらかじめ入れておく（§4.1）。マスターが入れる（OQ-086 → 決定）。入れた道具は使い終わっても置いたままにする（OQ-090 → 決定、§4.4）。秘書は Node.js（`engines.node`）と PostgreSQL の主版と、IaC の前に `tofu` を伝える。
+  秘書は、`package.json` を入れる変更（YGO-062 の実装）の前に、CI の定義に `sh scripts/prepare.sh` の段を `sh scripts/check.sh` の前に足すことをマスターに伝える。足すのはマスター（ADR-0104 の D2）。段があるまでは `.ai/gaps.md` の G-079 で追う。この段は §5.1 の一覧の行にある。
+  Node.js と PostgreSQL のサーバーの道具は、CI の実行の環境（イメージ）にあらかじめ入れておく（§4.1）。マスターが入れる（OQ-086 → 決定）。入れた道具は使い終わっても置いたままにする（OQ-090 → 決定、§4.4）。秘書がマスターに伝える道具と主版は §5.1 の一覧の表にある。
   `check.sh` の中身は手元と同じで、CI だけの確認を作らない。
 - `check.sh` が起こしたものは `check.sh` 自身が片付ける（§4.4）。CI だけの片付けの手順を作らない。
 - CI に秘密を登録しない。テストは偽の値だけで通る（§4.2）。外からの変更の提案でも同じに動く。
 - CI からデプロイ・IaC の適用（`tofu apply`）・クラウドへのログインをしない。IaC の確認は、IaC のコードを書いたあと、`prepare.sh` が `tofu init -backend=false` でプロバイダを取り込み、`check.sh` が `tofu fmt -check` と `tofu validate` をネットワークなしで動かす（ADR-0052 の D6）。
 - `develop` へのマージはマスターの承認（NFR-086）で、CI の結果はその材料にする。
+
+### §5.1 マスターに伝える道具の一覧
+
+秘書が 1 回でマスターに伝える道具と段の一覧（小見出しにすることは `[assumed]`）。主版・形の列は秘書が決めたもの（`[assumed]`）。
+入れる場所の列の環境に道具を用意し、CI の定義に段を足すのはマスター（OQ-086 → 決定・ADR-0104 の D2）。
+
+| 道具・段 | 主版・形 | 入れる場所 | 根拠 | 伝える時 |
+|----------|----------|------------|------|----------|
+| Node.js | 26 `[assumed]`。`package.json` の `engines.node` に `26.x` | CI の実行の環境・秘書のジョブの環境（マスターが入れる。OQ-086 → 決定） | ADR-0009・YGO-062 | YGO-062 の実装の前 |
+| npm | Node.js に付くもの。依存はロックファイルで固定する | CI の実行の環境・秘書のジョブの環境（Node.js と一緒にマスターが入れる。OQ-086 → 決定） | ADR-0103 | Node.js と同じ時 |
+| `initdb` | 18 `[assumed]` | CI の実行の環境・秘書のジョブの環境（マスターが入れる。OQ-086 → 決定） | ADR-0010・YGO-065 | DB のテストを足す前 |
+| `pg_ctl` | 18 `[assumed]` | CI の実行の環境・秘書のジョブの環境（マスターが入れる。OQ-086 → 決定） | ADR-0010・YGO-065 | DB のテストを足す前 |
+| `psql` | 18 `[assumed]` | CI の実行の環境・秘書のジョブの環境（マスターが入れる。OQ-086 → 決定） | ADR-0010・YGO-065 | DB のテストを足す前 |
+| CI の定義の `sh scripts/prepare.sh` の段 | `sh scripts/check.sh` の前に置く | CI の定義（マスターが足す） | ADR-0104 の D1・D2・G-079 | `package.json` を入れる前（YGO-062 の実装の前） |
+| `tofu` | 主版はまだ決めていない（IaC のコードを書く変更で決める） | CI の実行の環境・秘書のジョブの環境（マスターが入れる。OQ-086 → 決定） | ADR-0052 の D4・D6 | IaC のコードを書く前 |
 
 ---
 
