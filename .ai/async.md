@@ -10,10 +10,10 @@
 
 ## §1 原則
 
-1. **非同期処理はすべて worker で動かす** [explicit]（ADR-0100）: cron スケジュールとジョブの
+1. **非同期処理はすべて worker で動かす** [inferred]（ADR-0100）: cron スケジュールとジョブの
    実行は `worker` プロセスのみが担う。`web` プロセスはジョブを積むだけで、実行しない。
 
-2. **キューは PostgreSQL の上の pg-boss 相当** [explicit]（ADR-0010）: Redis 等の別ブローカは
+2. **キューは PostgreSQL の上の pg-boss 相当** [inferred]（ADR-0010）: Redis 等の別ブローカは
    使わない。トランザクションの中でジョブを積めるため、保存とキューの不整合が起きない。
 
 3. **ジョブのペイロードは ID だけ** [inferred]（db.md §1 原則 6）: 本文など大きなデータは

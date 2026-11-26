@@ -226,3 +226,4 @@
 - `.ai/tickets/YGO-047-g-011-req-5-1-points-to-oq.md`
 - `.ai/tickets/YGO-048-g-012-oq-headings-match-table.md`
 - `.ai/tickets/YGO-049-g-013-adr-0100-process-placement.md`
+- `.ai/tickets/YGO-050-g-014-architecture-inferred-tags.md`
