@@ -5,10 +5,10 @@
 - 段階: 実装
 - 今の M: M1
 - 点検 1 件
-- チケット 42/44
+- チケット 43/45
 - TC 0/65（結果なし）
 - FR の TC 18/18
-- gaps のチケットなし 2
+- gaps のチケットなし 3
 - CI はコンソールで
 - 今決める 1
 
@@ -68,6 +68,7 @@
 - YGO-061 M1 の FR ごとのテスト項目書（.ai/tests/test-plan.md）
 - YGO-063 K-018 最初のロックファイルの作り方とネットワークの例外
 - YGO-064 仕分け 9 回目の「今決める」は 0 件
+- YGO-066 K-019 CI は prepare.sh のあとに check.sh を動かす
 
 ## 未実装（M1 のチケットで done でない）
 - YGO-062 M1 のテストの土台（check.sh・JUnit XML・CI）（open）
@@ -131,3 +132,4 @@
 - G-076（M2）M2 以降の未着手の設計は、それぞれの M を今の M にするまで新しい ADR にせず、gaps の暫定のまま置く。M1 の設計の文書だけを詰める `[assumed]`。M2 を今の M にしたときに、その M の暫定の行から ADR にする
 - G-077（M1）準備書 `.ai/deploy/readiness.md` がない（M1 の達成の事実の「確かめた M が M1」が満たせない）。デプロイしない前提の準備書として、スタックの計画と IaC の設計の確かめを `environment.md` §5〜§10 を指して書き、「確かめた M: M1」の行を付け、`INDEX.md` に載せる `[assumed]`。題に G-077 を持つチケットで作る
 - G-078（M1）道具の主版は決まっている（Node.js 26 `[assumed]` は `environment.md` §3.1、PostgreSQL 18 `[assumed]` は YGO-065 の依存の節）。Node.js と npm の主版と PostgreSQL の道具（`initdb`・`pg_ctl`・`psql` の主版 18）の一覧を `environment.md` §3.1・§5 の 1 か所にまとめ、秘書が 1 回でマスターに伝えられるようにし、YGO-065 の依存の節はその一覧を指す `[assumed]`。主版を変えないまとめの作業で、あとで変えても安い
+- G-079（M1）CI の定義（`.github/workflows/`）に `sh scripts/prepare.sh` の段がまだない。ADR-0104 の D1 は CI が `prepare.sh` → `check.sh` の順に動かすことを前提にし、段を足すのはマスター（D2）。秘書は YGO-062 の実装（`package.json` を入れる変更）の前に、この段を足すことをマスターに伝える。G-078 で `environment.md` §3.1・§5 に秘書が 1 回でマスターに伝える一覧を作るときは、この段もその一覧に入れる `[assumed]`。閉じる条件: CI の定義に `sh scripts/prepare.sh` の段が `sh scripts/check.sh` の前にある（YGO-062 の受け入れ確認 18）
