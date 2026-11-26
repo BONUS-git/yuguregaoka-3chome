@@ -71,4 +71,25 @@ if [ -e "$mvp" ]; then
     done
 fi
 
+# 地図（INDEX.md）に .ai/ の下のすべてのファイルが載り、地図のパスがどれも実在すること（YGO-059、条件 6）。
+# ADR の行の末尾の状態は、その ADR の 3 行目（- 状態: …）と同じであること。
+idx=.ai/INDEX.md
+if [ -e "$idx" ]; then
+    for f in $(find .ai -type f ! -name '.*' | sort); do
+        grep -qF -- "\`$f\`" "$idx" || { echo "$f が $idx に載っていない" >&2; exit 1; }
+    done
+    for p in $(grep -oE '`\.ai/[^` ]+`' "$idx" | tr -d '`' | sort -u); do
+        [ -e "$p" ] || { echo "$idx の $p が実在しない（正しいパスに直すか消す）" >&2; exit 1; }
+    done
+    for af in .ai/adr/[0-9]*.md; do
+        [ -e "$af" ] || continue
+        st=$(sed -n '3s/^- 状態: //p' "$af")
+        [ -n "$st" ] || { echo "$af の 3 行目が状態の行（- 状態: …）でない" >&2; exit 1; }
+        grep -qxF -- "- \`$af\` — $st" "$idx" || {
+            echo "$idx の $af の行の末尾が状態（$st）と合っていない" >&2
+            exit 1
+        }
+    done
+fi
+
 echo "check: ok"
