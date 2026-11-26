@@ -120,3 +120,4 @@
 - [0101 — 認証の表と、送る前のトークンと前のアドレス](0101-auth-tables-and-pending-mail-values.md)
 - [0102 — 認証の表とメールの受け渡し、使用中のメールの登録](0102-auth-tables-mail-and-registered-email.md)
 - [0103 — 最初のロックファイルは依存を足す変更で作る](0103-first-lockfile-in-dependency-change.md)
+- [0104 — CI は prepare.sh のあとに check.sh を動かす](0104-ci-runs-prepare-then-check.md)

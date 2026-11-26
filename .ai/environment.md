@@ -4,7 +4,7 @@
 - 日付: 2026-11-21
 - チケット: YGO-009
 - 根拠: `.ai/brief.md`・`requirements.md`（NFR-058・NFR-063・NFR-065・NFR-067・NFR-071〜NFR-080・NFR-091・NFR-092）・`architecture.md`・`async.md`・`db.md`・`security.md`・`roadmap.md`・ADR-0006・0009〜0012・0021・0033・0076・0085・0086・0100
-- 関連 ADR: 0052（ローカルの開発と `check.sh` の環境・IaC は OpenTofu で設計だけ）・0068（使い終わった道具は片付ける）
+- 関連 ADR: 0052（ローカルの開発と `check.sh` の環境・IaC は OpenTofu で設計だけ）・0068（使い終わった道具は片付ける）・0103（最初のロックファイル）・0104（CI は prepare.sh のあとに check.sh）
 
 ---
 
@@ -109,7 +109,7 @@
      秘書は M0 で主版を伝え、DB のテストを足す前に道具があることを確かめる（`roadmap.md` §4 の M0 の依存）。
      `prepare.sh` は npm の依存だけを入れ（IaC のあとは `tofu init` も）、OS の道具は入れない [assumed]。
 5. マイグレーションを当てたデータベースを 1 つ作り、それをひな型（`CREATE DATABASE ... TEMPLATE`）にして、テストのファイルごとにデータベースを作る [assumed]。テストどうしが互いのデータを見ない。
-6. Vitest を動かす（ADR-0009）。`node_modules/` がなければ `sh scripts/prepare.sh` を先に動かすよう出して失敗する。`npx --no-install vitest run` で動かし、結果を JUnit XML で `test-results/junit.xml` に書く（標準の出力の報告も残す）。XML がない・`skipped`（skip と todo）がある・名前に TC-NNN のないテストがある、のどれでも失敗する。単体・統合（DB）・API（Fastify の `inject`。ポートを開かない）・組版のスナップショット・C1 の部品のテスト（Vitest と Testing Library）。
+6. Vitest を動かす（ADR-0009）。`node_modules/` がなければ `sh scripts/prepare.sh` を先に動かすよう出して失敗する。`check.sh` は `prepare.sh` も `npm ci` も呼ばず、依存は CI と手元で `check.sh` の前に `prepare.sh` が入れる（ADR-0104 の D1・D3）。`npx --no-install vitest run` で動かし、結果を JUnit XML で `test-results/junit.xml` に書く（標準の出力の報告も残す）。XML がない・`skipped`（skip と todo）がある・名前に TC-NNN のないテストがある、のどれでも失敗する。単体・統合（DB）・API（Fastify の `inject`。ポートを開かない）・組版のスナップショット・C1 の部品のテスト（Vitest と Testing Library）。
 7. 最後に `check: ok` を出す。
 
 ブラウザを動かす端から端までのテストは `check.sh` に入れない（ブラウザの取り込みにネットワークが要る。範囲は NFR-064 のとおり実装の段階で決める）。
@@ -142,7 +142,8 @@
 ## §5 CI の計画
 
 - **CI の設定のファイルは秘書の変更の外**（NFR-091・CLAUDE.md）。足すのはマスター。ここは計画だけ。
-- CI の仕事は 1 つ: レポジトリを取り出す → `sh scripts/prepare.sh`（依存の取り込み。CI でネットワークを使うのはここだけ。CI ではロックファイルを作らず、コミットしたものを `npm ci` で使う。最初のロックファイルを作る例外は依存を足す変更の中だけ、ADR-0103）→ `sh scripts/check.sh`。
+- CI の仕事は 1 つ: レポジトリを取り出す → `sh scripts/prepare.sh`（依存の取り込み。CI でネットワークを使うのはここだけ。CI ではロックファイルを作らず、コミットしたものを `npm ci` で使う。最初のロックファイルを作る例外は依存を足す変更の中だけ、ADR-0103）→ `sh scripts/check.sh`。この順は ADR-0104 の D1 で、M1 のテストは Vitest と npm の依存で書くため、`prepare.sh` の段がないと `check.sh` は `node_modules/` がないとして失敗する。
+  秘書は、`package.json` を入れる変更（YGO-062 の実装）の前に、CI の定義に `sh scripts/prepare.sh` の段を `sh scripts/check.sh` の前に足すことをマスターに伝える。足すのはマスター（ADR-0104 の D2）。段があるまでは `.ai/gaps.md` の G-079 で追い、G-078 の一覧（§3.1・§5）を作るときはこの段もその一覧に入れる。
   Node.js と PostgreSQL のサーバーの道具は、CI の実行の環境（イメージ）にあらかじめ入れておく（§4.1）。マスターが入れる（OQ-086 → 決定）。入れた道具は使い終わっても置いたままにする（OQ-090 → 決定、§4.4）。秘書は Node.js（`engines.node`）と PostgreSQL の主版と、IaC の前に `tofu` を伝える。
   `check.sh` の中身は手元と同じで、CI だけの確認を作らない。
 - `check.sh` が起こしたものは `check.sh` 自身が片付ける（§4.4）。CI だけの片付けの手順を作らない。
