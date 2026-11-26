@@ -7,6 +7,8 @@
 ## 決まり
 
 - テストの名前に TC-NNN を入れる。Vitest の `test` / `it` の名前の頭に `TC-001 …` と書く。関数やファイルの名前にするときは `test_TC_001_…` の形にする `[assumed]`。
+- `skip`・`todo` のテストは通っていないと数える。`check.sh` は JUnit XML に `skipped` があると失敗し、名前に TC-NNN のないテストも失敗にする（YGO-062）。
+- テストの結果は JUnit XML で `test-results/junit.xml` に書く（`vitest.config.ts`。`test-results/` はコミットしない）。
 - M1 の FR を確かめるテストは、どれもこの表の TC を持つ。1 つの TC を複数のテストに分けるときは、どのテストにも同じ ID を入れる。
 - ID は `TC-` と 3 桁で、使い回さない。FR を足したら表の末尾に続きの番号で足す。
 - どのテストも `sh scripts/check.sh` から、ネットワークなしで動かす（`.ai/environment.md` §4.1）。使うのは使い捨ての PostgreSQL（Unix ソケットだけ）・Fastify の `inject`・差し替えた時計。テストの準備で、外への接続を失敗させる。
