@@ -5,7 +5,7 @@
 - 段階: 実装
 - 今の M: M1
 - 点検 1 件
-- チケット 50/58
+- チケット 51/65
 - TC 0/65（結果なし）
 - FR の TC 18/18
 - gaps のチケットなし 2
@@ -74,6 +74,7 @@
 - YGO-068 G-077 デプロイしない前提の準備書を作る
 - YGO-069 G-078 マスターに伝える道具の主版を 1 つの一覧にまとめる
 - YGO-073 R-068 YGO-065 が 1 回の変更の大きさを超える
+- YGO-074 R-070 M0 の土台を M1 のチケットに混ぜ範囲が曖昧
 - YGO-075 ADR-0106 依存を足す変更ごとにロックファイルを直す
 - YGO-079 roadmap.md にすべてのマイルストーンの行を書く
 
@@ -82,10 +83,16 @@
 - YGO-070 G-079 CI の定義で prepare.sh の段を check.sh の前に置く（open）
 - YGO-071 R-066 M1 の FR が 1 つも実装されず TC のテストは 1 件（open）
 - YGO-072 R-067 package.json がないと check.sh がテストを飛ばして通る（open）
-- YGO-074 R-070 M0 の土台を M1 のチケットに混ぜ範囲が曖昧（open）
 - YGO-076 check.sh の使い捨ての PostgreSQL と主版 18 の確かめ（open）
 - YGO-077 M1 の住民と認証の 6 表のマイグレーション（open）
 - YGO-078 M1 の package.json とロックファイルで Vitest を動かす（open）
+- YGO-080 M1 の差し替えられる時計（open）
+- YGO-081 M1 の jobs のキューに積むこと（open）
+- YGO-082 M1 の環境変数の読み込みと MAIL_ADAPTER の選択（open）
+- YGO-083 M1 のモックのメールのアダプタ（open）
+- YGO-084 M1 の worker のジョブの実行（open）
+- YGO-085 M1 の KeyProvider の偽の鍵（open）
+- YGO-086 M1 の pg-boss を依存に足す（open）
 
 ## 暫定対応（`.ai/gaps.md` の暫定）
 - G-001（M6）掲示板の投稿の消し方は J14 の行を足すだけ。`rejected` は 30 日で本文を消し、`deleted` の行は通報のクローズから 1 年で消す `[assumed]
