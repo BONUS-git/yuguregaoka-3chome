@@ -29,7 +29,8 @@ CI の定義（`.github/workflows/`）があり `sh scripts/prepare.sh` → `sh 
 
 ## 範囲
 このチケットが作るのは、`roadmap.md` §4 の M0 の行のうち「Vitest を `check.sh` からつなぐ」と、それに要る `scripts/prepare.sh`・`package.json`（`engines` を含む）だけ。
-M0 の残り（使い捨ての PostgreSQL・`scripts/dev-db.sh`・時計・アダプタ・2 プロセスの骨組み・キュー・`APP_ENV` と環境変数の読み込み）は M0 の別のチケットに回す（「直さないところ」）。
+使い捨ての PostgreSQL（`.ai/environment.md` §4.1 の 4・5、§4.4）は YGO-076 に回す。
+M0 の残り（`scripts/dev-db.sh`・時計・アダプタ・2 プロセスの骨組み・キュー・`APP_ENV` と環境変数の読み込み）は M0 の別のチケットに回す（「直さないところ」）。
 `M: M1` とするのは、目的が M1 の TC のテストを動かす土台だから。
 
 - `package.json` とロックファイル: `fastify` を `dependencies` に、`vitest`・`typescript`・`@types/node` を `devDependencies` に入れ、版は固定する（範囲の記号を付けない）`[assumed]`。
@@ -56,7 +57,8 @@ M0 の残り（使い捨ての PostgreSQL・`scripts/dev-db.sh`・時計・ア�
 - `.ai/environment.md` を今の状態に合わせる:
   - §3.2 に、`prepare.sh` が `npm ci` を動かすことを書く。
   - §4.1 に、文書の確認と Vitest を動かすことと、JUnit XML の出力先 `test-results/junit.xml` を書く。§4.1 の 1（Node.js の確かめ）は作ったものとして書く。
-    §4.1 の 3〜5（型の検査と lint・使い捨ての PostgreSQL・ひな型のデータベース）は、M0 の別のチケットで足すものとして残す。
+    §4.1 の 4〜5（使い捨ての PostgreSQL・ひな型のデータベース）は、YGO-076 で足すものとして残す。
+    §4.1 の 3（型の検査と lint）は、M1 の TC が依存しないため M1 のチケットにせず、`.ai/environment.md` §4.1 の 3 として残す `[assumed]`（M1 の TC はどれも型の検査と lint の結果を確かめない）。
   - §3.1 の `engines` の行は、`package.json` に書いた主版と食い違わないようにする。§3.2 の 2 以降（`dev-db.sh`・`.local/`）は M0 の別のチケットで作るものとして残す。
 - 地図 `.ai/INDEX.md` と食い違うところがあれば同じ変更で直す（`.ai/` の外のファイルは地図に載せない）。
 
@@ -65,9 +67,9 @@ M0 の残り（使い捨ての PostgreSQL・`scripts/dev-db.sh`・時計・ア�
   その定義があり `sh scripts/prepare.sh` → `sh scripts/check.sh` の順に動かすことは、YGO-070 の受け入れ確認 1 で確かめる（ADR-0105 の D4）。
   CI の結果（緑かどうか）は、M1 の達成の確認で見る。
 - 前提: この土台は、CI が `prepare.sh` → `check.sh` の順に動かす形（ADR-0105 の D1）であることを前提にする。CI が `check.sh` だけを動かすと、`node_modules/` がなく `check.sh` は失敗する（受け入れ確認 4、ADR-0105 の D3）。
-- 使い捨ての PostgreSQL の起動と片付け（§4.1 の 4・5、§4.4）: `roadmap.md` §4 の M0 の別のチケットで、初めて DB を使う TC より前に足す。
+- 使い捨ての PostgreSQL の起動と片付け（§4.1 の 4・5、§4.4）: YGO-076 で、初めて DB を使う TC（TC-005、YGO-065）より前に足す。
 - `scripts/dev-db.sh`・時計・アダプタ・2 プロセスの骨組み・キュー・`APP_ENV` と環境変数の読み込み（`roadmap.md` §4 の M0 の行の残り）: M0 の別のチケットで足す。
-- 型の検査と lint（§4.1 の 3）: このチケットでは足さない。
+- 型の検査と lint（§4.1 の 3）: このチケットでは足さない。M1 の TC が依存しないため、M1 のチケットにもしない `[assumed]`。
 - M1 の FR の機能の実装: 別のチケットで 1 つずつ。
 - `.ai/status.md`: 秘書が書くもので、ジョブは変えない。
 - 新しい ADR・OQ・要回答は 0 件（道具は ADR-0009 と ADR-0052、ロックファイルは ADR-0103、CI の順と `prepare.sh` の段を足す人と CI の定義の確かめの置き場所は ADR-0105、Node.js を入れるのは OQ-086 で決まっている。版や設定の細部は `[assumed]`）。
@@ -85,8 +87,8 @@ CI の定義（`.github/workflows/`）の項目は入れない。CI の定義は
 8. `.gitignore` に `test-results/` と `node_modules/` の行がある。
 9. この変更で `.github/` の下のファイルを足していない・変えていない。
 10. `.ai/environment.md` に「`prepare.sh` は今のレポジトリになく」と「今の `check.sh` は文書の確認だけ」が残っておらず、§4.1 に `test-results/junit.xml` が書かれている。
-11. `.ai/environment.md` §3.1・§3.2・§4.1 の「M0 で」の記述が、このチケットで作ったものと食い違わない: §3.1 の `engines` の主版が `package.json` と同じで、§3.2 の `dev-db.sh`・`.local/` と §4.1 の 3〜5 は M0 で足すものとして残り、作ったと書かれていない。
-12. このチケットの「範囲」に、`roadmap.md` §4 の M0 の行のうち作るもの（Vitest を `check.sh` からつなぐ・`prepare.sh`）と、M0 の別のチケットに回すもの（使い捨ての PostgreSQL・`dev-db.sh`・時計・アダプタ）が書かれている。
+11. `.ai/environment.md` §3.1・§3.2・§4.1 の「M0 で」の記述が、このチケットで作ったものと食い違わない: §3.1 の `engines` の主版が `package.json` と同じで、§3.2 の `dev-db.sh`・`.local/` は M0 で足すもの、§4.1 の 4〜5 は YGO-076 で足すもの、§4.1 の 3 は M1 のチケットにしないものとして残り、作ったと書かれていない。
+12. このチケットの「範囲」に、`roadmap.md` §4 の M0 の行のうち作るもの（Vitest を `check.sh` からつなぐ・`prepare.sh`）と、YGO-076 に回すもの（使い捨ての PostgreSQL）と、M0 の別のチケットに回すもの（`dev-db.sh`・時計・アダプタ）が書かれている。
 13. `scripts/check.sh` の最初の段で、`node` のコマンドがあるかと、その主版が `package.json` の `engines.node` と合うかを確かめる。足りなければ、要る主版と「検証の環境に Node.js を入れる」ことが分かる文を出して、終了コード 0 以外で止まる（`.ai/retros.md` の変更 20261126-380a19 の節）。
 14. `package-lock.json` を消した状態で `sh scripts/prepare.sh` と `sh scripts/check.sh` がどちらも終了コード 0 以外で終わる（ADR-0103 の D3）。
 15. このチケットが `状態: done` のとき、`scripts/prepare.sh` を消した状態で `sh scripts/check.sh` が終了コード 0 以外で終わる。
