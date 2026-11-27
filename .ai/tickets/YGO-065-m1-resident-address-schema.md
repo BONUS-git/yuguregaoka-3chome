@@ -4,21 +4,21 @@ M: M1
 
 ## 目的
 目標の受け入れ条件 1（今の M の TC のテストがすべて `scripts/check.sh` で通り、CI が緑）を進める。
-M1 の FR を実装する最初の 1 単位として、`.ai/db.md` §2「住民・住所」の 8 表のスキーマとマイグレーションを作り、TC-005 のテストを通す。
+M1 の FR を実装する最初の 1 単位として、`.ai/db.md` §2「住民・住所」の `addresses`・`tenancies` の 2 表のマイグレーションを作り、TC-005 のテストを通す。
 
 最初にこの単位を選んだ理由:
-- `.ai/roadmap.md` §4 の M1 の行の FR（住所の候補・登録・メールの確認・ログイン・セッション・再認証・流量の制限・プロフィール・入居の一覧）は、どれもこの 8 表のどれかに読み書きする。表がないと、どの FR の経路も書けない。
-- `.ai/roadmap.md` §4 の依存の表で、M1 は M0 の「DB・アダプタ（メール）・時計」に依存する。時計とメールのアダプタは登録の経路から要るが、スキーマはそれより前に要る。
-- `.ai/tests/test-plan.md` の M1 の結合の TC のうち、経路もアダプタもなしで、表と制約だけで確かめられるのは TC-005 だけ。
+- `.ai/roadmap.md` §4 の M1 の行の FR（住所の候補・登録・メールの確認・ログイン・セッション・再認証・流量の制限・プロフィール・入居の一覧）は、どれも「住民・住所」の 8 表のどれかに読み書きする。表がないと、どの FR の経路も書けない。
+- `.ai/tests/test-plan.md` の M1 の結合の TC のうち、経路もアダプタもなしで、表と制約だけで確かめられるのは TC-005 だけ。TC-005 が使うのは `addresses`・`tenancies` の 2 表。
+
+範囲の分け方（YGO-073、`reviews/0004-phase-evaluation-2026-11-27.md` の R-068）: もとの範囲は 4 枚に分けた。このチケットに残るのは `addresses`・`tenancies` の表と TC-005 だけで、ほかは次のチケットに移した。
+- 依存を足すときのロックファイルの ADR（ADR-0103 を置き換える ADR-0106）と `ADR-0103` の参照の直し: YGO-075
+- 使い捨ての PostgreSQL・主版 18 の確かめ・ひな型の DB・`pg`/`@types/pg` の依存・`test/setup.ts`・`environment.md` §3.1・§4.1 の直し: YGO-076
+- 残りの 6 表（`residents`・`credentials`・`sessions`・`auth_tokens`・`staff_roles`・`rate_limit_buckets`）と `tenancies.resident_id` の外部キー: YGO-077
 
 ## 依存
 - YGO-062（M1 のテストの土台）が `状態: done` であること。`package.json`・`package-lock.json`・Vitest の段が `check.sh` で動くことを前提にする。
-  YGO-062 が `open` のあいだは、このチケットを始めない（`package.json` がないと Vitest の段が飛び、TC-005 のテストが動いたことを確かめられない）。
-- PostgreSQL のサーバーの主版は **18** `[assumed]`（`.ai/environment.md` §5.1 の一覧の `initdb`・`pg_ctl`・`psql` の行と §3.1 の PostgreSQL の行にある。本番のマネージドサービスでも同じ主版を選ぶ、ADR-0010）。
-  OQ-086 → 決定と `roadmap.md` §4 の M0 の依存の順（主版を決める → 秘書がマスターに伝える → 道具があることを確かめる → DB のテストを足す）に従い、次の 2 つがそろうまで、このチケットを始めない:
-  1. 秘書が、主版 18 をマスターに伝えている。
-  2. CI の実行の環境と秘書のジョブの環境で、`initdb --version`・`pg_ctl --version`・`psql --version` が主版 18 を返す（道具はマスターが入れる。OQ-086 → 決定、`.ai/environment.md` §4.1 の 4・§5.1）。
-  主版を 18 から変えるときは、このチケットを始める前に、`.ai/environment.md` §3.1・§5.1 の主版を直し、秘書が改めて伝える。
+- 依存の順: YGO-075（ADR-0106）→ YGO-076（使い捨ての PostgreSQL）→ **YGO-065（このチケット）** → YGO-077（残りの 6 表）。
+  - YGO-076 が `状態: done` であること。`check.sh` が使い捨ての PostgreSQL を起こし、`migrations/*.sql` をひな型の DB `yuguregaoka_template` に当て、`test/setup.ts` がファイルごとの DB を指す `DATABASE_URL` を組み立てることを前提にする。PostgreSQL の主版 18 と道具があることの確かめは YGO-076 の依存の節にある。
 
 ## 範囲
 対象の FR と TC:
@@ -26,55 +26,37 @@ M1 の FR を実装する最初の 1 単位として、`.ai/db.md` §2「住民�
 - TC-005（FR-003、結合）: `addresses.address_text` の UNIQUE と、`tenancies` の is_current の部分一意の制約に当たると挿入が失敗する
 
 作るもの:
-- **マイグレーション** `migrations/0001_residents_addresses.sql`: `.ai/db.md` §2「住民・住所」の 8 表 `residents`・`credentials`・`sessions`・`auth_tokens`・`staff_roles`・`rate_limit_buckets`・`addresses`・`tenancies` を、db.md の列・一意・外部キー・CHECK・索引のとおりに作る。
-  - CHECK: `residents` の誕生日の月・日と月日の組み合わせ、`credentials` の TOTP の列の組み、`auth_tokens` の `purpose` と対の列、`staff_roles` の `role` など、db.md §2 のこの 8 表に書かれたものすべて。
-  - 索引: `credentials` の (`email_key_version`)・(`email_hmac_key_version`)・(`totp_key_version`) の NULL を除く部分索引、`sessions` と `auth_tokens` の (`resident_id`)・(`expires_at`)、`tenancies` の `WHERE is_current` の部分一意など、db.md §2 のこの 8 表に書かれたものすべて。db.md が「足さない」とした索引は作らない。
-  - 当て方は `psql -v ON_ERROR_STOP=1 --single-transaction -f` `[assumed]`。マイグレーションの道具は依存に足さない `[assumed]`。
+- **マイグレーション** `migrations/0001_addresses_tenancies.sql`: `.ai/db.md` §2「住民・住所」の `addresses`・`tenancies` の 2 表を、db.md の列・一意・外部キー・索引のとおりに作る。
+  - 一意と索引: `addresses.address_text` の UNIQUE と、`tenancies` の (`address_id`) `WHERE is_current` の部分一意の索引。db.md が「足さない」とした索引は作らない。
+  - 外部キー: `tenancies.address_id` → `addresses`。`tenancies.resident_id` は外部キーのない `uuid NULL` で作る `[assumed]`（この時点では `residents` がない。外部キーは YGO-077 が `ALTER TABLE` で足す）。
   - db.md に NOT NULL・既定が書かれていない列は、SQL のコメントにその箇所ごとに `[assumed]` と書く。
-- **使い捨ての PostgreSQL**（`.ai/environment.md` §4.1 の 4・5）を `scripts/check.sh` に足す。YGO-062 が「初めて DB を使う TC より前に足す」としていて、TC-005 がその最初の TC のため、このチケットで作る。
-  - `mktemp -d` の一時ディレクトリに `initdb` し、`pg_ctl start` で起こす。`listen_addresses=''`（TCP で待ち受けない）で、Unix ソケットは一時ディレクトリの中。
-  - 片付けの `trap` を EXIT・INT・TERM・HUP に掛ける。止められない・消せないときは失敗する（§4.4）。
-  - `initdb`・`pg_ctl`・`psql` がなければ、理由を出して失敗する（飛ばさない）。
-  - マイグレーションを当てたひな型の DB `yuguregaoka_template` を作り、テストのファイルごとに `CREATE DATABASE ... TEMPLATE yuguregaoka_template` で DB を作る `[assumed]`。
-  - 接続は `.ai/environment.md` §4.2 のとおり `DATABASE_URL` を使う。`check.sh` がテストに渡すのは、ソケットのディレクトリとひな型の DB の名前だけ。テストの準備のコード（`test/setup.ts` など）が、それを使ってファイルごとの DB を作り、その DB を指す `DATABASE_URL` を組み立てる。`.env*` のファイルは使わない（§4.2）。
-  - `check.sh` は `initdb --version` の主版が `.ai/environment.md` §3.1 の PostgreSQL の行の主版（§5.1 の一覧と同じ 18）と合うかを確かめ、合わなければ要る主版を出して失敗する。
-- **DB のドライバ**: `pg` を `dependencies`、`@types/pg` を `devDependencies` に固定の版で足し、ロックファイルを直す `[assumed]`。
-  - ADR-0103 の D1 のネットワークの例外は「最初のロックファイル」だけで、依存を足す変更の根拠にならない。そのため ADR-0106 を作り、「依存を足す・変える変更ごとに、その変更の中でロックファイルを直す」として D1〜D3 を丸ごと書き直し、ADR-0103 の状態を `置き換え（→ 0106）` にする（ADR-0105 は CI の定義の確かめの置き場所で使っている）。
-  - 今の状態を書く文書（`.ai/environment.md` など）と `scripts/` に残る `ADR-0103` の参照を、同じ変更で `ADR-0106` に直す。
 - **TC-005 のテスト** `test/test_TC_005_address_tenancy_unique.test.ts`（名前は `TC-005 …` で始める。`skip`・`todo` にしない）:
   - 同じ `address_text` の `addresses` の行を 2 回挿入すると、2 回目が SQLSTATE `23505` で失敗する。
   - 同じ `address_id` に `is_current = true` の `tenancies` の行を 2 つ入れると、2 つ目が `23505` で失敗する。
   - `is_current = false` の行は、同じ住所に `is_current = true` の行があっても入る。
-  - 値は偽の値（住所は `夕暮ヶ丘三丁目 2-5` など、メールは `test@example.invalid`。`.ai/environment.md` §4.2）。
+  - `tenancies` の行は `resident_id` を NULL で入れる（db.md §2 で NULL を許す列。YGO-077 が `residents` への外部キーを足したあとも、テストを直さずに通る）`[assumed]`。
+  - 値は偽の値（住所は `夕暮ヶ丘三丁目 2-5` など。`.ai/environment.md` §4.2）。
 - **文書をそろえる**（同じ変更で今の状態に書き直す）:
-  - `.ai/environment.md` §4.1: 4・5 をこのチケットで作ったものとして書き、3（型の検査と lint）だけを M0 の別のチケットで足すものとして残す。「この順に足す」の文言は消す。
-  - `.ai/environment.md` §3.1: PostgreSQL の行に、`check.sh` が `initdb --version` の主版を確かめることを書く（主版 18 `[assumed]` は §3.1・§5.1 にある）。
   - `.ai/db.md` §2 の「DDL は書かない」を、DDL の正本は `migrations/` とする記述に直す。
-  - `.ai/INDEX.md`: ADR-0106 の行を足し、ADR-0103 の行の末尾を状態に合わせる。
 
 ## 直さないところと理由
+- ADR-0106 と `ADR-0103` の参照の直し: YGO-075。
+- 使い捨ての PostgreSQL・ひな型の DB・`pg` の依存・`test/setup.ts`（`.ai/environment.md` §4.1 の 4・5）: YGO-076。
+- 型の検査と lint（`.ai/environment.md` §4.1 の 3）: M1 の TC はどれも型の検査と lint の結果を確かめないため、M1 のチケットにせず、§4.1 の 3 として残す `[assumed]`（YGO-062・YGO-076 と同じ）。
+- 残りの 6 表と `tenancies.resident_id` の外部キー: YGO-077。
 - 経路・登録のトランザクション・409 の応答（TC-006 ほか）: 時計とメールのアダプタが要るため、M1 の次のチケットで。
 - 時計・メールのアダプタ・`scripts/dev-db.sh`・キュー・2 プロセスの骨組み・`APP_ENV`: `roadmap.md` §4 の M0 の行の残りで、それぞれ別のチケットで。
-- 型の検査と lint（`.ai/environment.md` §4.1 の 3）: このチケットでは足さない。§4.1 は 3〜5 を「この順に足す」としているが、4・5 を先にする。TC-005 は DB を使う最初のテストで、4・5 がないと動かせない。3 は DB に依存せず、あとから足しても 4・5 を変えずに済む。そのため §4.1 の書き直しで「この順に」を消す。
 - 「住民・住所」より後の表（手紙・配達回・新聞など）: 使う M のチケットで足す。
 - CI の workflow（`.github/`）・`.ai/status.md`: ジョブは書かない（CLAUDE.md）。
-- 新しい OQ・要回答は 0 件（ドライバ・マイグレーションの形・PostgreSQL の主版は技術の細部で `[assumed]`。主版はマスターに聞かず、秘書が伝える（OQ-086 → 決定）。接続の変数は `environment.md` §4.2 の `DATABASE_URL` で決まっている。ネットワークの例外は ADR-0106 で決める）。
-- このチケットを切る変更では、このチケットと `.ai/INDEX.md` のチケットの一覧の 1 行だけを足す。`scripts/check.sh` は `.ai/` の下のファイルが `.ai/INDEX.md` に載っていないと失敗するため。
+- 新しい OQ・要回答は 0 件（マイグレーションの形と列の細部は技術の細部で `[assumed]`）。
 
 ## 受け入れ確認
 1. このチケットの 1〜3 行目が `# YGO-065 M1 の住民と住所の DB のスキーマとマイグレーション`・`状態: done`・`M: M1`。
-2. YGO-062 のチケットの 2 行目が `状態: done`。
+2. YGO-062 と YGO-076 のチケットの 2 行目が `状態: done`。
 3. `sh scripts/prepare.sh` のあと `sh scripts/check.sh` がネットワークなしで終了コード 0 で `check: ok` で終わる。
 4. `test-results/junit.xml` に、名前に `TC-005` を含む `testcase` があり、その中に `skipped`・`failure`・`error` の要素がない（passed）。
-5. `migrations/0001_residents_addresses.sql` があり、`residents`・`credentials`・`sessions`・`auth_tokens`・`staff_roles`・`rate_limit_buckets`・`addresses`・`tenancies` の 8 つの `CREATE TABLE` がある。
+5. `migrations/0001_addresses_tenancies.sql` があり、`addresses`・`tenancies` の 2 つの `CREATE TABLE` があり、ほかの表の `CREATE TABLE` がない。
 6. そのマイグレーションに、`addresses.address_text` の UNIQUE と、`tenancies` の `address_id` の `WHERE is_current` の部分一意の索引がある。
-7. マイグレーションの列・一意・外部キー・CHECK・索引が `.ai/db.md` §2「住民・住所」の表と食い違わない。db.md に書かれていない NOT NULL・既定には、その箇所に `[assumed]` のコメントがある。
-8. `scripts/check.sh` の使い捨ての PostgreSQL が `listen_addresses=''` で起き、`trap` が EXIT・INT・TERM・HUP に掛かっている。
-9. `initdb`・`pg_ctl`・`psql` のどれかがないとき、`check.sh` は理由を出して終了コード 0 以外で終わる（飛ばさない）。
-10. `scripts/check.sh` に、ネットワークを使うコマンド（`npm ci`・`npm install`・`curl`・`wget` など）がない。
-11. `package.json` の `dependencies` に `pg`、`devDependencies` に `@types/pg` があり、版に `^`・`~` がない。`package-lock.json` に両方の名前がある。
-12. ADR-0106 があり 3 行目が `- 状態: 採用`、ADR-0103 の 3 行目が `- 状態: 置き換え（→ 0106）`。`.ai/INDEX.md` の両方の ADR の行の末尾が状態と同じ。
-13. `.ai/environment.md` §4.1 の 4・5 が作ったものとして書かれ、3 だけが M0 の別のチケットで足すものとして残っていて、「この順に」の文言がない。`.ai/db.md` §2 に「DDL は書かない」が残っていない。
-14. `.ai/`（チケットを除く）と `scripts/` に、今の決定として `ADR-0103` を指す記述が残っていない（ADR-0106 と ADR-0103 の本文、経緯を書く `retros.md`・`triage.md` を除く）。
-15. `scripts/check.sh` に、`initdb --version` の主版を `.ai/environment.md` §3.1 の PostgreSQL の行の主版（§5.1 の一覧と同じ 18）と比べ、合わなければ終了コード 0 以外で終わる段がある。
-16. テストの準備のコード（`test/setup.ts` など）がファイルごとの DB を指す `DATABASE_URL` を組み立て、`scripts/check.sh` が渡す環境変数はソケットのディレクトリとひな型の DB の名前だけ。
+7. マイグレーションの列・一意・外部キー・索引が `.ai/db.md` §2 の `addresses`・`tenancies` の表と食い違わない（`tenancies.resident_id` の外部キーだけは YGO-077 で足し、その箇所に `[assumed]` のコメントがある）。db.md に書かれていない NOT NULL・既定には、その箇所に `[assumed]` のコメントがある。
+8. `.ai/db.md` §2 に「DDL は書かない」が残っていない。
+9. TC-005 のテストが `tenancies` に入れる行は、どれも `resident_id` が NULL（仮の UUID を入れない）。

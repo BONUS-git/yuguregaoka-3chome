@@ -270,3 +270,6 @@
 - `.ai/tickets/YGO-072-r-067-check-fails-tests-without-package-json.md`
 - `.ai/tickets/YGO-073-r-068-split-ygo-065.md`
 - `.ai/tickets/YGO-074-r-070-m0-parts-as-m1-tickets.md`
+- `.ai/tickets/YGO-075-adr-0106-lockfile-per-dependency-change.md`
+- `.ai/tickets/YGO-076-check-throwaway-postgresql.md`
+- `.ai/tickets/YGO-077-m1-resident-auth-tables.md`
