@@ -10,10 +10,22 @@ M1 の FR を実装する最初の 1 単位として、`.ai/db.md` §2「住民�
 - `.ai/roadmap.md` §4 の M1 の行の FR（住所の候補・登録・メールの確認・ログイン・セッション・再認証・流量の制限・プロフィール・入居の一覧）は、どれも「住民・住所」の 8 表のどれかに読み書きする。表がないと、どの FR の経路も書けない。
 - `.ai/tests/test-plan.md` の M1 の結合の TC のうち、経路もアダプタもなしで、表と制約だけで確かめられるのは TC-005 だけ。TC-005 が使うのは `addresses`・`tenancies` の 2 表。
 
-範囲の分け方（YGO-073、`reviews/0004-phase-evaluation-2026-11-27.md` の R-068）: もとの範囲は 4 枚に分けた。このチケットに残るのは `addresses`・`tenancies` の表と TC-005 だけで、ほかは次のチケットに移した。
-- 依存を足すときのロックファイルの ADR（ADR-0103 を置き換える ADR-0106）と `ADR-0103` の参照の直し: YGO-075
-- 使い捨ての PostgreSQL・主版 18 の確かめ・ひな型の DB・`pg`/`@types/pg` の依存・`test/setup.ts`・`environment.md` §3.1・§4.1 の直し: YGO-076
-- 残りの 6 表（`residents`・`credentials`・`sessions`・`auth_tokens`・`staff_roles`・`rate_limit_buckets`）と `tenancies.resident_id` の外部キー: YGO-077
+## 分けた先
+YGO-073 で分けた（`reviews/0004-phase-evaluation-2026-11-27.md` の R-068）。もとの範囲と受け入れ確認の項目ごとの移り先:
+- ADR-0103 を置き換える ADR-0106・`.ai/` に残る `ADR-0103` の参照の直し・`.ai/INDEX.md` の ADR の行: YGO-075
+- 使い捨ての PostgreSQL を `check.sh` から起こすこと: YGO-076
+- PostgreSQL の主版 18 と道具があることの確かめ: YGO-076
+- `migrations/*.sql` を当てるひな型の DB `yuguregaoka_template` と、`test/setup.ts` のファイルごとの DB: YGO-076
+- `pg`/`@types/pg` の依存とロックファイル: YGO-076
+- `scripts/` に残る `ADR-0103` の参照の直し: YGO-076
+- `.ai/environment.md` §3.1・§4.1 の直し: YGO-076
+- 残りの 6 表（`residents`・`credentials`・`sessions`・`auth_tokens`・`staff_roles`・`rate_limit_buckets`）とその CHECK・索引: YGO-077
+- `tenancies.resident_id` の `residents` への外部キー: YGO-077
+- `addresses`・`tenancies` のマイグレーション: 移り先なし（このチケットの範囲）
+- TC-005 のテスト: 移り先なし（このチケットの範囲）
+- `.ai/db.md` §2 の「DDL は書かない」の直し: 移り先なし（このチケットの範囲）
+
+移り先のない 3 項目が残るため `状態: open` のまま。範囲と受け入れ確認はこの 3 項目だけを書く。
 
 ## 依存
 - YGO-062（M1 のテストの土台）と YGO-078（`package.json` とロックファイル）が `状態: done` であること。`package.json`・`package-lock.json`・Vitest の段が `check.sh` で動くことを前提にする。
@@ -40,10 +52,8 @@ M1 の FR を実装する最初の 1 単位として、`.ai/db.md` §2「住民�
   - `.ai/db.md` §2 の「DDL は書かない」を、DDL の正本は `migrations/` とする記述に直す。
 
 ## 直さないところと理由
-- ADR-0106 と `ADR-0103` の参照の直し: YGO-075。
-- 使い捨ての PostgreSQL・ひな型の DB・`pg` の依存・`test/setup.ts`（`.ai/environment.md` §4.1 の 4・5）: YGO-076。
+- YGO-073 で分けた項目: 上の「分けた先」の節の移り先のチケットで。
 - 型の検査と lint（`.ai/environment.md` §4.1 の 3）: M1 の TC はどれも型の検査と lint の結果を確かめないため、M1 のチケットにせず、§4.1 の 3 として残す `[assumed]`（YGO-062・YGO-076 と同じ）。
-- 残りの 6 表と `tenancies.resident_id` の外部キー: YGO-077。
 - 経路・登録のトランザクション・409 の応答（TC-006 ほか）: 時計とメールのアダプタが要るため、YGO-071 で切る FR のチケットで。
 - `roadmap.md` §4 の M0 の行の残りのうち M1 の TC が使う部品: YGO-080（差し替えられる時計）・YGO-086（pg-boss の依存）・YGO-081（`jobs` のキューに積む口）・YGO-082（環境変数の読み込みと `MAIL_ADAPTER` の選択）・YGO-083（モックのメールのアダプタ）・YGO-084（worker のジョブの実行）・YGO-085（KeyProvider の偽の鍵）。どれもこのチケットのあとに並べる。
 - `scripts/dev-db.sh`（開発の DB の台本。`check.sh` は使い捨ての PostgreSQL を使い、TC はこの台本を使わない）と `APP_ENV` の起動の検査（M1 の TC はどれも確かめない）: M1 の TC が使わないため M1 のチケットにせず、使う TC のチケットを切るときに扱う `[assumed]`。
