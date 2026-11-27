@@ -13,26 +13,25 @@ YGO-062 から分けた理由は、YGO-062 の「分けた理由」の節に書�
 - 実装のジョブで次が許されていること: Bash・`node -v`・`npm --version`・`npm_config_cache` を付けた `npm install --package-lock-only --ignore-scripts`・`sh scripts/prepare.sh`・`sh scripts/check.sh`（`.ai/environment.md` §5 の「ジョブがコマンドを動かす権限」・`.ai/gaps.md` の G-080）。
 - 秘書は、このチケットの実装（`package.json` を入れる変更）の前に、CI の定義に `sh scripts/prepare.sh` の段を `sh scripts/check.sh` の前に足すことをマスターに伝える（ADR-0105 の D2・G-079）。段ができるのは待たない。
 
-## 確かめた事実（変更 20261127-e33c31 の時点）
+## 確かめた事実（変更 20261127-19ab3d の時点）
 - 前提: YGO-062 は `状態: done`。YGO-065 は YGO-073 で分けられ（`addresses`・`tenancies` と TC-005）、このチケットは依存しない。このチケットが YGO-072・YGO-080 の依存で、逆ではない。
-- develop（8fae980）に `package.json`・`package-lock.json` はない。前の 4 回の変更（20261127-5812ca・20261127-54c015・20261127-6b7da1・20261127-19e8fa（34c1427））が変えたのは `.ai/` の文書と `scripts/prepare.sh`・`scripts/check.sh` の注記だけで、どれも実装のジョブで Bash が拒まれて止まった記録だった。`prepare.sh` にはロックファイルを作るコマンドと ADR-0106 の D1・D2 を指す注記があり、`scripts/` に置き換え済みの ADR-0103 の参照は残っていない。
-- 34c1427 の見直しの指摘（重大 R3-F1 と中）は、レポジトリの中に記録がない。この変更の指示（見直し 1 回目・2 回目のあとの出し直しも含む）にも、その本文は入っていない。下の「34c1427 の見直しの指摘」の節は、本文が渡されるまで「本文待ち」とする。
-- 受け入れ確認ごとの状態: 済みは 11（`.github/` は変えていない）だけ。4・7・8・9・10 は、確かめる `check.sh`・`prepare.sh`・TC-033 のテストはあるが、`package.json` がないのでその段が動かず未確認。1・2・3・5・6・12 は残り。
-- ある: `scripts/check.sh`（`package.json` があるときだけ動く Node.js とロックファイルの段、`package.json` があるときだけ動く Vitest の段、このチケットが `状態: done` なのに `package.json`・`package-lock.json`・`scripts/prepare.sh` のどれかがなければ失敗する段）・`scripts/prepare.sh`・`vitest.config.ts`・`src/app.ts`・`test/test_TC_033_no_oauth_webauthn_routes.test.ts`・`.gitignore` の `node_modules/` と `test-results/` の行。
+- develop（32eaab4）に `package.json`・`package-lock.json` はない（ファイルの一覧で確かめた）。前の 5 回の変更（20261127-5812ca・20261127-54c015・20261127-6b7da1・20261127-19e8fa（34c1427）・20261127-e33c31（31d9315））が変えたのは `.ai/` の文書と `scripts/prepare.sh`・`scripts/check.sh` の注記だけで、どれも実装のジョブで Bash が拒まれて止まった記録だった。`prepare.sh` にはロックファイルを作るコマンドと ADR-0106 の D1・D2 を指す注記があり、`scripts/` に置き換え済みの ADR-0103 の参照は残っていない。
+- 受け入れ確認ごとの状態（この変更の実装のジョブで確かめたことだけで数える）: 済みは 11（`.github/` は変えていない）だけ。4・7・8・9・10 は、確かめる `check.sh`・`prepare.sh`・TC-033 のテストはあるが、この変更ではどれも動かせておらず未確認。1・2・3・5・6・12 は残り。レポジトリの外で試した結果は、レポジトリから再現できないので、どの受け入れ確認の確かめにも数えない。
+- ある（ファイルの一覧で確かめた）: `scripts/check.sh`・`scripts/prepare.sh`・`vitest.config.ts`・`test/test_TC_033_no_oauth_webauthn_routes.test.ts`。
 - ない: `package.json`・`package-lock.json`。そのため `check.sh` の Node.js とロックファイルの段と Vitest の段は動かず、`test-results/` はできない。
-- ジョブの環境: この変更（20261127-e33c31）の計画の段階で確かめた値（実装のジョブでは確かめ直せていない）。`node -v` は `v26.13.1`、`npm --version` は `11.20.0`、レジストリは `https://registry.npmjs.org/` に届いた。安定版は fastify 5.12.8・vitest 5.1.2・typescript 7.0.2・@types/node 26.6.11 で、vitest の engines と peer は Node 26 と合う。既定の npm のキャッシュには書けず、`npm_config_cache` に一時ディレクトリを渡す。実装のジョブでは下の「止まっている理由」のとおりコマンドを動かす道具（Bash）が拒まれる。
+- 入れる予定の版（実装の時点で `npm view` で確かめ直す。まだ確かめた値ではない）: `dependencies` に fastify 5.12.8、`devDependencies` に @types/node 26.6.11・typescript 7.0.2・vitest 5.1.2、`engines.node` は `26.x`。
 
-## 止まっている理由（変更 20261127-e33c31 の時点）
-- 止まった段（ADR-0106 の D2）: ロックファイルの作成。実装のジョブではコマンドを動かす道具（Bash）が拒まれる。この変更の実装のジョブでも、最初の呼び出し（チケットと `scripts/` を読み、`node -v`・`npm -v` を動かす読み取りのコマンド）で拒まれ、`npm`・`node`・`sh scripts/prepare.sh`・`sh scripts/check.sh` のどれも動かせなかった。出たエラーの行: `Permission to use Bash has been denied because Claude Code is running in don't ask mode.`。同じ段で止まったのは 5 回目（20261127-5812ca・20261127-54c015・20261127-6b7da1・20261127-19e8fa・この変更）。どの回も計画の段階では npm が動いた。
-- この変更は、見直しの 1 回目と 2 回目のあとに出し直した実装のジョブでも、どちらも最初の呼び出し（`node -v`・`npm --version`・`git status`）で同じエラーの行が出て拒まれた。見直しの 2 回目（R2-F1）が求めた「G-080 の一覧を許してから出し直す」は、実装のジョブの権限には反映されていない。
+## 止まっている理由（変更 20261127-19ab3d の時点）
+- 止まった段（ADR-0106 の D2）: ロックファイルの作成。実装のジョブではコマンドを動かす道具（Bash）が拒まれる。この変更の実装のジョブでは、見直しの 1 回目・2 回目のあとの出し直しでも、最初の呼び出し（`git log`・`git status`・`node -v`・`npm --version` を動かすコマンド）で拒まれ、`npm`・`node`・`sh scripts/prepare.sh`・`sh scripts/check.sh` のどれも動かせなかった。出たエラーの行: `Permission to use Bash has been denied because Claude Code is running in don't ask mode.`。同じ段で止まったのは 6 回目（20261127-5812ca・20261127-54c015・20261127-6b7da1・20261127-19e8fa・20261127-e33c31・この変更）。指示の計画によれば、どの回も計画の段階では npm が動いた。
 - ロックファイルは手で書かない（範囲・ADR-0106 の D1）ため、`package.json` も入れず、状態は `open` のまま。
 - 外の用意がないと満たせない確認: 2・3（`prepare.sh` と Vitest が動かない）・5（ロックファイルを作れない）・4・7・8・9・10（`package.json` がないと段が動かない）・6・12（入れたあとの状態に書き直す相手がない）・1（ほかが満たせない）。
-- 要る外の用意: 秘書が実装のジョブの設定で、Bash・`node -v`・`npm --version`・`npm_config_cache` を付けた `npm install --package-lock-only --ignore-scripts`・`sh scripts/prepare.sh`・`sh scripts/check.sh` を許す（G-080）。計画の段階で許されていても、実装の段階で許されていなければ同じところで止まる。許されるまで、このチケットを実装のジョブに出し直しても変更は進まない（G-082）。
+- 要る外の用意（2 つ）: 31d9315 の見直しの指摘（重大 R3-F1 と中）の本文をジョブの指示に入れる（下の「31d9315 の見直しの指摘」の節）。秘書が実装のジョブの設定で、Bash・`node -v`・`npm --version`・`npm_config_cache` を付けた `npm install --package-lock-only --ignore-scripts`・`sh scripts/prepare.sh`・`sh scripts/check.sh` を許す（G-080）。計画の段階で許されていても、実装の段階で許されていなければ同じところで止まる。許されるまで、このチケットを実装のジョブに出し直しても変更は進まない（G-082）。
 - 許されたら: 範囲のとおりに `package.json` を書き（`name: "yuguregaoka"`・`version: "0.0.0"` を足す `[assumed]`。書かないとロックファイルの `name` に作業のディレクトリの名前が入る）、ロックファイルを作り、受け入れ確認を 1 つずつ確かめる。
 
-## 34c1427 の見直しの指摘（変更 20261127-e33c31 の時点）
-- 重大 R3-F1: 本文待ち。
-- 中の指摘: 本文待ち。
+## 31d9315 の見直しの指摘（変更 20261127-19ab3d の時点）
+- 出どころ: YGO-078 の最後のマージ 31d9315（変更 20261127-e33c31）の見直し。この変更の指示が「最後の見直しで R3-F1 が残った」と書き、YGO-078 を対象にしたマージの最後が 31d9315 であることから決めた。`git log` はこの変更の実装のジョブで動かせず、ログでは確かめていない。
+- 重大 R3-F1: 未解決。本文はレポジトリにも指示にもない。この変更の指示は「チケットの本文と実際のファイル（`package.json`・ロックファイル・`check.sh`）の食い違いだと考えられる」と書いているだけで、これは指示からの推測であり、見直しの原文で確かめた中身ではない。閉じるのは、`package.json` とロックファイルを入れ、このチケットの本文を実際のファイルに合わせる変更。
+- 中の指摘: 本文はレポジトリにも指示にもない。未解決。
 
 ## 範囲
 - `package.json` を手で書く: `private: true`・`"type": "module"`・`"engines": {"node": "26.x"}`（主版は `.ai/environment.md` §3.1）。
