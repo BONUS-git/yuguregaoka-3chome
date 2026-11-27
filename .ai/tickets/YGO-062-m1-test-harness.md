@@ -5,9 +5,8 @@ M: M1
 ## 目的
 目標の受け入れ条件 1（今の M の TC のテストがすべて `scripts/check.sh` で通り、CI が緑）を進める。
 M1 の機能を実装するチケットが、それぞれ TC のテストを足すだけで済むように、テストを動かす土台を先に作る。
-CI の定義（`.github/workflows/`）があり `sh scripts/prepare.sh` → `sh scripts/check.sh` の順に動かすことの確かめは、このチケットの受け入れ確認から外した（もとの 18）。
-理由: CI の定義はジョブが書けない・変えられないファイルで（CLAUDE.md）、このチケットに残すと実装の変更で `done` にできない。同じ中身は YGO-070 の受け入れ確認 1 が確かめる（ADR-0105 の D4）。
-CI が実際に緑になるかは、M1 の達成の確認で CI の結果を見る。
+CI の定義（`.github/workflows/`）があり `sh scripts/prepare.sh` → `sh scripts/check.sh` の順に動かすことの確かめは、このチケットに入れない。
+同じ中身は YGO-070 の受け入れ確認 1 が確かめる（ADR-0105 の D4）。CI が緑かは M1 の達成の確認で見る。
 
 ## 確かめた事実
 - ある:
@@ -74,6 +73,8 @@ M0 の残り（使い捨ての PostgreSQL・`scripts/dev-db.sh`・時計・ア�
 - 新しい ADR・OQ・要回答は 0 件（道具は ADR-0009 と ADR-0052、ロックファイルは ADR-0103、CI の順と `prepare.sh` の段を足す人と CI の定義の確かめの置き場所は ADR-0105、Node.js を入れるのは OQ-086 で決まっている。版や設定の細部は `[assumed]`）。
 
 ## 受け入れ確認
+CI の定義（`.github/workflows/`）の項目は入れない。CI の定義はジョブが書かない・変えないファイルで（CLAUDE.md）、ここに入れると実装の変更で `done` にできないため。受け持つのは YGO-070 の受け入れ確認 1（ADR-0105 の D4）。
+
 1. このチケットの 1〜3 行目が `# YGO-062 M1 のテストの土台（check.sh・JUnit XML・CI）`・`状態: done`・`M: M1`。
 2. `sh scripts/prepare.sh` のあと `sh scripts/check.sh` が終了コード 0 で `check: ok` で終わり、`test-results/` に JUnit XML（`.xml`）が 1 つ以上できる。
 3. その XML に、名前に `TC-033` を含む `testcase` がちょうど 1 つあり、その中に `skipped`・`failure`・`error` の要素がない。
@@ -93,17 +94,34 @@ M0 の残り（使い捨ての PostgreSQL・`scripts/dev-db.sh`・時計・ア�
 17. `package.json` の `engines.node` の主版と、`.ai/environment.md` §3.1 の Node.js の行の主版が同じ。
 
 ## 残り
-受け入れ確認を 1 行ずつ、今のファイルと照らした結果（満たす: 5・6・8・9・10・12。行はあるが動かして確かめていない: 13・14）。次が残るため `状態: open` のままにする。
+受け入れ確認を 1 行ずつ、今のファイルと照らした結果。満たさない項目が残るため `状態: open` のままにする。
 
-- **7・11・17（と、それに依る 2〜4・15・16）**: `package.json` と `package-lock.json` がない。
-  - 止まった段（ADR-0103 の D2）: 段 2（`package.json` と `package-lock.json` の作成）。その前の段 0（`node -v` で主版 26 と `npm` を確かめる）で、コマンドを動かせなかった。エラーの行: `Permission to use Bash has been denied`。
-  - なぜ残るか: `node`・`npm` を動かせず、ロックファイルを作れない。ロックファイルは手で書かない（ADR-0103 の D2）。`package.json` だけを入れると、`check.sh` の最初の段が node がないとして失敗し、検証が通らない。
-  - 片付く条件: マスターが主版 26 の Node.js と npm をジョブの環境に入れる（OQ-086 の決定。新しい OQ は立てない）。そのあと、次の順に進める:
-    1. `package.json` を手で書く: `private`・`"type": "module"`・`"engines": {"node": "26.x"}`（主版は `.ai/environment.md` §3.1）。`dependencies` に `fastify`、`devDependencies` に `vitest`・`typescript`・`@types/node`。どの版も `^`・`~` を付けない固定の版で、実装の時点の安定版にし、`@types/node` は主版 26 のものにする `[assumed]`。
-    2. ADR-0103 の D1 のコマンドを引数なしで 1 回動かす: `npm install --package-lock-only --ignore-scripts`。版が見つからないと出たら、`package.json` の版を直して同じコマンドを動かす。
-    3. `sh scripts/prepare.sh` と `sh scripts/check.sh` を動かし、受け入れ確認 2〜17 を実際に確かめる（4・13〜16 は、失敗するはずの状態を作って確かめ、元に戻す）。`engines.node` と `.ai/environment.md` §3.1 の主版がそろっていることも確かめる（17）。
-- **13・14（行はあるが動かして確かめていない）**: 行は `check.sh` の 12〜15 行目（node がないとき「node がない: 検証の環境に Node.js 26 を入れる（package.json の engines.node）」と出して終了コード 1）と `prepare.sh` の 12〜15 行目（`package-lock.json` がないとき ADR-0103 を示して終了コード 1）にある。`package.json` がないため、動かして確かめていない。
-  - 片付く条件: 上の手順 3。
-- **CI の定義**: このチケットの受け入れ確認ではない（ADR-0105 の D4）。段を足すのはマスターで、秘書は `package.json` を入れる前に伝える（ADR-0105 の D2、`.ai/environment.md` §5）。段があるかは YGO-070 の受け入れ確認 1 と `.ai/gaps.md` の G-079 で追う。
-  段がないまま `package.json` を入れると、CI では `node_modules/` がないとして `check.sh` が失敗する（受け入れ確認 4 の形、ADR-0105 の D3）。`check.sh` に依存の取り込みを足して避けない。
-- **1**: 上の 7・11・17 と、それに依る確認が片付くまで `open`。
+| 番号 | 結果 | 根拠 |
+|---|---|---|
+| 1 | 満たさない | 2 行目が `状態: open`（下の 7 が片付くまで） |
+| 2 | 満たさない | `package.json` がなく、`check.sh` の 171 行目の段が Vitest を動かさない。`test-results/` ができない |
+| 3 | 満たさない | 2 と同じ（XML ができない） |
+| 4 | 行はあるが動かして確かめていない | `check.sh` の 172 行目（`node_modules/` がなければ `prepare.sh` を動かすよう出して終了コード 1）。171 行目の `package.json` の条件の中にあり、今は通らない |
+| 5 | 満たす | `check.sh` にネットワークを使うコマンドがなく、174 行目が `npx --no-install vitest run` |
+| 6 | 満たす | `prepare.sh` の 20 行目が `npm ci --no-audit --no-fund` |
+| 7 | 満たさない | `package.json`・`package-lock.json` がない |
+| 8 | 満たす | `.gitignore` の 7 行目 `node_modules/`・13 行目 `test-results/` |
+| 9 | 満たす | この変更は `.github/` に触れていない（レポジトリに `.github/` がない） |
+| 10 | 満たす | `.ai/environment.md` に 2 つの文がなく、§4.1 の 6（112 行目）に `test-results/junit.xml` がある |
+| 11 | 満たさない | §3.1（46 行目）の主版 26 と比べる `package.json` がない |
+| 12 | 満たす | このチケットの「範囲」の節 |
+| 13 | 行はあるが動かして確かめていない | `check.sh` の 9〜20 行目（node がないとき 12〜15 行目で「node がない: 検証の環境に Node.js 26 を入れる（package.json の engines.node）」と出して終了コード 1、主版が違うとき 17〜20 行目）。`package.json` がないので段が動かない |
+| 14 | 行はあるが動かして確かめていない | `prepare.sh` の 12〜15 行目と `check.sh` の 21〜24 行目（`package-lock.json` がないとき ADR-0103 を示して終了コード 1） |
+| 15 | 行はあるが動かして確かめていない | `check.sh` の 161〜167 行目（`状態: done` なのに `package.json`・`package-lock.json`・`scripts/prepare.sh` のどれかがなければ失敗） |
+| 16 | 行はあるが動かして確かめていない | `check.sh` の 178〜181 行目（XML に `<skipped` があれば失敗） |
+| 17 | 満たさない | `package.json` がない |
+
+- 止まった段（ADR-0103 の D2）: 段 0（`node -v`・`npm -v` で主版 26 の Node.js と npm を確かめる）。計画のときに出たエラーの行: `command not found: node`・`command not found: npm`。実装のジョブでも `node -v`・`npm -v` を動かせず、ロックファイルを作る段 2 に進めなかった。
+- なぜ残るか: ロックファイルは手で書かない（ADR-0103 の D2）。`package.json` だけを入れると、`check.sh` の最初の段が node がないとして失敗し、検証が通らない。
+- `package.json` がないと `check.sh` が `test/` のテストを飛ばして `check: ok` になる問題は、YGO-072（評価の R-067）で直す。
+- 片付く条件: マスターが主版 26 の Node.js と npm をジョブの環境に入れる（OQ-086 の決定。新しい OQ は立てない）。秘書は `package.json` を入れる前に、CI の定義に `prepare.sh` の段を足すことをマスターに伝える（ADR-0105 の D2。段があるかは YGO-070 の受け入れ確認 1 と `.ai/gaps.md` の G-079 で追う）。そのあと、次の順に進める:
+  1. `package.json` を手で書く: `private`・`"type": "module"`・`"engines": {"node": "26.x"}`（主版は `.ai/environment.md` §3.1）。`dependencies` に `fastify`、`devDependencies` に `vitest`・`typescript`・`@types/node`。どの版も `^`・`~` を付けない固定の版で、実装の時点の安定版にし、`@types/node` は主版 26 のものにする `[assumed]`。
+  2. ADR-0103 の D1 のコマンドを引数なしで 1 回動かす: `npm install --package-lock-only --ignore-scripts`。版が見つからないと出たら、`package.json` の版を直して同じコマンドを動かす。
+  3. `sh scripts/prepare.sh` → `sh scripts/check.sh` を動かし、受け入れ確認 2・3 を確かめる。`engines.node` と `.ai/environment.md` §3.1 の主版がそろっていることを確かめる（11・17）。
+  4. 失敗するはずの状態を作って確かめ、そのたびに元に戻す: `node_modules/` を消す（4）、`engines.node` を別の主版にする（13）、`package-lock.json` を消す（14）、状態を `done` にして `scripts/prepare.sh` を消す（15）、TC-033 を `test.skip` にする（16）。
+  5. すべて確かめたら `状態: done` にして、この節を消す。
