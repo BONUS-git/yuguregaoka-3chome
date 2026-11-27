@@ -118,9 +118,11 @@ CI の定義（`.github/workflows/`）の項目は入れない。CI の定義は
 | 16 | 行はあるが動かして確かめていない | `check.sh` の 178〜181 行目（XML に `<skipped` があれば失敗） |
 | 17 | 満たさない | `package.json` がない |
 
-- 止まった段（ADR-0103 の D2）: 段 0（`node -v`・`npm -v` で主版 26 の Node.js と npm を確かめる）。計画のときに出たエラーの行: `command not found: node`・`command not found: npm`。実装のジョブでも `node -v`・`npm -v` を動かせず、ロックファイルを作る段 2 に進めなかった。
+- 止まった段（ADR-0103 の D2）: 段 0（`node -v`・`npm -v` で主版 26 の Node.js と npm を確かめる）。計画のときに出たエラーの行: `command not found: node`・`command not found: npm`。
+  変更 20261127-3613bc の実装のジョブでは、シェルのコマンドを動かす道具が使えず（許可がない）、`node -v`・`npm -v` も `sh scripts/check.sh` も動かせなかった。Node.js 26 と npm が入ったかは確かめられず、ロックファイルを作る段 2 に進まなかった。
+- 範囲を分けても、残り（1〜4・7・11・13〜17）はどれも Node.js と npm がないと確かめられない。そのため、前提（OQ-086 の決定どおり Node.js 26 と npm がジョブの環境に入り、ジョブがシェルのコマンドを動かせること）が済むまで、同じ指示をもう一度出さない。
+- 重なるところ: CI の定義の `prepare.sh` の段は YGO-070、`package.json` がないときにテストを飛ばす問題は YGO-072、使い捨ての PostgreSQL は YGO-076、依存を足すたびにロックファイルを直す決定は YGO-075 で扱う。
 - なぜ残るか: ロックファイルは手で書かない（ADR-0103 の D2）。`package.json` だけを入れると、`check.sh` の最初の段が node がないとして失敗し、検証が通らない。
-- `package.json` がないと `check.sh` が `test/` のテストを飛ばして `check: ok` になる問題は、YGO-072（評価の R-067）で直す。
 - 片付く条件: マスターが主版 26 の Node.js と npm をジョブの環境に入れる（OQ-086 の決定。新しい OQ は立てない）。秘書は `package.json` を入れる前に、CI の定義に `prepare.sh` の段を足すことをマスターに伝える（ADR-0105 の D2。段があるかは YGO-070 の受け入れ確認 1 と `.ai/gaps.md` の G-079 で追う）。そのあと、次の順に進める:
   1. `package.json` を手で書く: `private`・`"type": "module"`・`"engines": {"node": "26.x"}`（主版は `.ai/environment.md` §3.1）。`dependencies` に `fastify`、`devDependencies` に `vitest`・`typescript`・`@types/node`。どの版も `^`・`~` を付けない固定の版で、実装の時点の安定版にし、`@types/node` は主版 26 のものにする `[assumed]`。
   2. ADR-0103 の D1 のコマンドを引数なしで 1 回動かす: `npm install --package-lock-only --ignore-scripts`。版が見つからないと出たら、`package.json` の版を直して同じコマンドを動かす。
