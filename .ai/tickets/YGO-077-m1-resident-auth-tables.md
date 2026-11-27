@@ -8,8 +8,8 @@ M: M1
 YGO-073 で YGO-065 から分けた 4 枚目（機能の実装）。範囲はこの 6 表と、`tenancies.resident_id` の外部キーだけ。
 
 ## 依存
-- YGO-062（M1 のテストの土台）が `状態: done` であること。
-- 依存の順: YGO-075（ADR-0106）→ YGO-076（使い捨ての PostgreSQL）→ YGO-065（`addresses`・`tenancies`）→ **YGO-077（このチケット）**。
+- YGO-062（M1 のテストの土台）と YGO-078（`package.json` とロックファイル）が `状態: done` であること。
+- 依存の順: YGO-078（`package.json` とロックファイル）→ YGO-075（ADR-0106）→ YGO-076（使い捨ての PostgreSQL）→ YGO-065（`addresses`・`tenancies`）→ **YGO-077（このチケット）**。
   - YGO-065 が `状態: done` であること。`migrations/0001_addresses_tenancies.sql` があり、`tenancies.resident_id` が外部キーのない `uuid NULL` で作られていること、TC-005 のテストが `tenancies` の行を `resident_id` NULL で入れること（外部キーを足しても TC-005 を直さずに通る）を前提にする。
   - YGO-076 が `状態: done` であること（`check.sh` がひな型の DB にマイグレーションを当てる）。
 

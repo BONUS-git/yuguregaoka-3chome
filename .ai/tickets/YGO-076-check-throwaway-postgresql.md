@@ -8,8 +8,8 @@ M: M1
 YGO-073 で YGO-065 から分けた 2 枚目（道具の追加）。範囲は `check.sh` の DB の段と、テストが DB に繋ぐための道具（ドライバとテストの準備のコード）だけで、表（マイグレーション）と TC のテストは入れない。
 
 ## 依存
-- YGO-062（M1 のテストの土台）が `状態: done` であること。`package.json`・`package-lock.json`・Vitest の段が `check.sh` で動くことを前提にする。
-- 依存の順: YGO-075（ADR-0106）→ **YGO-076（このチケット）** → YGO-065（`addresses`・`tenancies`）→ YGO-077（残りの 6 表）。
+- YGO-062（M1 のテストの土台）と YGO-078（`package.json` とロックファイル）が `状態: done` であること。`package.json`・`package-lock.json`・Vitest の段が `check.sh` で動くことを前提にする。
+- 依存の順: YGO-078（`package.json` とロックファイル）→ YGO-075（ADR-0106）→ **YGO-076（このチケット）** → YGO-065（`addresses`・`tenancies`）→ YGO-077（残りの 6 表）。
   - YGO-075 が `状態: done` であること。`pg`・`@types/pg` を足す変更でロックファイルを直す根拠は ADR-0106 の D1。
 - PostgreSQL のサーバーの主版は **18** `[assumed]`（`.ai/environment.md` §5.1 の一覧の `initdb`・`pg_ctl`・`psql` の行と §3.1 の PostgreSQL の行。本番のマネージドサービスでも同じ主版を選ぶ、ADR-0010）。
   OQ-086 → 決定と `roadmap.md` §4 の M0 の依存の順（主版を決める → 秘書がマスターに伝える → 道具があることを確かめる → DB のテストを足す）に従い、次の 2 つがそろうまで、このチケットを始めない:

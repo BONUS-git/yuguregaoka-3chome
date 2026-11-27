@@ -158,11 +158,18 @@ if [ -e "$idx" ]; then
     done
 fi
 
-# YGO-062 を done にしたなら、その範囲のファイルがそろっていること（retros.md 2026-11-26 の 2 回目）。
+# YGO-062 を done にしたなら、その範囲の土台のファイルがそろっていること（retros.md 2026-11-26 の 2 回目）。
 t062=.ai/tickets/YGO-062-m1-test-harness.md
 if [ -e "$t062" ] && grep -qxF '状態: done' "$t062"; then
-    for f in package.json package-lock.json scripts/prepare.sh; do
+    for f in scripts/prepare.sh vitest.config.ts src/app.ts test/test_TC_033_no_oauth_webauthn_routes.test.ts; do
         [ -e "$f" ] || { echo "$t062 は done なのに $f がない" >&2; exit 1; }
+    done
+fi
+# YGO-078 を done にしたなら、package.json・ロックファイル・prepare.sh がそろっていること（YGO-062 から分けた範囲）。
+t078=.ai/tickets/YGO-078-m1-package-json-lockfile-vitest.md
+if [ -e "$t078" ] && grep -qxF '状態: done' "$t078"; then
+    for f in package.json package-lock.json scripts/prepare.sh; do
+        [ -e "$f" ] || { echo "$t078 は done なのに $f がない" >&2; exit 1; }
     done
 fi
 

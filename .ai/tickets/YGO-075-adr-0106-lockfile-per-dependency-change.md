@@ -11,8 +11,8 @@ YGO-073 で YGO-065 から分けた 1 枚目（ADR の置き換え）。範囲�
 番号は ADR-0106 とする。ADR-0105 は CI の定義の確かめの置き場所（`.ai/adr/0105-ci-definition-check-in-ygo-070.md`、`採用`）で使っている。
 
 ## 依存
-- YGO-062（M1 のテストの土台）が `状態: done` であること（YGO-073 の依存の節: 分けたチケットの実装は YGO-062 の done を待つ）。
-- 依存の順: **YGO-075（このチケット）** → YGO-076（使い捨ての PostgreSQL）→ YGO-065（`addresses`・`tenancies`）→ YGO-077（残りの 6 表）。このチケットが最初で、前に待つ分割先のチケットはない。
+- YGO-062（M1 のテストの土台）と YGO-078（`package.json` とロックファイル）が `状態: done` であること（YGO-073 の依存の節: 分けたチケットの実装は YGO-062 の done を待つ。受け入れ確認 6 の TC-033 の testcase は、YGO-078 で `package.json` とロックファイルが入り、`check.sh` の Vitest の段が動いてはじめてできる）。
+- 依存の順: YGO-078（`package.json` とロックファイル）→ **YGO-075（このチケット）** → YGO-076（使い捨ての PostgreSQL）→ YGO-065（`addresses`・`tenancies`）→ YGO-077（残りの 6 表）。YGO-073 の分割先のチケットの中ではこのチケットが最初で、前に待つのは YGO-078 だけ。
 
 ## 範囲
 - `.ai/adr/0106-<短い英語の名前>.md` を作る（題は 40 字まで、3 行目は `- 状態: 採用`）。ADR-0103 の D1〜D3 を丸ごと書き直す（一部だけ変えない。CLAUDE.md の ADR の決まり）:
