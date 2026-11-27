@@ -25,7 +25,7 @@ M: M1
 ## 確かめた事実（変更 20261127-936bd4 の時点）
 - `package.json`・`package-lock.json` はない。
 - `test/test_TC_033_no_oauth_webauthn_routes.test.ts` はある。
-- YGO-078（`.ai/tickets/YGO-078-m1-package-json-lockfile-vitest.md`）は `状態: open`。YGO-078 の変更は、実装のジョブで `npm` と `sh scripts/prepare.sh` が権限で拒まれ、同じ段（ロックファイルの作成）で 3 回止まり（変更 20261127-54c015・20261127-5812ca・20261127-6b7da1）、どれも `.ai/` の記録だけで終わった（G-080）。権限が変わるまで YGO-078 を出し直しても進まない（G-082）。
+- YGO-078（`.ai/tickets/YGO-078-m1-package-json-lockfile-vitest.md`）は `状態: open`。YGO-078 の変更は、実装のジョブではコマンドを動かす道具（Bash）が拒まれるため、同じ段（ロックファイルの作成）で 4 回止まり（変更 20261127-5812ca・20261127-54c015・20261127-6b7da1・20261127-19e8fa）、どれも `.ai/` の記録だけで終わった（G-080）。G-080 の一覧が許されるまで YGO-078 を出し直しても進まない（G-082）。
 - `scripts/check.sh` には、テストがあり `package.json` がないときに止める段はまだない。1 の段と 6 の段は `if [ -e package.json ]` で飛ばしている。前の YGO-072 の変更（c741492）が変えたのは、このチケットの事実の節だけ。
 - この変更では段とテストを入れなかった。段を入れると `package.json` がない間は `sh scripts/check.sh` が失敗し、それ以降のどの変更もマージできなくなる。テストは Vitest で動かすので、`package.json` がないと動かず JUnit XML もできない。
 - `scripts/check.sh` には、このチケットが `状態: done` なのに `package.json` がないときに止める段がある（受け入れ確認 3 を固定のコードで確かめる）。

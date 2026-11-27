@@ -4,7 +4,7 @@
 set -eu
 cd "$(dirname "$0")/.."
 
-# 1. Node.js とロックファイルを確かめる（YGO-062、.ai/environment.md §4.1 の 1、ADR-0103）。
+# 1. Node.js とロックファイルを確かめる（YGO-062、.ai/environment.md §4.1 の 1、ADR-0106）。
 # package.json があるときだけ。node がない・主版が engines.node と違うときは、要る主版を出して止まる。
 if [ -e package.json ]; then
     need=$(sed -n 's/.*"node"[[:space:]]*:[[:space:]]*"\([0-9][0-9]*\)\..*/\1/p' package.json | head -n 1)
@@ -19,7 +19,7 @@ if [ -e package.json ]; then
         exit 1
     }
     [ -e package-lock.json ] || {
-        echo "package-lock.json がない: 依存を変える変更の中でロックファイルを作ってコミットする（ADR-0103）" >&2
+        echo "package-lock.json がない: 依存を変える変更の中でロックファイルを作ってコミットする（ADR-0106）" >&2
         exit 1
     }
     # package.json の依存の名前がどれもロックファイルにあり、版に範囲の記号（^・~）がないこと。
