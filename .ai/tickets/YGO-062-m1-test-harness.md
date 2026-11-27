@@ -72,7 +72,8 @@ M0 の残り（`scripts/dev-db.sh`・時計・アダプタ・2 プロセスの�
 - 型の検査と lint（§4.1 の 3）: このチケットでは足さない。M1 の TC が依存しないため、M1 のチケットにもしない `[assumed]`。
 - M1 の FR の機能の実装: 別のチケットで 1 つずつ。
 - `.ai/status.md`: 秘書が書くもので、ジョブは変えない。
-- 新しい ADR・OQ・要回答は 0 件（道具は ADR-0009 と ADR-0052、ロックファイルは ADR-0103、CI の順と `prepare.sh` の段を足す人と CI の定義の確かめの置き場所は ADR-0105、Node.js を入れるのは OQ-086 で決まっている。版や設定の細部は `[assumed]`）。
+- 新しい OQ・要回答は 0 件（道具は ADR-0009 と ADR-0052、ロックファイルは ADR-0103、CI の順と `prepare.sh` の段を足す人は ADR-0105、Node.js を入れるのは OQ-086 で決まっている。版や設定の細部は `[assumed]`）。
+- 新しい ADR は 0 件。ADR-0105 を丸ごと置き換える ADR（`.ai/gaps.md` の G-081 の予定）は、このチケットが `状態: done` になったあと、題に G-081 を付けた別のチケットで作る（「残り」の「このチケットの外に分けるもの」）。
 
 ## 受け入れ確認
 CI の定義（`.github/workflows/`）の項目は入れない。CI の定義はジョブが書かない・変えないファイルで（CLAUDE.md）、ここに入れると実装の変更で `done` にできないため。受け持つのは YGO-070 の受け入れ確認 1（ADR-0105 の D4）。
@@ -98,29 +99,34 @@ CI の定義（`.github/workflows/`）の項目は入れない。CI の定義は
 ## 残り
 受け入れ確認を 1 行ずつ、今のファイルと照らした結果。満たさない項目が残るため `状態: open` のままにする。
 
-| 番号 | 結果 | 根拠 |
-|---|---|---|
-| 1 | 満たさない | 2 行目が `状態: open`（下の 7 が片付くまで） |
-| 2 | 満たさない | `package.json` がなく、`check.sh` の 171 行目の段が Vitest を動かさない。`test-results/` ができない |
-| 3 | 満たさない | 2 と同じ（XML ができない） |
-| 4 | 行はあるが動かして確かめていない | `check.sh` の 172 行目（`node_modules/` がなければ `prepare.sh` を動かすよう出して終了コード 1）。171 行目の `package.json` の条件の中にあり、今は通らない |
-| 5 | 満たす | `check.sh` にネットワークを使うコマンドがなく、174 行目が `npx --no-install vitest run` |
-| 6 | 満たす | `prepare.sh` の 20 行目が `npm ci --no-audit --no-fund` |
-| 7 | 満たさない | `package.json`・`package-lock.json` がない |
-| 8 | 満たす | `.gitignore` の 7 行目 `node_modules/`・13 行目 `test-results/` |
-| 9 | 満たす | この変更は `.github/` に触れていない（レポジトリに `.github/` がない） |
-| 10 | 満たす | `.ai/environment.md` に 2 つの文がなく、§4.1 の 6（112 行目）に `test-results/junit.xml` がある |
-| 11 | 満たさない | §3.1（46 行目）の主版 26 と比べる `package.json` がない |
-| 12 | 満たす | このチケットの「範囲」の節 |
-| 13 | 行はあるが動かして確かめていない | `check.sh` の 9〜20 行目（node がないとき 12〜15 行目で「node がない: 検証の環境に Node.js 26 を入れる（package.json の engines.node）」と出して終了コード 1、主版が違うとき 17〜20 行目）。`package.json` がないので段が動かない |
-| 14 | 行はあるが動かして確かめていない | `prepare.sh` の 12〜15 行目と `check.sh` の 21〜24 行目（`package-lock.json` がないとき ADR-0103 を示して終了コード 1） |
-| 15 | 行はあるが動かして確かめていない | `check.sh` の 161〜167 行目（`状態: done` なのに `package.json`・`package-lock.json`・`scripts/prepare.sh` のどれかがなければ失敗） |
-| 16 | 行はあるが動かして確かめていない | `check.sh` の 178〜181 行目（XML に `<skipped` があれば失敗） |
-| 17 | 満たさない | `package.json` がない |
+結果は「済み」か「未了」だけを書く。行が書いてあっても、動かして確かめていない項目は「未了」とする。
 
-- 止まった段（ADR-0103 の D2）: 段 0（`node -v`・`npm -v` で主版 26 の Node.js と npm を確かめる）。計画のときに出たエラーの行: `command not found: node`・`command not found: npm`。
-  変更 20261127-3613bc の実装のジョブでは、シェルのコマンドを動かす道具が使えず（許可がない）、`node -v`・`npm -v` も `sh scripts/check.sh` も動かせなかった。Node.js 26 と npm が入ったかは確かめられず、ロックファイルを作る段 2 に進まなかった。
-- 範囲を分けても、残り（1〜4・7・11・13〜17）はどれも Node.js と npm がないと確かめられない。そのため、前提（OQ-086 の決定どおり Node.js 26 と npm がジョブの環境に入り、ジョブがシェルのコマンドを動かせること）が済むまで、同じ指示をもう一度出さない。
+| 番号 | 結果 | 根拠 | 待つ先 |
+|---|---|---|---|
+| 1 | 未了 | 2 行目が `状態: open`（ほかの未了が片付くまで） | G-080 |
+| 2 | 未了 | `package.json` がなく、`check.sh` の 171 行目の段が Vitest を動かさない。`test-results/` ができない | G-080 |
+| 3 | 未了 | 2 と同じ（XML ができない） | G-080 |
+| 4 | 未了 | `check.sh` の 172 行目に、`node_modules/` がなければ `prepare.sh` を動かすよう出して終了コード 1 の行がある。171 行目の `package.json` の条件の中にあり、動かして確かめていない | G-080 |
+| 5 | 済み | `check.sh` にネットワークを使うコマンドがなく、174 行目が `npx --no-install vitest run` | — |
+| 6 | 済み | `prepare.sh` の 20 行目が `npm ci --no-audit --no-fund` | — |
+| 7 | 未了 | `package.json`・`package-lock.json` がない | G-080 |
+| 8 | 済み | `.gitignore` の 7 行目 `node_modules/`・13 行目 `test-results/` | — |
+| 9 | 済み | この変更は `.github/` に触れていない（レポジトリに `.github/` がない） | — |
+| 10 | 済み | `.ai/environment.md` に 2 つの文がなく、§4.1 の 6（112 行目）に `test-results/junit.xml` がある | — |
+| 11 | 未了 | §3.1（46 行目）の主版 26 と比べる `package.json` がない | G-080 |
+| 12 | 済み | このチケットの「範囲」の節（31〜34 行目） | — |
+| 13 | 未了 | `check.sh` の 9〜20 行目に行がある（node がないとき 12〜15 行目で「node がない: 検証の環境に Node.js <主版> を入れる（package.json の engines.node）」と出して終了コード 1、主版が違うとき 17〜20 行目）。`package.json` がないので段が動かず、確かめていない | G-080 |
+| 14 | 未了 | `prepare.sh` の 12〜15 行目と `check.sh` の 21〜24 行目に行がある（`package-lock.json` がないとき ADR-0103 を示して終了コード 1）。動かして確かめていない | G-080 |
+| 15 | 未了 | `check.sh` の 161〜167 行目に行がある（`状態: done` なのに `package.json`・`package-lock.json`・`scripts/prepare.sh` のどれかがなければ失敗）。動かして確かめていない | G-080 |
+| 16 | 未了 | `check.sh` の 178〜181 行目に行がある（XML に `<skipped` があれば失敗）。動かして確かめていない | G-080 |
+| 17 | 未了 | `package.json` がない | G-080 |
+
+- YGO-070・YGO-075・YGO-076 を待つ受け入れ確認はない。未了はどれも `.ai/gaps.md` の G-080（Node.js 26 と npm をジョブの環境に入れる。入れるのはマスター、OQ-086 → 決定）を待つ。
+- CI の段は待たない: `package.json` に頼る未了の項目（2〜4・7・11・13〜17）は、CI の定義の `sh scripts/prepare.sh` の段（G-079）ができるのを待たない。ADR-0105 の D2 が決めるのは、秘書が `package.json` を入れる前に、その段を足すことをマスターに「伝える」ことで、段ができるまで `package.json` を入れないとはしていない。`.ai/environment.md` §5.1 の表のこの段の行の「伝える時」の列（`package.json` を入れる前）も、伝える時期を書いたもので同じ意味。受け入れ確認はどれも手元で `prepare.sh` → `check.sh` を動かして確かめ、CI の定義の確かめと CI が緑かはこのチケットに入れない（ADR-0105 の D4。緑かは M1 の達成の確認で見る）。
+- 止まった段（ADR-0103 の D2）: 段 0（`node -v`・`npm -v` で主版 26 の Node.js と npm を確かめる）。動かせなかったのはこの段だけで、エラーの行は `command not found: node`・`command not found: npm`・`command not found: npx`（変更 20261127-d27c2d の時点）。
+- この変更の時点の `sh scripts/check.sh`: 終了コード 0・`check: ok`。`package.json` がないため 1 の段（9〜44 行目）と 6 の段（171〜184 行目）は動かず、TC-NNN の名前・`test-results/` の JUnit XML・skip 0 件は確かめられていない（`test-results/` はできない）。
+- `package.json` も入れない: ロックファイルは手で書けず（ADR-0103 の D2）、`package.json` だけを入れると `check.sh` の最初の段（12〜15 行目）が node がないとして失敗し、それ以降の変更がマージできなくなる。
+- 前提（OQ-086 の決定どおり Node.js 26 と npm がジョブの環境に入り、ジョブがシェルのコマンドを動かせること）が済むまで、このチケットの残りを閉じる指示をもう一度出さない。出し直しても同じ結果になる。
 - 重なるところ: CI の定義の `prepare.sh` の段は YGO-070、`package.json` がないときにテストを飛ばす問題は YGO-072、使い捨ての PostgreSQL は YGO-076、依存を足すたびにロックファイルを直す決定は YGO-075 で扱う。
 - なぜ残るか: ロックファイルは手で書かない（ADR-0103 の D2）。`package.json` だけを入れると、`check.sh` の最初の段が node がないとして失敗し、検証が通らない。
 - 片付く条件: マスターが主版 26 の Node.js と npm をジョブの環境に入れる（OQ-086 の決定。新しい OQ は立てない）。秘書は `package.json` を入れる前に、CI の定義に `prepare.sh` の段を足すことをマスターに伝える（ADR-0105 の D2。段があるかは YGO-070 の受け入れ確認 1 と `.ai/gaps.md` の G-079 で追う）。そのあと、次の順に進める:
@@ -129,3 +135,4 @@ CI の定義（`.github/workflows/`）の項目は入れない。CI の定義は
   3. `sh scripts/prepare.sh` → `sh scripts/check.sh` を動かし、受け入れ確認 2・3 を確かめる。`engines.node` と `.ai/environment.md` §3.1 の主版がそろっていることを確かめる（11・17）。
   4. 失敗するはずの状態を作って確かめ、そのたびに元に戻す: `node_modules/` を消す（4）、`engines.node` を別の主版にする（13）、`package-lock.json` を消す（14）、状態を `done` にして `scripts/prepare.sh` を消す（15）、TC-033 を `test.skip` にする（16）。
   5. すべて確かめたら `状態: done` にして、この節を消す。
+- このチケットの外に分けるもの: ADR-0105 の置き換え・YGO-070 の取り下げ・G-079 の閉じる条件の書き換え（`.ai/gaps.md` の G-081 の予定）は、このチケットの変更に入れない。このチケットの範囲には道具の追加（`package.json`・依存・ロックファイル）が入っており、ADR の置き換えも入れると 2 つの種類の作業を 1 つの変更が負うため。このチケットが `状態: done` になったあと、題に G-081 を付けた別のチケットで行う。そのチケットは、このチケットが done になった次の変更で切る（今は始められず、待つだけのチケットになるため、今は切らない）。
