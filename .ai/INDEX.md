@@ -276,3 +276,9 @@
 - `.ai/tickets/YGO-077-m1-resident-auth-tables.md`
 - `.ai/tickets/YGO-078-m1-package-json-lockfile-vitest.md`
 - `.ai/tickets/YGO-079-roadmap-milestone-lines.md`
+- `.ai/tickets/YGO-080-m1-clock.md`
+- `.ai/tickets/YGO-081-m1-jobs-queue.md`
+- `.ai/tickets/YGO-082-m1-env-config-mail-adapter.md`
+- `.ai/tickets/YGO-083-m1-mock-mail-adapter.md`
+- `.ai/tickets/YGO-084-m1-worker-job-runner.md`
+- `.ai/tickets/YGO-085-m1-keyprovider-fake-keys.md`

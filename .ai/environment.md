@@ -49,14 +49,14 @@
 
 コンテナの実行環境（コンテナのエンジンや Compose）は要らない（ADR-0052 の D2）。手元に入れた PostgreSQL を、レポジトリが管理する場所で動かす。
 
-### §3.2 起動の手順（M0 で台本を作る）
+### §3.2 起動の手順（2 以降の台本は M2 で作る、`gaps.md` G-082）
 
 1. `npm ci`（ネットワークを使うのは、`prepare.sh` の `npm ci` と IaC のコードを書いたあとの `tofu init -backend=false`（ADR-0052 の D3・D6）のほかは、例外として依存を足す・変える変更ごとにロックファイルを作り・直す `npm install --package-lock-only --ignore-scripts`（ADR-0106）だけ）。
    - 秘書のジョブでは `npm ci` を `sh scripts/prepare.sh` が行う（YGO-062）。`package.json` がないときは何も入れずに終了コード 0 で終わる。`npm` がないときは「検証の環境に Node.js を入れる」と出して止まる。
    - `prepare.sh` は、`package.json` があり `package-lock.json` がないときはロックファイルを作らず、「依存を変える変更の中でロックファイルを作ってコミットする」と出して終了コード 1 で止まる。ロックファイルがあるときは `npm ci` だけを動かす（ADR-0106 の D3）。
    - 例外の `npm install --package-lock-only --ignore-scripts` は、依存を足す・変える変更ごとに、その変更の中で 1 回試し、できた（直った）ロックファイルを `package.json` と同じ変更でコミットする。終える前に `sh scripts/prepare.sh` と `sh scripts/check.sh` がどちらも終了コード 0 で終わることを確かめる（ADR-0106 の D1）。作れなかったら、ロックファイルを手で書かず・手で直さず、止まった段とエラーの行をチケットに書いて、それまでのファイルを変更として出す（ADR-0106 の D2）。`sh scripts/check.sh` はネットワークなしのまま（NFR-063）。
 2. 開発の DB を起こす: `sh scripts/dev-db.sh start`。
-   - 初めてのときだけ `initdb` で、レポジトリの中の無視するディレクトリ（`.local/pg/`。M0 で `.gitignore` に `.local/` を足す）にデータを作る。
+   - 初めてのときだけ `initdb` で、レポジトリの中の無視するディレクトリ（`.local/pg/`。`.gitignore` の `.local/` の行は、`scripts/dev-db.sh` と同じ M2 のチケットで足す、`gaps.md` G-082）にデータを作る。
    - 待ち受けはループバック（`127.0.0.1`）と `.local/pg/` の中の Unix ソケットだけ。認証はソケットの `peer` か、ループバックの `scram-sha-256` に偽のパスワード（`EXAMPLE_DB_PASSWORD_DO_NOT_USE`）。
    - データベース `yuguregaoka_dev` を作り、マイグレーションを当てる。
    - `sh scripts/dev-db.sh stop` で止め、`reset` で `.local/pg/` を消して作り直す。`clean` は止めて `.local/pg/` を消し、作り直さない。

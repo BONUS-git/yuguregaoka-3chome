@@ -44,8 +44,9 @@ M1 の FR を実装する最初の 1 単位として、`.ai/db.md` §2「住民�
 - 使い捨ての PostgreSQL・ひな型の DB・`pg` の依存・`test/setup.ts`（`.ai/environment.md` §4.1 の 4・5）: YGO-076。
 - 型の検査と lint（`.ai/environment.md` §4.1 の 3）: M1 の TC はどれも型の検査と lint の結果を確かめないため、M1 のチケットにせず、§4.1 の 3 として残す `[assumed]`（YGO-062・YGO-076 と同じ）。
 - 残りの 6 表と `tenancies.resident_id` の外部キー: YGO-077。
-- 経路・登録のトランザクション・409 の応答（TC-006 ほか）: 時計とメールのアダプタが要るため、M1 の次のチケットで。
-- 時計・メールのアダプタ・`scripts/dev-db.sh`・キュー・2 プロセスの骨組み・`APP_ENV`: `roadmap.md` §4 の M0 の行の残りで、それぞれ別のチケットで。
+- 経路・登録のトランザクション・409 の応答（TC-006 ほか）: 時計（YGO-080）とメールのアダプタ（YGO-083）が要るため、M1 の次のチケット（YGO-071 で切る FR のチケット）で。
+- M1 の TC が使う M0 の部品（`roadmap.md` §4 の M0 の行の残りのうち）: 時計は YGO-080、`jobs` のキューは YGO-081、環境変数の読み込みと `MAIL_ADAPTER` の選択は YGO-082、モックのメールのアダプタは YGO-083、worker のジョブの実行は YGO-084、KeyProvider の偽の鍵は YGO-085。
+- `scripts/dev-db.sh` と `APP_ENV` の起動の検査: `check.sh` は使い捨ての PostgreSQL を使い TC は `dev-db.sh` を使わず、起動の検査はどの M1 の TC も確かめないため、M1 のチケットにせず、M2 で TC とチケットを足す（`.ai/gaps.md` G-082）`[assumed]`（YGO-062 と同じ）。M1 の TC が使わないほかの M0 の残り（web の起動・C3 の空の形・ほかのアダプタ）も同じ。
 - 「住民・住所」より後の表（手紙・配達回・新聞など）: 使う M のチケットで足す。
 - CI の workflow（`.github/`）・`.ai/status.md`: ジョブは書かない（CLAUDE.md）。
 - 新しい OQ・要回答は 0 件（マイグレーションの形と列の細部は技術の細部で `[assumed]`）。
