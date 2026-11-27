@@ -17,7 +17,7 @@ M1 の FR を実装する最初の 1 単位として、`.ai/db.md` §2「住民�
 
 ## 依存
 - YGO-062（M1 のテストの土台）と YGO-078（`package.json` とロックファイル）が `状態: done` であること。`package.json`・`package-lock.json`・Vitest の段が `check.sh` で動くことを前提にする。
-- 依存の順: YGO-078（`package.json` とロックファイル）→ YGO-075（ADR-0106）→ YGO-076（使い捨ての PostgreSQL）→ **YGO-065（このチケット）** → YGO-077（残りの 6 表）。
+- 依存の順: YGO-062 → YGO-075（ADR-0106）と YGO-078（`package.json` とロックファイル。並んで進む）→ YGO-076（使い捨ての PostgreSQL）→ **YGO-065（このチケット）** → YGO-077（残りの 6 表）。
   - YGO-076 が `状態: done` であること。`check.sh` が使い捨ての PostgreSQL を起こし、`migrations/*.sql` をひな型の DB `yuguregaoka_template` に当て、`test/setup.ts` がファイルごとの DB を指す `DATABASE_URL` を組み立てることを前提にする。PostgreSQL の主版 18 と道具があることの確かめは YGO-076 の依存の節にある。
 
 ## 範囲
@@ -44,8 +44,9 @@ M1 の FR を実装する最初の 1 単位として、`.ai/db.md` §2「住民�
 - 使い捨ての PostgreSQL・ひな型の DB・`pg` の依存・`test/setup.ts`（`.ai/environment.md` §4.1 の 4・5）: YGO-076。
 - 型の検査と lint（`.ai/environment.md` §4.1 の 3）: M1 の TC はどれも型の検査と lint の結果を確かめないため、M1 のチケットにせず、§4.1 の 3 として残す `[assumed]`（YGO-062・YGO-076 と同じ）。
 - 残りの 6 表と `tenancies.resident_id` の外部キー: YGO-077。
-- 経路・登録のトランザクション・409 の応答（TC-006 ほか）: 時計とメールのアダプタが要るため、M1 の次のチケットで。
-- 時計・メールのアダプタ・`scripts/dev-db.sh`・キュー・2 プロセスの骨組み・`APP_ENV`: `roadmap.md` §4 の M0 の行の残りで、それぞれ別のチケットで。
+- 経路・登録のトランザクション・409 の応答（TC-006 ほか）: 時計とメールのアダプタが要るため、YGO-071 で切る FR のチケットで。
+- `roadmap.md` §4 の M0 の行の残りのうち M1 の TC が使う部品: YGO-080（差し替えられる時計）・YGO-086（pg-boss の依存）・YGO-081（`jobs` のキューに積む口）・YGO-082（環境変数の読み込みと `MAIL_ADAPTER` の選択）・YGO-083（モックのメールのアダプタ）・YGO-084（worker のジョブの実行）・YGO-085（KeyProvider の偽の鍵）。どれもこのチケットのあとに並べる。
+- `scripts/dev-db.sh`（開発の DB の台本。`check.sh` は使い捨ての PostgreSQL を使い、TC はこの台本を使わない）と `APP_ENV` の起動の検査（M1 の TC はどれも確かめない）: M1 の TC が使わないため M1 のチケットにせず、使う TC のチケットを切るときに扱う `[assumed]`。
 - 「住民・住所」より後の表（手紙・配達回・新聞など）: 使う M のチケットで足す。
 - CI の workflow（`.github/`）・`.ai/status.md`: ジョブは書かない（CLAUDE.md）。
 - 新しい OQ・要回答は 0 件（マイグレーションの形と列の細部は技術の細部で `[assumed]`）。

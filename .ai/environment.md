@@ -70,7 +70,7 @@
 | クライアントの開発サーバー | `npm run dev:client` | Vite | `127.0.0.1:5173`。`/api` を web へ中継する |
 
 - 本番に近い形で確かめるときは、`npm run build` でクライアントを静的なファイルにし、web がそれを配る（ADR-0009）。
-- worker の時計は外から差し替えられる（`roadmap.md` M0）。開発では `CLOCK_OFFSET` で時刻をずらし、配達回の流れ（`async.md` §3）を手元で早回しで見られるようにする [assumed]。
+- worker の時計は外から差し替えられる（`roadmap.md` M0。作るのは YGO-080）。開発では `CLOCK_OFFSET` で時刻をずらし、配達回の流れ（`async.md` §3）を手元で早回しで見られるようにする [assumed]。
 
 ### §3.3 開発でのアダプタ
 

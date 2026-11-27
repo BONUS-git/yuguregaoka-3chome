@@ -17,6 +17,7 @@
 | 年齢と誕生日 | `.ai/diagrams/m1-er.md`・`.ai/diagrams/m1-registration-sequence.md` | `.ai/db.md` §2 の `residents`、`.ai/api.md` §7 F-02、ADR-0093 |
 | プロセスの分け方（web / worker）と C1〜C13 の置き場 | `.ai/diagrams/m1-components.md` | ADR-0100、`.ai/architecture.md` §1 の 1・§2 の「動くプロセス」の列 |
 | M1 の FR の一覧 | — | `.ai/roadmap.md` §4 の「今の M の範囲」、`.ai/mvp.md` (b) |
+| M1 の TC が依存する M0 の土台のチケットと依存の順 | — | `.ai/roadmap.md` §4 の「M1 の土台のチケット」（YGO-062・YGO-078・YGO-075・YGO-076・YGO-065・YGO-077・YGO-080〜YGO-086） |
 | M の分け方と、手紙の一続きが通る M・中心の体験の全体がそろう M | — | `.ai/roadmap.md` §4 の段階、ADR-0099・ADR-0097、`.ai/gaps.md` G-069 |
 | 要回答で止まる M・FR があるか | — | `.ai/roadmap.md` §8、ADR-0099 の D6、`.ai/open-questions.md` §2（一覧） |
 | M1 の受け入れ条件 | — | `.ai/roadmap.md` §4 の受け入れ条件（A-01〜A-18） |
@@ -276,3 +277,10 @@
 - `.ai/tickets/YGO-077-m1-resident-auth-tables.md`
 - `.ai/tickets/YGO-078-m1-package-json-lockfile-vitest.md`
 - `.ai/tickets/YGO-079-roadmap-milestone-lines.md`
+- `.ai/tickets/YGO-080-m1-replaceable-clock.md`
+- `.ai/tickets/YGO-081-m1-jobs-queue-enqueue.md`
+- `.ai/tickets/YGO-082-m1-env-loading-mail-adapter.md`
+- `.ai/tickets/YGO-083-m1-mock-mail-adapter.md`
+- `.ai/tickets/YGO-084-m1-worker-job-runner.md`
+- `.ai/tickets/YGO-085-m1-keyprovider-fake-keys.md`
+- `.ai/tickets/YGO-086-m1-pg-boss-dependency.md`

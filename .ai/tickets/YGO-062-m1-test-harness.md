@@ -26,7 +26,8 @@ CI の定義（`.github/workflows/`）があり `sh scripts/prepare.sh` → `sh 
 このチケットが作るのは、`roadmap.md` §4 の M0 の行のうち「Vitest を `check.sh` からつなぐ」ための台本・設定・例のテストと、それに要る `scripts/prepare.sh` だけ。
 `package.json`（`engines` を含む）とロックファイルを入れて Vitest を動かすことは YGO-078 に回す。
 使い捨ての PostgreSQL（`.ai/environment.md` §4.1 の 4・5、§4.4）は YGO-076 に回す。
-M0 の残り（`scripts/dev-db.sh`・時計・アダプタ・2 プロセスの骨組み・キュー・`APP_ENV` と環境変数の読み込み）は M0 の別のチケットに回す（「直さないところ」）。
+M0 の残りのうち M1 の TC が使う部品（時計・pg-boss の依存・`jobs` のキューに積む口・環境変数の読み込みと `MAIL_ADAPTER` の選択・モックのメールのアダプタ・worker のジョブの実行・KeyProvider の偽の鍵）は、M1 のチケット YGO-080〜YGO-086 に回す（「直さないところ」）。
+`scripts/dev-db.sh` と `APP_ENV` の起動の検査は、M1 の TC が使わないため M1 のチケットにせず、使う TC のチケットを切るときに扱う `[assumed]`。
 `M: M1` とするのは、目的が M1 の TC のテストを動かす土台だから。
 
 - `vitest.config.ts`: テストの結果を JUnit XML で `test-results/junit.xml` に書く（標準の出力の報告も残す）`[assumed]`。
@@ -37,7 +38,7 @@ M0 の残り（`scripts/dev-db.sh`・時計・アダプタ・2 プロセスの�
 - `scripts/check.sh` の Vitest の段（文書の確認のあと、`check: ok` の前、`package.json` があるときだけ）: `node_modules/` がなければ `sh scripts/prepare.sh` を先に動かすよう出して失敗する。`npx --no-install vitest run` を動かし、`test-results/junit.xml` がない、`skipped`（skip・todo）がある、名前に TC-NNN のない `testcase` がある、のどれでも失敗する。
 - `.gitignore`: `test-results/` と `node_modules/` の行。
 - 例のテスト: `src/app.ts` に、経路を持たない Fastify のアプリを返す `buildApp()` を置く。`test/test_TC_033_no_oauth_webauthn_routes.test.ts` を 1 つ置き、テストの名前は `TC-033 …` で始め、ルートの一覧に `oauth`・`webauthn` を含む経路がないことを確かめる。ポートは開かない。`skip`・`todo` にしない。
-- `.ai/environment.md` を今の状態に合わせる: §3.2 に `prepare.sh` が `npm ci` を動かすこと、§4.1 に文書の確認と Vitest を動かすことと JUnit XML の出力先 `test-results/junit.xml`。§4.1 の 4〜5 は YGO-076 で足すもの、§4.1 の 3（型の検査と lint）は M1 の TC が依存しないため M1 のチケットにせず残す `[assumed]`。§3.2 の 2 以降（`dev-db.sh`・`.local/`）は M0 の別のチケットで作るものとして残す。
+- `.ai/environment.md` を今の状態に合わせる: §3.2 に `prepare.sh` が `npm ci` を動かすこと、§4.1 に文書の確認と Vitest を動かすことと JUnit XML の出力先 `test-results/junit.xml`。§4.1 の 4〜5 は YGO-076 で足すもの、§4.1 の 3（型の検査と lint）は M1 の TC が依存しないため M1 のチケットにせず残す `[assumed]`。§3.2 の 2 以降（`dev-db.sh`・`.local/`）は、M1 の TC が使わないため M1 のチケットにせず、使う TC のチケットを切るときに作るものとして残す `[assumed]`。
 - 地図 `.ai/INDEX.md` と食い違うところがあれば同じ変更で直す（`.ai/` の外のファイルは地図に載せない）。
 
 ## 直さないところと理由
@@ -45,7 +46,8 @@ M0 の残り（`scripts/dev-db.sh`・時計・アダプタ・2 プロセスの�
 - CI の定義（`.github/`）: ジョブが書いてよい範囲の外（CLAUDE.md）。足すのはマスター（`.ai/environment.md` §5）。
   その定義があり `sh scripts/prepare.sh` → `sh scripts/check.sh` の順に動かすことは、YGO-070 の受け入れ確認 1 で確かめる（ADR-0105 の D4）。CI の結果（緑かどうか）は、M1 の達成の確認で見る。
 - 使い捨ての PostgreSQL の起動と片付け（§4.1 の 4・5、§4.4）: YGO-076 で、初めて DB を使う TC（TC-005、YGO-065）より前に足す。
-- `scripts/dev-db.sh`・時計・アダプタ・2 プロセスの骨組み・キュー・`APP_ENV` と環境変数の読み込み（`roadmap.md` §4 の M0 の行の残り）: M0 の別のチケットで足す。
+- `roadmap.md` §4 の M0 の行の残りのうち M1 の TC が使う部品: YGO-080（差し替えられる時計）・YGO-086（pg-boss の依存）・YGO-081（`jobs` のキューに積む口）・YGO-082（環境変数の読み込みと `MAIL_ADAPTER` の選択）・YGO-083（モックのメールのアダプタ）・YGO-084（worker のジョブの実行）・YGO-085（KeyProvider の偽の鍵）で足す。
+- `scripts/dev-db.sh`（開発の DB の台本。`check.sh` は使い捨ての PostgreSQL を使い、TC はこの台本を使わない）と `APP_ENV` の起動の検査（`staging`・`production` で偽の鍵か `CLOCK_OFFSET` があれば起動に失敗する。M1 の TC はどれも確かめない）: M1 の TC が使わないため M1 のチケットにせず、使う TC のチケットを切るときに扱う `[assumed]`。
 - 型の検査と lint（§4.1 の 3）: M1 の TC が依存しないため、M1 のチケットにしない `[assumed]`。
 - M1 の FR の機能の実装: 別のチケットで 1 つずつ。
 - `.ai/status.md`: 秘書が書くもので、ジョブは変えない。
@@ -66,8 +68,8 @@ CI の定義（`.github/workflows/`）の項目は入れない（受け持つの
 4. `.gitignore` に `test-results/` と `node_modules/` の行がある。
 5. この変更で `.github/` の下のファイルを足していない・変えていない。
 6. `.ai/environment.md` に「`prepare.sh` は今のレポジトリになく」と「今の `check.sh` は文書の確認だけ」が残っておらず、§4.1 に `test-results/junit.xml` が書かれている。
-7. `.ai/environment.md` §3.2・§4.1 の記述が、このチケットで作ったものと食い違わない: §3.2 の `dev-db.sh`・`.local/` は M0 で足すもの、§4.1 の 4〜5 は YGO-076 で足すもの、§4.1 の 3 は M1 のチケットにしないものとして残り、作ったと書かれていない。§3.1 の `engines` の行は YGO-078 を指す。
-8. このチケットの「範囲」に、作るもの（Vitest を `check.sh` からつなぐ台本・設定・例のテスト・`prepare.sh`）と、YGO-078 に回すもの（`package.json`・ロックファイル）と、YGO-076 に回すもの（使い捨ての PostgreSQL）と、M0 の別のチケットに回すもの（`dev-db.sh`・時計・アダプタ）が書かれている。
+7. `.ai/environment.md` §3.2・§4.1 の記述が、このチケットで作ったものと食い違わない: §3.2 の `dev-db.sh`・`.local/` は使う TC のチケットを切るときに足すもの、§4.1 の 4〜5 は YGO-076 で足すもの、§4.1 の 3 は M1 のチケットにしないものとして残り、作ったと書かれていない。§3.1 の `engines` の行は YGO-078 を指す。
+8. このチケットの「範囲」に、作るもの（Vitest を `check.sh` からつなぐ台本・設定・例のテスト・`prepare.sh`）と、YGO-078 に回すもの（`package.json`・ロックファイル）と、YGO-076 に回すもの（使い捨ての PostgreSQL）と、YGO-080〜YGO-086 に回すもの（時計・pg-boss の依存・`jobs` のキューに積む口・環境変数の読み込み・モックのメールのアダプタ・worker のジョブの実行・偽の鍵）が書かれ、それとは別の文に、使う TC のチケットを切るときに扱うもの（`dev-db.sh`・`APP_ENV` の起動の検査）が書かれている。
 9. `scripts/check.sh` に、次の行がある: `node` がない・主版が `engines.node` と違うときに要る主版と「検証の環境に Node.js」を出して終了コード 1、`package-lock.json` がないときに ADR-0103 を示して終了コード 1、`node_modules/` がないときに `prepare.sh` を動かすよう出して終了コード 1、`test-results/junit.xml` がない・`<skipped` がある・名前に TC-NNN のない `testcase` があるときに終了コード 1。
 10. `vitest.config.ts` の報告が `default` と `junit` で、出力が `test-results/junit.xml`。`test/test_TC_033_no_oauth_webauthn_routes.test.ts` のテストの名前が `TC-033` で始まり、`skip`・`todo`・`only` でない。`src/app.ts` に `buildApp()` がある。
 11. `scripts/check.sh` の、done なのに `package.json`・`package-lock.json`・`scripts/prepare.sh` のどれかがなければ失敗する段が、YGO-078 のチケットを見る（このチケットの done では `package.json` を求めない）。
@@ -84,8 +86,8 @@ CI の定義（`.github/workflows/`）の項目は入れない（受け持つの
 | 4 | 済み | `.gitignore` の 7 行目 `node_modules/`・13 行目 `test-results/` |
 | 5 | 済み | この変更は `.github/` に触れていない（レポジトリに `.github/` がない） |
 | 6 | 済み | `.ai/environment.md` に 2 つの文がなく（検索で 0 件）、§4.1 の 6 に `test-results/junit.xml` がある |
-| 7 | 済み | §3.2 の 2（`dev-db.sh`・`.local/` は M0 で足す）、§4.1 の冒頭の段落（4・5 は YGO-076、3 は M1 のチケットにしない）、§3.1 の Node.js の行（YGO-078） |
-| 8 | 済み | このファイルの「範囲」の節 |
+| 7 | 済み | §3.2 の 2（`dev-db.sh`・`.local/` は M0 の台本で、作ったと書かれていない）、§4.1 の冒頭の段落（4・5 は YGO-076、3 は M1 のチケットにしない）、§3.1 の Node.js の行（YGO-078） |
+| 8 | 済み | このファイルの「範囲」の節（YGO-080〜YGO-086 の文と、`dev-db.sh`・`APP_ENV` の起動の検査の文が分かれている） |
 | 9 | 済み | `check.sh` の最初の段（node がない・主版が違う・ロックファイルがない）と Vitest の段（`node_modules/` がない・XML がない・`<skipped` がある・TC-NNN のない testcase） |
 | 10 | 済み | `vitest.config.ts` の 8・9 行目、TC-033 のテストの 12 行目（`test(` で始まる）、`src/app.ts` |
 | 11 | 済み | `check.sh` の文書の確認の、YGO-078 のチケットの `状態: done` を見る段 |
