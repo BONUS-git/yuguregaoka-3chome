@@ -172,6 +172,11 @@ if [ -e "$t078" ] && grep -qxF '状態: done' "$t078"; then
         [ -e "$f" ] || { echo "$t078 は done なのに $f がない" >&2; exit 1; }
     done
 fi
+# YGO-072 を done にしたなら、package.json があること（reviews/0004 の R-067、受け入れ確認 3）。
+t072=.ai/tickets/YGO-072-r-067-check-fails-tests-without-package-json.md
+if [ -e "$t072" ] && grep -qxF '状態: done' "$t072"; then
+    [ -e package.json ] || { echo "$t072 は done なのに package.json がない" >&2; exit 1; }
+fi
 
 # 6. Vitest を動かす（ADR-0009、.ai/environment.md §4.1 の 6）。ネットワークは使わない。
 # 結果は test-results/junit.xml。skip・todo は通っていないと数え、名前に TC-NNN のないテストも失敗にする。
