@@ -121,3 +121,4 @@
 - [0102 — 認証の表とメールの受け渡し、使用中のメールの登録](0102-auth-tables-mail-and-registered-email.md)
 - [0103 — 最初のロックファイルは依存を足す変更で作る](0103-first-lockfile-in-dependency-change.md)
 - [0104 — CI は prepare.sh のあとに check.sh を動かす](0104-ci-runs-prepare-then-check.md)
+- [0105 — CI の定義の確かめは YGO-070 が受け持つ](0105-ci-definition-check-in-ygo-070.md)
