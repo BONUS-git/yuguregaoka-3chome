@@ -16,8 +16,8 @@ M1 の FR を実装する最初の 1 単位として、`.ai/db.md` §2「住民�
 - 残りの 6 表（`residents`・`credentials`・`sessions`・`auth_tokens`・`staff_roles`・`rate_limit_buckets`）と `tenancies.resident_id` の外部キー: YGO-077
 
 ## 依存
-- YGO-062（M1 のテストの土台）が `状態: done` であること。`package.json`・`package-lock.json`・Vitest の段が `check.sh` で動くことを前提にする。
-- 依存の順: YGO-075（ADR-0106）→ YGO-076（使い捨ての PostgreSQL）→ **YGO-065（このチケット）** → YGO-077（残りの 6 表）。
+- YGO-062（M1 のテストの土台）と YGO-078（`package.json` とロックファイル）が `状態: done` であること。`package.json`・`package-lock.json`・Vitest の段が `check.sh` で動くことを前提にする。
+- 依存の順: YGO-078（`package.json` とロックファイル）→ YGO-075（ADR-0106）→ YGO-076（使い捨ての PostgreSQL）→ **YGO-065（このチケット）** → YGO-077（残りの 6 表）。
   - YGO-076 が `状態: done` であること。`check.sh` が使い捨ての PostgreSQL を起こし、`migrations/*.sql` をひな型の DB `yuguregaoka_template` に当て、`test/setup.ts` がファイルごとの DB を指す `DATABASE_URL` を組み立てることを前提にする。PostgreSQL の主版 18 と道具があることの確かめは YGO-076 の依存の節にある。
 
 ## 範囲
@@ -52,7 +52,7 @@ M1 の FR を実装する最初の 1 単位として、`.ai/db.md` §2「住民�
 
 ## 受け入れ確認
 1. このチケットの 1〜3 行目が `# YGO-065 M1 の住民と住所の DB のスキーマとマイグレーション`・`状態: done`・`M: M1`。
-2. YGO-062 と YGO-076 のチケットの 2 行目が `状態: done`。
+2. YGO-062・YGO-078・YGO-076 のチケットの 2 行目が `状態: done`。
 3. `sh scripts/prepare.sh` のあと `sh scripts/check.sh` がネットワークなしで終了コード 0 で `check: ok` で終わる。
 4. `test-results/junit.xml` に、名前に `TC-005` を含む `testcase` があり、その中に `skipped`・`failure`・`error` の要素がない（passed）。
 5. `migrations/0001_addresses_tenancies.sql` があり、`addresses`・`tenancies` の 2 つの `CREATE TABLE` があり、ほかの表の `CREATE TABLE` がない。

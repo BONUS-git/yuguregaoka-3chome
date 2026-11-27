@@ -273,3 +273,4 @@
 - `.ai/tickets/YGO-075-adr-0106-lockfile-per-dependency-change.md`
 - `.ai/tickets/YGO-076-check-throwaway-postgresql.md`
 - `.ai/tickets/YGO-077-m1-resident-auth-tables.md`
+- `.ai/tickets/YGO-078-m1-package-json-lockfile-vitest.md`
