@@ -70,5 +70,5 @@
 - `environment.md` §7.4 の 1〜4 の順に進める（手順はそこにだけ書く）。1 のマスターの承認（OQ-085・NFR-080）がないうちは、2 以降に進まない。
 - G-078: 道具の主版の一覧は `environment.md` §5.1 の表にある（YGO-069 で閉じた。`.ai/gaps.md`）。
 - G-079: CI の定義に `sh scripts/prepare.sh` の段を `sh scripts/check.sh` の前に足す（足すのはマスター、ADR-0105 の D2。`.ai/gaps.md`）。
-- G-080: 秘書の実装のジョブが `npm` のコマンドと `sh scripts/prepare.sh` を動かす権限。`node -v` と `sh scripts/check.sh` は動く（止まっているのは YGO-078。与えるのは秘書のジョブの実行の設定。`environment.md` §5 の「ジョブがコマンドを動かす権限」。道具を入れること、OQ-086 とは別。`.ai/gaps.md`）。権限が変わらないまま YGO-078 を出し直しても進まない（G-082）。
+- G-080: 実装のジョブではコマンドを動かす道具（Bash）が拒まれる。秘書が許すものは Bash・`node -v`・`npm --version`・`npm_config_cache` を付けた `npm install --package-lock-only --ignore-scripts`・`sh scripts/prepare.sh`・`sh scripts/check.sh`（止まっているのは YGO-078。与えるのは秘書のジョブの実行の設定。`environment.md` §5 の「ジョブがコマンドを動かす権限」。道具を入れること、OQ-086 とは別。`.ai/gaps.md`）。これらが許されないまま YGO-078 を出し直しても進まない（G-082）。
 - §2 で「未確認」の 2 行（リージョン・戻し方）と「マスターの用意が要る」の 3 行。「用意済み」の行はまだない。

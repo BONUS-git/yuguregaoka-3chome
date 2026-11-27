@@ -10,7 +10,7 @@ YGO-073 で YGO-065 から分けた 2 枚目（道具の追加）。範囲は `c
 ## 依存
 - YGO-062（M1 のテストの土台）と YGO-078（`package.json` とロックファイル）が `状態: done` であること。`package.json`・`package-lock.json`・Vitest の段が `check.sh` で動くことを前提にする。
 - 依存の順: YGO-075（ADR-0106）と YGO-078（`package.json` とロックファイル）→ **YGO-076（このチケット）** → YGO-065（`addresses`・`tenancies`）→ YGO-077（残りの 6 表）。
-  - YGO-075 が `状態: done` であること。`pg`・`@types/pg` を足す変更でロックファイルを直す根拠は ADR-0106 の D1。YGO-075 の受け入れ確認は `.ai/` だけを見て、`scripts/` の `ADR-0103` はこのチケットの受け入れ確認 11 で直すので、YGO-075 はこのチケットを待たない。
+  - YGO-075 が `状態: done` であること。`pg`・`@types/pg` を足す変更でロックファイルを直す根拠は ADR-0106 の D1。YGO-075 の受け入れ確認は `.ai/` だけを見て、`scripts/` に `ADR-0103` がないことはこのチケットの受け入れ確認 11 で確かめるので、YGO-075 はこのチケットを待たない。
 - PostgreSQL のサーバーの主版は **18** `[assumed]`（`.ai/environment.md` §5.1 の一覧の `initdb`・`pg_ctl`・`psql` の行と §3.1 の PostgreSQL の行。本番のマネージドサービスでも同じ主版を選ぶ、ADR-0010）。
   OQ-086 → 決定と `roadmap.md` §4 の M0 の依存の順（主版を決める → 秘書がマスターに伝える → 道具があることを確かめる → DB のテストを足す）に従い、次の 2 つがそろうまで、このチケットを始めない:
   1. 秘書が、主版 18 をマスターに伝えている。
@@ -28,7 +28,7 @@ YGO-073 で YGO-065 から分けた 2 枚目（道具の追加）。範囲は `c
 - **接続**（`.ai/environment.md` §4.2）: `check.sh` がテストに渡すのは、ソケットのディレクトリとひな型の DB の名前の環境変数だけ。テストの準備のコード `test/setup.ts` が、それを使ってテストのファイルごとに `CREATE DATABASE ... TEMPLATE yuguregaoka_template` で DB を作り、その DB を指す `DATABASE_URL` を組み立てる `[assumed]`。`.env*` のファイルは使わない（§4.2）。`vitest.config.ts` の `setupFiles` に `test/setup.ts` を足す。
 - **外への接続を失敗させる**（`roadmap.md` A-07 の (4)・`tests/test-plan.md` の冒頭・`.ai/environment.md` §4.2）: `test/setup.ts` が、テストの中からのループバック（`localhost`・`127.0.0.1`・`::1`）と Unix ソケットのほかへの接続（例: `192.0.2.1`・`smtp.example.invalid`）を、接続を開く前に失敗させる `[assumed]`（Node.js の `net`・`tls` の接続の口を差し替える。依存は足さない）。A-07 の (4) の接続の検査のテストは、A-07 を確かめるチケットで足す（このチケットはテストを足さない。`check.sh` は名前に TC-NNN のない `testcase` で失敗する）。
 - **DB のドライバ**: `pg` を `dependencies`、`@types/pg` を `devDependencies` に固定の版で足し、ADR-0106 の D1 のとおり同じ変更でロックファイルを直す `[assumed]`。
-- **`scripts/` の ADR の参照**: `scripts/check.sh` と `scripts/prepare.sh` のコメントと出力の文に残る `ADR-0103` を `ADR-0106` に直す（ADR-0103 は ADR-0106 で置き換え。YGO-075 は `.ai/` だけを範囲にしたため、ここで直す）。確かめの段の動きは変えない。
+- **`scripts/` の ADR の参照**: `scripts/check.sh` と `scripts/prepare.sh` のコメントと出力の文の ADR の参照は、YGO-078 の変更（20261127-19e8fa）ですでに `ADR-0106` になっている。このチケットで足す段のコメントも `ADR-0106` を指し、`ADR-0103` を戻さない（受け入れ確認 11）。確かめの段の動きは変えない。
 - **文書をそろえる**（同じ変更で今の状態に書き直す）:
   - `.ai/environment.md` §4.1: 冒頭の文を、`check.sh` が 1・2・4・5・6・7 を動かす形にし、4・5 をこのチケットで作ったものとして書く。3（型の検査と lint）は、M1 の TC が依存しないため M1 のチケットにせず §4.1 の 3 として残すと書く `[assumed]`。
   - `.ai/environment.md` §3.1: PostgreSQL の行に、`check.sh` が `initdb --version` の主版を確かめることを書く。

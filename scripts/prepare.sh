@@ -1,7 +1,11 @@
 #!/bin/sh
-# 依存の取り込み（ADR-0052 の D3・ADR-0103 の D3、.ai/environment.md §3.2 の 1）。
+# 依存の取り込み（ADR-0052 の D3・ADR-0106 の D3、.ai/environment.md §3.2 の 1）。
 # npm の依存だけを、コミットしたロックファイルのとおりに入れる。OS の道具（PostgreSQL・tofu）は入れない。
-# ロックファイルはここでは作らない（作るのは依存を変える変更の中、ADR-0103 の D1）。
+# ロックファイルはここでは作らない（作るのは依存を変える変更の中、ADR-0106 の D1）。
+# ロックファイルの作り方（ADR-0106 の D1）: 依存を変える変更の中で、レポジトリの直下で次を 1 回だけ動かす。
+#   npm_config_cache="$(mktemp -d)" npm install --package-lock-only --ignore-scripts
+# できたファイルに絶対パス（"/ で始まる値）と https://registry.npmjs.org/ 以外の resolved がないことを確かめる。
+# 作れなければ（ADR-0106 の D2）ロックファイルを手で書かず、package.json も入れず、止まった段とエラーの行をチケットに書く。
 set -eu
 cd "$(dirname "$0")/.."
 
@@ -10,7 +14,7 @@ if [ ! -e package.json ]; then
     exit 0
 fi
 if [ ! -e package-lock.json ]; then
-    echo "prepare: package-lock.json がない。依存を変える変更の中でロックファイルを作ってコミットする（ADR-0103）" >&2
+    echo "prepare: package-lock.json がない。依存を変える変更の中でロックファイルを作ってコミットする（ADR-0106）" >&2
     exit 1
 fi
 command -v npm >/dev/null 2>&1 || {
