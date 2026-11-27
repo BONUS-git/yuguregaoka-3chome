@@ -26,10 +26,10 @@ M: M1
 - YGO-062（`.ai/tickets/YGO-062-m1-test-harness.md`）は `状態: open`。
 - `package.json`・`package-lock.json` はない。
 - `test/test_TC_033_no_oauth_webauthn_routes.test.ts` はある。
-- ジョブの環境に `node`・`npm` がない（仕分け 12 の G-080。道具を入れるのはマスター、OQ-086 → 決定）。
+- ジョブの環境の `node` は `v26.13.1` で動く。YGO-062 を止めているのは、ジョブが `npm` と `sh scripts/prepare.sh` を動かす権限がないこと（G-080）。与えるのは秘書のジョブの実行の設定で、OQ-086 とは別。
 
 ## 止まっている理由と再開の条件
-- 理由: 依存の節のとおり、この段は YGO-062 と同じ変更か YGO-062 の done のあとに入れる。今入れると、TC-033 のテストがあり `package.json` がないため `check.sh` がすぐ失敗し、それ以降のすべての変更がマージできなくなる。受け入れ確認 3（`package.json` がある）も満たせないので、`状態: open` のままにする。YGO-062 は `node`・`npm` がないためこの変更でも実装できず、この変更の範囲もこのチケット 1 つに限られる。
+- 理由: 依存の節のとおり、この段は YGO-062 と同じ変更か YGO-062 の done のあとに入れる。今入れると、TC-033 のテストがあり `package.json` がないため `check.sh` がすぐ失敗し、それ以降のすべての変更がマージできなくなる。受け入れ確認 3（`package.json` がある）も満たせないので、`状態: open` のままにする。YGO-062 は、ジョブに `npm` と `sh scripts/prepare.sh` を動かす権限がない（G-080。与えるのは秘書のジョブの実行の設定）ため `package.json` とロックファイルを入れられず、この変更の範囲もこのチケット 1 つに限られる。
 - 再開の条件: YGO-062 が `状態: done` で、`package.json` がある（または YGO-062 と同じ変更で入れる）。
 - 再開のときの作り方 `[assumed]`:
   1. 段: `scripts/check.sh` の 1 の段の前に、`test/` の下に `*.test.ts` が 1 つ以上あり `package.json` がないとき、理由（`package.json` がないためテストを動かせない）を出して `exit 1` する段を足す。注記に `YGO-072` と `R-067` を書く。テストがないときは、この段では止めない。
