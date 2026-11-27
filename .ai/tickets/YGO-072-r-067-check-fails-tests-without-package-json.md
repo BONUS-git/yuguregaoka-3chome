@@ -21,3 +21,17 @@ M: M1
 1. このチケットの 1〜3 行目が `# YGO-072 R-067 package.json がないと check.sh がテストを飛ばして通る`・`状態: done`・`M: M1`。
 2. `scripts/check.sh` に、`test/` の `*.test.ts` があることと `package.json` がないことの両方を条件にして `exit 1` する段があり、その注記に `YGO-072` と `R-067` がある。
 3. このチケットが done になった変更で、`package.json` がある（YGO-062 と同じ変更か、YGO-062 が `状態: done`）。
+
+## 確かめた事実（変更 20261127-958e56 の時点）
+- YGO-062（`.ai/tickets/YGO-062-m1-test-harness.md`）は `状態: open`。
+- `package.json`・`package-lock.json` はない。
+- `test/test_TC_033_no_oauth_webauthn_routes.test.ts` はある。
+- ジョブの環境に `node`・`npm` がない（仕分け 12 の G-080。道具を入れるのはマスター、OQ-086 → 決定）。
+
+## 止まっている理由と再開の条件
+- 理由: 依存の節のとおり、この段は YGO-062 と同じ変更か YGO-062 の done のあとに入れる。今入れると、TC-033 のテストがあり `package.json` がないため `check.sh` がすぐ失敗し、それ以降のすべての変更がマージできなくなる。受け入れ確認 3（`package.json` がある）も満たせないので、`状態: open` のままにする。YGO-062 は `node`・`npm` がないためこの変更でも実装できず、この変更の範囲もこのチケット 1 つに限られる。
+- 再開の条件: YGO-062 が `状態: done` で、`package.json` がある（または YGO-062 と同じ変更で入れる）。
+- 再開のときの作り方 `[assumed]`:
+  1. 段: `scripts/check.sh` の 1 の段の前に、`test/` の下に `*.test.ts` が 1 つ以上あり `package.json` がないとき、理由（`package.json` がないためテストを動かせない）を出して `exit 1` する段を足す。注記に `YGO-072` と `R-067` を書く。テストがないときは、この段では止めない。
+  2. テスト: 名前に TC-NNN を入れたテストを足す。`check.sh` を一時ディレクトリに写し、テストがあり `package.json` がない組み合わせで 0 以外で終わることを確かめる。ネットワークを使わず、結果は `test-results/junit.xml` に書かれる。
+  3. 文書: 同じ変更で `.ai/environment.md`（§4.1 の段の一覧）と `.ai/tests/test-plan.md` をそろえ、このチケットを `状態: done` にする。
