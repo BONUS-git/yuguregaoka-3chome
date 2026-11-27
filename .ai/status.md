@@ -4,11 +4,11 @@
 
 - 段階: 実装
 - 今の M: M1
-- 点検 0
+- 点検 1 件
 - チケット 47/56
 - TC 0/65（結果なし）
 - FR の TC 18/18
-- gaps のチケットなし 0
+- gaps のチケットなし 2
 - CI はコンソールで
 - 今決める 0
 
@@ -19,7 +19,7 @@
 - [x] M1 の FR にすべてテスト項目（`.ai/tests/test-plan.md` の TC）がある
 - [ ] M1 の TC のテストがすべて通っている（skip と結果のないものは通っていない）
 - [?] CI（GitHub Actions）が緑（マージの時点では未確定。コンソールで見る）
-- [x] M1 に向かう gaps の行にすべてチケットがある
+- [ ] M1 に向かう gaps の行にすべてチケットがある
 - [x] 地図（`.ai/INDEX.md`）に切れも漏れもない
 - [x] M1 の FR にかかわる図があり、その「確かめた M」が M1
 - [x] 準備書（`.ai/deploy/readiness.md`）の「確かめた M」が M1
@@ -143,4 +143,6 @@
 - G-076（M2）M2 以降の未着手の設計は、それぞれの M を今の M にするまで新しい ADR にせず、gaps の暫定のまま置く。M1 の設計の文書だけを詰める `[assumed]`。M2 を今の M にしたときに、その M の暫定の行から ADR にする
 - G-077（M1）YGO-068 で、準備書 `.ai/deploy/readiness.md` を作り（`- 確かめた M: M1`。デプロイしない前提の L0、サーバー側の項目の状態、`environment.md` §5〜§9 の節と持ち越しの OQ の 6 件の対応）、`INDEX.md` に載せた。残りはない
 - G-078（M1）YGO-069 で、マスターに伝える道具の主版の一覧を `environment.md` §5.1 の表にまとめ、§3.1 の PostgreSQL の行に 18 `[assumed]` を書き、§3.1・§4.1・§5 の文と YGO-076 の依存の節・範囲・受け入れ確認 5 はその表を指す形にした。`.ai/triage.md` の G-078 の今の事実は仕分け 11 の行で、仕分け 10 の行は前の回の記録として変えない。残りはない
-- G-079（M1）CI の定義（`.github/workflows/`）に `sh scripts/prepare.sh` の段がまだない。ADR-0105 の D1 は CI が `prepare.sh` → `check.sh` の順に動かすことを前提にし、段を足すのはマスター（D2）。秘書は YGO-062 の実装（`package.json` を入れる変更）の前に、この段を足すことをマスターに伝える。`environment.md` §5.1 の一覧にこの段の行がある。閉じる条件: CI の定義に `sh scripts/prepare.sh` の段が `sh scripts/check.sh` の前にある（YGO-070 の受け入れ確認 1）
+- G-079（M1）CI の定義（`.github/workflows/`）に `sh scripts/prepare.sh` の段がまだない。ADR-0105 の D1 は CI が `prepare.sh` → `check.sh` の順に動かすことを前提にし、段を足すのはマスター（D2）。秘書は YGO-062 の実装（`package.json` を入れる変更）の前に、この段を足すことをマスターに伝える。`environment.md` §5.1 の一覧にこの段の行がある。閉じる条件: CI の定義に `sh scripts/prepare.sh` の段が `sh scripts/check.sh` の前にある（YGO-070 の受け入れ確認 1。ADR-0105 の D4）。ADR-0105 を置き換えたあとの閉じる条件は G-081 の予定のとおり
+- G-080（M1）ジョブの環境に Node.js と Bash がなく、YGO-062 が止まっている。道具を用意するのはマスター（OQ-086 → 決定、ADR-0068。主版は `environment.md` §5.1 の表）で、新しい要回答は立てない。外の作業を待つだけなので、チケットは切らずにこの行と準備書で追う `[assumed]`。閉じる条件: YGO-062 の実装の変更で node と npm が動き、`package.json` が入る
+- G-081（M1）「今決める 0 件」の記録と、マスターの作業を待つだけのことはチケットにせず、`triage.md` の記録と gaps の行（と準備書）で追う（冒頭の決まりの例外）`[assumed]`。ADR-0105 の D4 が採用のままなので、今は G-079 を YGO-070 の受け入れ確認 1 で閉じる。予定（置き換えたあとの形）: YGO-070 は取り下げ、G-079 は CI の定義に `sh scripts/prepare.sh` の段が `sh scripts/check.sh` の前にあるという事実で閉じる。きっかけ: YGO-062 の実装の変更（`package.json` を入れる変更）で、ADR-0105 を丸ごと置き換える新しい ADR を作り、同じ変更で YGO-070 の取り下げ・それを指す文書（YGO-062・`environment.md` §5）の直し・G-079 の閉じる条件の書き換えを行う `[assumed]
