@@ -12,6 +12,11 @@ M: M1
 - YGO-065 のあとに並べる。依存の順: YGO-062 → YGO-075 と YGO-078（並んで進む）→ YGO-076 → YGO-065 → **YGO-080（このチケット）**。YGO-065 が `状態: done` であること。
 - 部品どうしの順: YGO-080・YGO-082・YGO-086 → YGO-081・YGO-083・YGO-085 → YGO-084。このチケットは先頭の組で、ほかの部品のチケットを待たない。YGO-084 がこのチケットを待つ。
 
+## 前提（変更 20261127-50bc9e の時点で満たされていない）
+- YGO-078（`package.json`・`package-lock.json`・Vitest）が `状態: done` でない。develop（9301ab8）に `package.json`・`package-lock.json` がなく、`sh scripts/prepare.sh` は「package.json がないので入れる依存はない」で終わり、`sh scripts/check.sh` は Vitest の段を飛ばして `check: ok` になる。`test-results/` はできず、JUnit XML は書かれない。YGO-078 を止めているものは YGO-078 の「止まっている理由」の節と `gaps.md` の G-080・G-082 にある。
+- YGO-065（住民と住所の DB のスキーマとマイグレーション）が `状態: done` でない。
+- この 2 つがそろい、`sh scripts/prepare.sh` のあと `sh scripts/check.sh` が Vitest を動かして `test-results/junit.xml` を書くまで、このチケットは実装しない（時計のアダプタもテストも足さない）。
+
 ## 範囲
 - 時計のアダプタ（`src/clock.ts` など）`[assumed]`: 今の時刻を返す 1 つの口を持ち、本物は実時間（JST に固定して扱う、`environment.md` §3.3）を返す。テストでは決まった時刻を返し、進められる時計に差し替えられる。
 - web の経路と worker のジョブは、時計を引数で受け取る（モジュールの全体の状態にしない）`[assumed]`。
