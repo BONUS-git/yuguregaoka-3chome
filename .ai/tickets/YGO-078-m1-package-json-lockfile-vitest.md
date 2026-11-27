@@ -10,13 +10,17 @@ YGO-062 から分けた理由は、YGO-062 の「分けた理由」の節に書�
 
 ## 依存
 - YGO-062（`.ai/tickets/YGO-062-m1-test-harness.md`）が `状態: done`。
-- ジョブが `npm` のコマンド（`npm --version`・`npm install --package-lock-only --ignore-scripts`）と `sh scripts/prepare.sh`・`sh scripts/check.sh` を動かせること（`.ai/environment.md` §5 の「ジョブがコマンドを動かす権限」・`.ai/gaps.md` の G-080）。
+- ジョブが `node`・`npm` のコマンド（`node -v`・`npm --version`・`npm install --package-lock-only --ignore-scripts`）と `sh scripts/prepare.sh`・`sh scripts/check.sh` を動かせること（`.ai/environment.md` §5 の「ジョブがコマンドを動かす権限」・`.ai/gaps.md` の G-080）。
 - 秘書は、このチケットの実装（`package.json` を入れる変更）の前に、CI の定義に `sh scripts/prepare.sh` の段を `sh scripts/check.sh` の前に足すことをマスターに伝える（ADR-0105 の D2・G-079）。段ができるのは待たない。
 
-## 確かめた事実（変更 20261127-e16545 の時点）
+## 確かめた事実（変更 20261127-54c015 の時点）
+- 前提: YGO-062 は `状態: done`。YGO-065 は YGO-073 で分けられ（`addresses`・`tenancies` と TC-005）、このチケットは依存しない。YGO-072 は c741492 でマージ済みで（チケットの事実の節だけ。`状態: open`、`check.sh` は変わっていない）、このチケットが YGO-072 の依存で、逆ではない。
+- 止まった段（ADR-0106 の D2）: ロックファイルの作成。実装のジョブで `npm_config_cache` に一時ディレクトリを渡した `npm install --package-lock-only --ignore-scripts`、`npm --version`、`node -v` のどれも、動く前に道具の権限で拒まれた。出たエラーの行: `Permission to use Bash has been denied because Claude Code is running in don't ask mode.`。`sh scripts/check.sh` だけは動き、`check: ok` で終わった（`package.json` がないので Node.js・ロックファイル・Vitest の段は動かない）。
+- そのため `package.json` も入れず（範囲の「作れなければ」）、状態は `open` のまま。この変更は、この事実と `.ai/environment.md` §5・`.ai/gaps.md` の G-080 の時点の書き直しだけ。
+- 片付く条件: 実装のジョブの設定で `node`・`npm` のコマンド（と `sh scripts/prepare.sh`）を許す（G-080。与えるのは秘書）。許されたら、範囲のとおりに `package.json` を書いてロックファイルを作る。
 - ある: `scripts/check.sh`（`package.json` があるときだけ動く Node.js とロックファイルの段、`package.json` があるときだけ動く Vitest の段、このチケットが `状態: done` なのに `package.json`・`package-lock.json`・`scripts/prepare.sh` のどれかがなければ失敗する段）・`scripts/prepare.sh`・`vitest.config.ts`・`src/app.ts`・`test/test_TC_033_no_oauth_webauthn_routes.test.ts`・`.gitignore` の `node_modules/` と `test-results/` の行。
 - ない: `package.json`・`package-lock.json`。そのため `check.sh` の Node.js とロックファイルの段と Vitest の段は動かず、`test-results/` はできない。
-- ジョブの環境: 変更 20261127-edc14e では `node -v` が `v26.13.1` で、npm のコマンドは権限で拒まれた。変更 20261127-e16545 の実装のジョブでは、コマンドを動かす道具そのものが権限で拒まれ、`node -v`・`npm -v`・`sh scripts/check.sh` のどれも動かなかった（同じ変更の計画の段階では `npm -v` が `11.20.0` を返し、既定の npm のキャッシュには書けず、`npm_config_cache` に一時ディレクトリを渡すとレジストリに届いた）。
+- ジョブの環境: この変更（20261127-54c015）の計画の段階で確かめた値。`node -v` は `v26.13.1`（変更 20261127-edc14e と同じ）、`npm -v` は `11.20.0`（変更 20261127-e16545 と同じ）。安定版は fastify 5.12.8・vitest 5.1.2・typescript 7.0.2・@types/node 26.6.11 だった。既定の npm のキャッシュには書けず、`npm_config_cache` に一時ディレクトリを渡すとレジストリに届いた。実装のジョブでは上のとおり `node`・`npm` が拒まれる。
 
 ## 範囲
 - `package.json` を手で書く: `private: true`・`"type": "module"`・`"engines": {"node": "26.x"}`（主版は `.ai/environment.md` §3.1）。

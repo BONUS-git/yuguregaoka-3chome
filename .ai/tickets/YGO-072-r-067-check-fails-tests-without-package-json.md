@@ -26,7 +26,7 @@ M: M1
 - YGO-062（`.ai/tickets/YGO-062-m1-test-harness.md`）は `状態: done`。範囲は台本・設定・例のテストまでで、`package.json` とロックファイルは YGO-078（`状態: open`）に分けた。
 - `package.json`・`package-lock.json` はない。
 - `test/test_TC_033_no_oauth_webauthn_routes.test.ts` はある。
-- YGO-078 を止めているのは、実装のジョブが `npm` と `sh scripts/prepare.sh`・`sh scripts/check.sh` を動かす権限がないこと（G-080）。与えるのは秘書のジョブの実行の設定で、OQ-086 とは別。
+- YGO-078 を止めているのは、実装のジョブが `node`・`npm` のコマンド（と、確かめていない `sh scripts/prepare.sh`）を動かす権限がないこと（G-080。`sh scripts/check.sh` は動く）。与えるのは秘書のジョブの実行の設定で、OQ-086 とは別。
 
 ## 止まっている理由と再開の条件
 - 理由: 依存の節のとおり、この段は YGO-078 と同じ変更か YGO-078 の done のあとに入れる。今入れると、TC-033 のテストがあり `package.json` がないため `check.sh` がすぐ失敗し、それ以降のすべての変更がマージできなくなる。受け入れ確認 3（`package.json` がある）も満たせないので、`状態: open` のままにする。
