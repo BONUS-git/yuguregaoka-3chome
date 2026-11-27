@@ -9,8 +9,8 @@ YGO-073 で YGO-065 から分けた 2 枚目（道具の追加）。範囲は `c
 
 ## 依存
 - YGO-062（M1 のテストの土台）と YGO-078（`package.json` とロックファイル）が `状態: done` であること。`package.json`・`package-lock.json`・Vitest の段が `check.sh` で動くことを前提にする。
-- 依存の順: YGO-078（`package.json` とロックファイル）→ YGO-075（ADR-0106）→ **YGO-076（このチケット）** → YGO-065（`addresses`・`tenancies`）→ YGO-077（残りの 6 表）。
-  - YGO-075 が `状態: done` であること。`pg`・`@types/pg` を足す変更でロックファイルを直す根拠は ADR-0106 の D1。
+- 依存の順: YGO-075（ADR-0106）と YGO-078（`package.json` とロックファイル）→ **YGO-076（このチケット）** → YGO-065（`addresses`・`tenancies`）→ YGO-077（残りの 6 表）。
+  - YGO-075 が `状態: done` であること。`pg`・`@types/pg` を足す変更でロックファイルを直す根拠は ADR-0106 の D1。YGO-075 の受け入れ確認は `.ai/` だけを見て、`scripts/` の `ADR-0103` はこのチケットの受け入れ確認 11 で直すので、YGO-075 はこのチケットを待たない。
 - PostgreSQL のサーバーの主版は **18** `[assumed]`（`.ai/environment.md` §5.1 の一覧の `initdb`・`pg_ctl`・`psql` の行と §3.1 の PostgreSQL の行。本番のマネージドサービスでも同じ主版を選ぶ、ADR-0010）。
   OQ-086 → 決定と `roadmap.md` §4 の M0 の依存の順（主版を決める → 秘書がマスターに伝える → 道具があることを確かめる → DB のテストを足す）に従い、次の 2 つがそろうまで、このチケットを始めない:
   1. 秘書が、主版 18 をマスターに伝えている。
@@ -27,6 +27,7 @@ YGO-073 で YGO-065 から分けた 2 枚目（道具の追加）。範囲は `c
 - **ひな型のデータベース**（§4.1 の 5）: `yuguregaoka_template` を作り、`migrations/*.sql` を名前の順に `psql -v ON_ERROR_STOP=1 --single-transaction -f` で当てる `[assumed]`。マイグレーションの道具は依存に足さない `[assumed]`。このチケットの時点では `migrations/` にファイルがなく、空のひな型になる（表は YGO-065・YGO-077 が足す）。
 - **接続**（`.ai/environment.md` §4.2）: `check.sh` がテストに渡すのは、ソケットのディレクトリとひな型の DB の名前の環境変数だけ。テストの準備のコード `test/setup.ts` が、それを使ってテストのファイルごとに `CREATE DATABASE ... TEMPLATE yuguregaoka_template` で DB を作り、その DB を指す `DATABASE_URL` を組み立てる `[assumed]`。`.env*` のファイルは使わない（§4.2）。`vitest.config.ts` の `setupFiles` に `test/setup.ts` を足す。
 - **DB のドライバ**: `pg` を `dependencies`、`@types/pg` を `devDependencies` に固定の版で足し、ADR-0106 の D1 のとおり同じ変更でロックファイルを直す `[assumed]`。
+- **`scripts/` の ADR の参照**: `scripts/check.sh` と `scripts/prepare.sh` のコメントと出力の文に残る `ADR-0103` を `ADR-0106` に直す（ADR-0103 は ADR-0106 で置き換え。YGO-075 は `.ai/` だけを範囲にしたため、ここで直す）。確かめの段の動きは変えない。
 - **文書をそろえる**（同じ変更で今の状態に書き直す）:
   - `.ai/environment.md` §4.1: 冒頭の文を、`check.sh` が 1・2・4・5・6・7 を動かす形にし、4・5 をこのチケットで作ったものとして書く。3（型の検査と lint）は、M1 の TC が依存しないため M1 のチケットにせず §4.1 の 3 として残すと書く `[assumed]`。
   - `.ai/environment.md` §3.1: PostgreSQL の行に、`check.sh` が `initdb --version` の主版を確かめることを書く。
@@ -49,3 +50,4 @@ YGO-073 で YGO-065 から分けた 2 枚目（道具の追加）。範囲は `c
 8. `scripts/check.sh` に、ネットワークを使うコマンド（`npm ci`・`npm install`・`curl`・`wget` など）がない。
 9. `package.json` の `dependencies` に `pg`、`devDependencies` に `@types/pg` があり、版に `^`・`~` がない。`package-lock.json` に両方の名前がある。
 10. `.ai/environment.md` §4.1 の 4・5 が作ったものとして書かれ、3 は M1 の TC が依存しないため M1 のチケットにしないと書かれていて、「この順に」の文言がない。§3.1 の PostgreSQL の行に `initdb --version` の主版の確かめが書かれている。
+11. `scripts/` に `ADR-0103` が残っていない（`scripts/check.sh` と `scripts/prepare.sh` の参照が `ADR-0106`）。
