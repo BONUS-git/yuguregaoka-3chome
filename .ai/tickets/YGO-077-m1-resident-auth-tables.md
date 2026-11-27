@@ -9,7 +9,7 @@ YGO-073 で YGO-065 から分けた 4 枚目（機能の実装）。範囲はこ
 
 ## 依存
 - YGO-062（M1 のテストの土台）と YGO-078（`package.json` とロックファイル）が `状態: done` であること。
-- 依存の順: YGO-078（`package.json` とロックファイル）→ YGO-075（ADR-0106）→ YGO-076（使い捨ての PostgreSQL）→ YGO-065（`addresses`・`tenancies`）→ **YGO-077（このチケット）**。
+- 依存の順: YGO-062 → YGO-075（ADR-0106）と YGO-078（`package.json` とロックファイル。並んで進む）→ YGO-076（使い捨ての PostgreSQL）→ YGO-065（`addresses`・`tenancies`）→ **YGO-077（このチケット）**。
   - YGO-065 が `状態: done` であること。`migrations/0001_addresses_tenancies.sql` があり、`tenancies.resident_id` が外部キーのない `uuid NULL` で作られていること、TC-005 のテストが `tenancies` の行を `resident_id` NULL で入れること（外部キーを足しても TC-005 を直さずに通る）を前提にする。
   - YGO-076 が `状態: done` であること（`check.sh` がひな型の DB にマイグレーションを当てる）。
 
@@ -23,7 +23,7 @@ YGO-073 で YGO-065 から分けた 4 枚目（機能の実装）。範囲はこ
 
 ## 直さないところと理由
 - TC のテスト: `.ai/tests/test-plan.md` に、経路を通さずにこの 6 表だけで確かめる TC がない。6 表を使う TC（TC-016・TC-018・TC-020・TC-023 など）は、YGO-071 で切る FR のチケットが書く。
-- 経路・登録のトランザクション・J14・J18: YGO-071 で切る FR のチケットと、YGO-074 で切る M0 の部品のチケット。
+- 経路・登録のトランザクション・J14・J18: YGO-071 で切る FR のチケットと、M0 の部品のチケット YGO-080〜YGO-086。
 - 「住民・住所」より後の表（手紙・配達回・新聞など）: 使う M のチケットで足す。
 - 新しい OQ・要回答は 0 件（列の型と NOT NULL の細部は db.md と `[assumed]`）。
 
