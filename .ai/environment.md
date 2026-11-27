@@ -4,7 +4,7 @@
 - 日付: 2026-11-21
 - チケット: YGO-009
 - 根拠: `.ai/brief.md`・`requirements.md`（NFR-058・NFR-063・NFR-065・NFR-067・NFR-071〜NFR-080・NFR-091・NFR-092）・`architecture.md`・`async.md`・`db.md`・`security.md`・`roadmap.md`・ADR-0006・0009〜0012・0021・0033・0076・0085・0086・0100
-- 関連 ADR: 0052（ローカルの開発と `check.sh` の環境・IaC は OpenTofu で設計だけ）・0068（使い終わった道具は片付ける）・0103（最初のロックファイル）・0105（CI は prepare.sh のあとに check.sh、CI の定義の確かめは YGO-070）
+- 関連 ADR: 0052（ローカルの開発と `check.sh` の環境・IaC は OpenTofu で設計だけ）・0068（使い終わった道具は片付ける）・0106（依存を足す・変える変更ごとのロックファイル）・0105（CI は prepare.sh のあとに check.sh、CI の定義の確かめは YGO-070）
 
 ---
 
@@ -44,17 +44,17 @@
 | 道具 | 版の決め方 | 理由 |
 |------|-----------|------|
 | Node.js | 主版 26（2026-11 の Active LTS）`[assumed]`。`package.json` の `engines.node` に `26.x` と書く（YGO-078）| ADR-0009。CI とジョブの環境にはマスターが入れる（OQ-086 → 決定）。秘書は「マスターが用意するもの」の表の主版をマスターに伝える |
-| npm | Node.js に付くもの。依存はロックファイルで固定する | 依存を変えるときは `scripts/prepare.sh` とマニフェスト・ロックファイルを同じ変更で直す。最初のロックファイルは、依存を足す変更の中で `npm install --package-lock-only --ignore-scripts` で作り、`package.json` と同じ変更に入れる（ADR-0103 の D1。作れなければ D2） |
+| npm | Node.js に付くもの。依存はロックファイルで固定する | 依存を変えるときは `scripts/prepare.sh` とマニフェスト・ロックファイルを同じ変更で直す。ロックファイルは、依存を足す・変える変更ごとに、その変更の中で `npm install --package-lock-only --ignore-scripts` で作り・直し、`package.json` と同じ変更に入れる（最初のロックファイルも同じ。ADR-0106 の D1。作れなければ D2） |
 | PostgreSQL | サーバーの主版 18 `[assumed]`。本番のマネージドサービスでも同じ主版を選ぶ（「マスターが用意するもの」の表） | ADR-0010。手元の OS に入れたもの（`initdb`・`pg_ctl`・`psql` がパスにある）を使う。CI とジョブの環境にはマスターが入れる（OQ-086 → 決定） |
 
 コンテナの実行環境（コンテナのエンジンや Compose）は要らない（ADR-0052 の D2）。手元に入れた PostgreSQL を、レポジトリが管理する場所で動かす。
 
 ### §3.2 起動の手順（M0 で台本を作る）
 
-1. `npm ci`（ネットワークを使うのは、`prepare.sh` の `npm ci` と IaC のコードを書いたあとの `tofu init -backend=false`（ADR-0052 の D3・D6）のほかは、例外として最初のロックファイルを作る `npm install --package-lock-only --ignore-scripts`（ADR-0103）だけ）。
+1. `npm ci`（ネットワークを使うのは、`prepare.sh` の `npm ci` と IaC のコードを書いたあとの `tofu init -backend=false`（ADR-0052 の D3・D6）のほかは、例外として依存を足す・変える変更ごとにロックファイルを作り・直す `npm install --package-lock-only --ignore-scripts`（ADR-0106）だけ）。
    - 秘書のジョブでは `npm ci` を `sh scripts/prepare.sh` が行う（YGO-062）。`package.json` がないときは何も入れずに終了コード 0 で終わる。`npm` がないときは「検証の環境に Node.js を入れる」と出して止まる。
-   - `prepare.sh` は、`package.json` があり `package-lock.json` がないときはロックファイルを作らず、「依存を変える変更の中でロックファイルを作ってコミットする」と出して終了コード 1 で止まる。ロックファイルがあるときは `npm ci` だけを動かす（ADR-0103 の D3）。
-   - 例外の `npm install --package-lock-only --ignore-scripts` は、依存を足す変更の中で 1 回試し、できたロックファイルを `package.json` と同じ変更でコミットする。終える前に `sh scripts/prepare.sh` と `sh scripts/check.sh` がどちらも終了コード 0 で終わることを確かめる（ADR-0103 の D1）。作れなかったら、ロックファイルを手で書かず、止まった段とエラーの行をチケットに書いて、それまでのファイルを変更として出す（ADR-0103 の D2）。`sh scripts/check.sh` はネットワークなしのまま（NFR-063）。
+   - `prepare.sh` は、`package.json` があり `package-lock.json` がないときはロックファイルを作らず、「依存を変える変更の中でロックファイルを作ってコミットする」と出して終了コード 1 で止まる。ロックファイルがあるときは `npm ci` だけを動かす（ADR-0106 の D3）。
+   - 例外の `npm install --package-lock-only --ignore-scripts` は、依存を足す・変える変更ごとに、その変更の中で 1 回試し、できた（直った）ロックファイルを `package.json` と同じ変更でコミットする。終える前に `sh scripts/prepare.sh` と `sh scripts/check.sh` がどちらも終了コード 0 で終わることを確かめる（ADR-0106 の D1）。作れなかったら、ロックファイルを手で書かず・手で直さず、止まった段とエラーの行をチケットに書いて、それまでのファイルを変更として出す（ADR-0106 の D2）。`sh scripts/check.sh` はネットワークなしのまま（NFR-063）。
 2. 開発の DB を起こす: `sh scripts/dev-db.sh start`。
    - 初めてのときだけ `initdb` で、レポジトリの中の無視するディレクトリ（`.local/pg/`。M0 で `.gitignore` に `.local/` を足す）にデータを作る。
    - 待ち受けはループバック（`127.0.0.1`）と `.local/pg/` の中の Unix ソケットだけ。認証はソケットの `peer` か、ループバックの `scram-sha-256` に偽のパスワード（`EXAMPLE_DB_PASSWORD_DO_NOT_USE`）。
@@ -95,7 +95,7 @@
 `check.sh` は 1・2・6・7 を動かす（YGO-062）。1 と 6 は `package.json` があるときだけ動く。4・5 は YGO-076 で足す。3 は M1 の TC が依存しないため M1 のチケットにせず、ここに残す `[assumed]`（M1 の TC はどれも型の検査と lint の結果を確かめない）。
 
 1. **Node.js を確かめる**（YGO-062）: `node` のコマンドがあるかと、その主版が `package.json` の `engines.node` と合うかを確かめる。足りなければ、要る主版と「検証の環境に Node.js を入れる」を出して**失敗する**（飛ばさない）。
-   - 続けて、`package-lock.json` があることと、`package.json` の依存の名前がどれもロックファイルにあり版に `^`・`~` がないことを確かめる（ADR-0103）。
+   - 続けて、`package-lock.json` があることと、`package.json` の依存の名前がどれもロックファイルにあり版に `^`・`~` がないことを確かめる（ADR-0106 の D1）。
    - Node.js は `check.sh` を動かす機械（手元・CI・秘書のジョブの環境）にあらかじめ入っていることを前提にする。CI とジョブの環境にはマスターが入れる（OQ-086 → 決定）。
      秘書は「マスターが用意するもの」の表を読み、Vitest を `check.sh` からつなぐ前に node があることを確かめる（`roadmap.md` §4 の M0 の依存）。
 2. 文書の確認（今のまま）。
@@ -142,11 +142,11 @@
 ## §5 CI の計画
 
 - **CI の設定のファイルは秘書の変更の外**（NFR-091・CLAUDE.md）。足すのはマスター。ここは計画だけ。
-- CI の仕事は 1 つ: レポジトリを取り出す → `sh scripts/prepare.sh`（依存の取り込み。CI でネットワークを使うのはここだけ。CI ではロックファイルを作らず、コミットしたものを `npm ci` で使う。最初のロックファイルを作る例外は依存を足す変更の中だけ、ADR-0103）→ `sh scripts/check.sh`。この順は ADR-0105 の D1 で、M1 のテストは Vitest と npm の依存で書くため、`prepare.sh` の段がないと `check.sh` は `node_modules/` がないとして失敗する。
+- CI の仕事は 1 つ: レポジトリを取り出す → `sh scripts/prepare.sh`（依存の取り込み。CI でネットワークを使うのはここだけ。CI ではロックファイルを作らず、コミットしたものを `npm ci` で使う。ロックファイルを作り・直す例外は依存を足す・変える変更の中だけ、ADR-0106）→ `sh scripts/check.sh`。この順は ADR-0105 の D1 で、M1 のテストは Vitest と npm の依存で書くため、`prepare.sh` の段がないと `check.sh` は `node_modules/` がないとして失敗する。
   秘書は、`package.json` を入れる変更（YGO-078 の実装）の前に、CI の定義に `sh scripts/prepare.sh` の段を `sh scripts/check.sh` の前に足すことをマスターに伝える。足すのはマスター（ADR-0105 の D2）。段があるまでは `.ai/gaps.md` の G-079 で追う。段があることをファイルで確かめるのは YGO-070 の受け入れ確認 1 で、YGO-062・YGO-078 の受け入れ確認には入れない（ADR-0105 の D4）。
   Node.js と PostgreSQL のサーバーの道具は、CI の実行の環境（イメージ）にあらかじめ入れておく（§4.1）。マスターが入れる（OQ-086 → 決定）。入れた道具は使い終わっても置いたままにする（OQ-090 → 決定、§4.4）。マスターが用意する道具と主版は「マスターが用意するもの」の表にある。
   `check.sh` の中身は手元と同じで、CI だけの確認を作らない。
-- **ジョブがコマンドを動かす権限**: 道具を入れること（下の表、OQ-086）とは別に、秘書の実装のジョブには `npm` のコマンド（`npm --version`・`npm install --package-lock-only --ignore-scripts`）と `sh scripts/prepare.sh`・`sh scripts/check.sh` を動かす権限が要る。権限を与えるのは秘書（ジョブの実行の設定で、許すコマンドに足す）で、マスターの道具の用意とは分ける `[assumed]`。今は実装のジョブでコマンドを動かす道具が権限で拒まれ、YGO-078（`package.json` とロックファイル）が止まっている（`.ai/gaps.md` の G-080。準備書 `.ai/deploy/readiness.md` §4 で追う）。計画の段階では `npm -v` が動いたので、npm が入っていることと、権限が段階ごとに違うことが分かっている（変更 20261127-e16545）。ジョブでは既定の npm のキャッシュ（ホームの下）に書けないため、npm のコマンドには `npm_config_cache` に一時ディレクトリを渡す `[assumed]`。実装のジョブで権限がないあいだは、ロックファイルを作れず（ADR-0103 の D2）、`sh scripts/check.sh` も動かして確かめられない。
+- **ジョブがコマンドを動かす権限**: 道具を入れること（下の表、OQ-086）とは別に、秘書の実装のジョブには `npm` のコマンド（`npm --version`・`npm install --package-lock-only --ignore-scripts`）と `sh scripts/prepare.sh`・`sh scripts/check.sh` を動かす権限が要る。権限を与えるのは秘書（ジョブの実行の設定で、許すコマンドに足す）で、マスターの道具の用意とは分ける `[assumed]`。今は実装のジョブでコマンドを動かす道具が権限で拒まれ、YGO-078（`package.json` とロックファイル）が止まっている（`.ai/gaps.md` の G-080。準備書 `.ai/deploy/readiness.md` §4 で追う）。計画の段階では `npm -v` が動いたので、npm が入っていることと、権限が段階ごとに違うことが分かっている（変更 20261127-e16545）。ジョブでは既定の npm のキャッシュ（ホームの下）に書けないため、npm のコマンドには `npm_config_cache` に一時ディレクトリを渡す `[assumed]`。実装のジョブで権限がないあいだは、ロックファイルを作れず（ADR-0106 の D2）、`sh scripts/check.sh` も動かして確かめられない。
 - `check.sh` が起こしたものは `check.sh` 自身が片付ける（§4.4）。CI だけの片付けの手順を作らない。
 - CI に秘密を登録しない。テストは偽の値だけで通る（§4.2）。外からの変更の提案でも同じに動く。
 - CI からデプロイ・IaC の適用（`tofu apply`）・クラウドへのログインをしない。IaC の確認は、IaC のコードを書いたあと、`prepare.sh` が `tofu init -backend=false` でプロバイダを取り込み、`check.sh` が `tofu fmt -check` と `tofu validate` をネットワークなしで動かす（ADR-0052 の D6）。

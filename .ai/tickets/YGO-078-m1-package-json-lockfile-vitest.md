@@ -6,7 +6,7 @@ M: M1
 目標の受け入れ条件 1（今の M の TC のテストがすべて `scripts/check.sh` で通り、CI が緑）を進める。
 YGO-062 が作ったテストの土台（`scripts/prepare.sh`・`check.sh` の Node.js とロックファイルの段と Vitest の段・`vitest.config.ts`・TC-033 のテスト）に、
 `package.json` とロックファイルを入れて、`check.sh` から Vitest を実際に動かし、JUnit XML を `test-results/junit.xml` に書かせる。
-YGO-062 から分けた理由は、YGO-062 の「分けた理由」の節に書いた（ADR-0103 の D2）。
+YGO-062 から分けた理由は、YGO-062 の「分けた理由」の節に書いた（ADR-0106 の D2）。
 
 ## 依存
 - YGO-062（`.ai/tickets/YGO-062-m1-test-harness.md`）が `状態: done`。
@@ -21,16 +21,16 @@ YGO-062 から分けた理由は、YGO-062 の「分けた理由」の節に書�
 ## 範囲
 - `package.json` を手で書く: `private: true`・`"type": "module"`・`"engines": {"node": "26.x"}`（主版は `.ai/environment.md` §3.1）。
   `dependencies` に `fastify`、`devDependencies` に `vitest`・`typescript`・`@types/node`。どの版も `^`・`~` を付けない固定の版で、実装の時点の安定版にし、`@types/node` は主版 26 のものにする `[assumed]`。`author`・`repository`・`license` は書かない `[assumed]`。
-- ロックファイル: ADR-0103 の D1 のコマンド `npm install --package-lock-only --ignore-scripts` を引数なしで 1 回動かして作る（手で書かない）。npm のキャッシュがホームの下に書けないジョブでは `npm_config_cache` に一時ディレクトリを渡す `[assumed]`。できたファイルに絶対パスと非公開のレジストリの URL がないことを確かめる。作れなければ ADR-0103 の D2 のとおり、止まった段とエラーの行をこのチケットに書き、`package.json` も入れない。
+- ロックファイル: ADR-0106 の D1 のコマンド `npm install --package-lock-only --ignore-scripts` を引数なしで 1 回動かして作る（手で書かない）。npm のキャッシュがホームの下に書けないジョブでは `npm_config_cache` に一時ディレクトリを渡す `[assumed]`。できたファイルに絶対パスと非公開のレジストリの URL がないことを確かめる。作れなければ ADR-0106 の D2 のとおり、止まった段とエラーの行をこのチケットに書き、`package.json` も入れない。
 - `sh scripts/prepare.sh` → `sh scripts/check.sh` を動かし、下の受け入れ確認を 1 つずつ確かめる。失敗するはずの状態は、確かめたら元に戻す。
 - `.ai/environment.md`（§3.1 の `engines` の行・§5 の「ジョブがコマンドを動かす権限」・「マスターが用意するもの」の表の npm（ジョブ）の待つチケット）と `.ai/gaps.md` の G-080 を、入れたあとの状態に書き直す。
 
 ## 直さないところと理由
 - CI の定義（`.github/`）: ジョブが書いてよい範囲の外（CLAUDE.md）。CI の定義に `prepare.sh` の段があることの確かめは YGO-070 の受け入れ確認 1（ADR-0105 の D4）。CI が緑かは M1 の達成の確認で見る。
 - `package.json` がないときにテストを飛ばす問題: YGO-072。
-- 使い捨ての PostgreSQL: YGO-076。依存を足すたびにロックファイルを直す決定: YGO-075。
+- 使い捨ての PostgreSQL: YGO-076。依存を足すたびにロックファイルを直す決定: ADR-0106（YGO-075）。
 - `.ai/status.md`: 秘書が書く。
-- 新しい OQ・新しい ADR は 0 件（ロックファイルは ADR-0103、CI の順は ADR-0105、道具の用意は OQ-086 の決定で決まっている）。
+- 新しい OQ・新しい ADR は 0 件（ロックファイルは ADR-0106、CI の順は ADR-0105、道具の用意は OQ-086 の決定で決まっている）。
 
 ## 受け入れ確認
 1. このチケットの 1〜3 行目が `# YGO-078 M1 の package.json とロックファイルで Vitest を動かす`・`状態: done`・`M: M1`。
@@ -40,7 +40,7 @@ YGO-062 から分けた理由は、YGO-062 の「分けた理由」の節に書�
 5. `package.json` の `dependencies` に `fastify`、`devDependencies` に `vitest`・`typescript`・`@types/node` があり、どの版にも `^`・`~` が付いていない。`package-lock.json` があり、中に絶対パス（`"/` で始まる値）と `registry.npmjs.org` 以外のレジストリの URL がない。
 6. `package.json` の `engines.node` の主版と、`.ai/environment.md` §3.1 の Node.js の行の主版が同じ。
 7. `package.json` の `engines.node` を別の主版にした状態で `sh scripts/check.sh` が終了コード 0 以外で終わり、要る主版と「検証の環境に Node.js」を含む文を出す。
-8. `package-lock.json` を消した状態で `sh scripts/prepare.sh` と `sh scripts/check.sh` がどちらも終了コード 0 以外で終わる（ADR-0103 の D3）。
+8. `package-lock.json` を消した状態で `sh scripts/prepare.sh` と `sh scripts/check.sh` がどちらも終了コード 0 以外で終わる（ADR-0106 の D3）。
 9. このチケットが `状態: done` のとき、`scripts/prepare.sh` を消した状態で `sh scripts/check.sh` が終了コード 0 以外で終わる。
 10. TC-033 のテストを `test.skip` にした状態で `sh scripts/check.sh` が終了コード 0 以外で終わる。
 11. この変更で `.github/` の下のファイルを足していない・変えていない。
