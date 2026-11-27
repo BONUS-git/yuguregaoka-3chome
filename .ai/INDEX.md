@@ -191,6 +191,7 @@
 - `.ai/reviews/0001-design-review.md` — 設計のレビュー（R-001〜）
 - `.ai/reviews/0002-phase-evaluation-2026-11-25.md` — 段階の評価（2026-11-25）
 - `.ai/reviews/0003-phase-evaluation-2026-11-26.md` — 段階の評価（2026-11-26、R-060〜R-064）
+- `.ai/reviews/0004-phase-evaluation-2026-11-27.md` — 段階の評価（2026-11-27、R-065〜R-070）
 
 ## チケット（`.ai/tickets/`）
 
@@ -264,3 +265,7 @@
 - `.ai/tickets/YGO-068-g-077-deploy-readiness.md`
 - `.ai/tickets/YGO-069-g-078-tool-versions-list.md`
 - `.ai/tickets/YGO-070-g-079-ci-prepare-step.md`
+- `.ai/tickets/YGO-071-r-066-m1-fr-ticket-order.md`
+- `.ai/tickets/YGO-072-r-067-check-fails-tests-without-package-json.md`
+- `.ai/tickets/YGO-073-r-068-split-ygo-065.md`
+- `.ai/tickets/YGO-074-r-070-m0-parts-as-m1-tickets.md`
