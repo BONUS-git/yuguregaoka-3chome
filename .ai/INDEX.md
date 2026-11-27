@@ -275,3 +275,4 @@
 - `.ai/tickets/YGO-076-check-throwaway-postgresql.md`
 - `.ai/tickets/YGO-077-m1-resident-auth-tables.md`
 - `.ai/tickets/YGO-078-m1-package-json-lockfile-vitest.md`
+- `.ai/tickets/YGO-079-roadmap-milestone-lines.md`

@@ -50,11 +50,12 @@ for f in .ai/*.md .ai/adr/*.md .ai/reviews/*.md; do
     test -s "$f" || { echo "空の文書: $f" >&2; exit 1; }
 done
 
-# 今の M の FR（roadmap.md の「- M<n>: FR-…」の行）と NFR-013 の正本の行に、
+# 今の M（M1）の FR（roadmap.md の「- M1: <名前>。FR-…」の行）と NFR-013 の正本の行に、
 # 未決の書き方が残っていないこと（YGO-027、reviews/0002 の R-050、retros.md 2026-11-25）。
-m_line=$(grep -E '^- M[0-9]+: FR-' .ai/roadmap.md || true)
-[ -n "$m_line" ] || { echo "roadmap.md に今の M の範囲の行（- M<n>: FR-…）がない" >&2; exit 1; }
-ids=$(printf '%s\n' "$m_line" | sed 's/^- M[0-9]*: //' | tr ',' '\n' | tr -d ' ')
+m_line=$(grep -E '^- M1: ' .ai/roadmap.md || true)
+[ -n "$m_line" ] || { echo "roadmap.md に今の M の範囲の行（- M1: <名前>。FR-…）がない" >&2; exit 1; }
+ids=$(printf '%s\n' "$m_line" | grep -oE 'FR-[0-9]{3}' || true)
+[ -n "$ids" ] || { echo "roadmap.md の今の M の行（- M1: <名前>。FR-…）に FR がない" >&2; exit 1; }
 for id in $ids NFR-013; do
     row=$(grep -E "^\| $id \|" .ai/requirements.md || true)
     [ -n "$row" ] || { echo "requirements.md に $id の行がない" >&2; exit 1; }
@@ -88,10 +89,10 @@ if [ -e "$seq" ]; then
 fi
 
 # M1 の図のそれぞれに「- FR:」「- ADR:」「- 確かめた M: M1」の行と mermaid のブロックがあり、
-# ADR の行はどれも状態が「採用」の ADR を指し、FR の行は roadmap.md の「- M1: FR-…」の行にあること
+# ADR の行はどれも状態が「採用」の ADR を指し、FR の行は roadmap.md の「- M1: <名前>。FR-…」の行にあること
 # （YGO-060、条件 4）。
-m1_fr=$(grep -E '^- M1: FR-' .ai/roadmap.md | grep -oE 'FR-[0-9]{3}' || true)
-[ -n "$m1_fr" ] || { echo "roadmap.md に M1 の FR の行（- M1: FR-…）がない" >&2; exit 1; }
+m1_fr=$(grep -E '^- M1: ' .ai/roadmap.md | grep -oE 'FR-[0-9]{3}' || true)
+[ -n "$m1_fr" ] || { echo "roadmap.md に M1 の FR の行（- M1: <名前>。FR-…）がない" >&2; exit 1; }
 for f in .ai/diagrams/m1-*.md; do
     [ -e "$f" ] || continue
     grep -qE '^- FR: FR-[0-9]{3}' "$f" || { echo "$f に「- FR: FR-NNN, …」の行がない" >&2; exit 1; }
