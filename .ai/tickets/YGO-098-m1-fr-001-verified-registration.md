@@ -14,7 +14,7 @@ M: M1
   - YGO-095（範囲の 5。`GET /me` にセッションが要る）・YGO-097（範囲の 6。メールの確認の完了）
 - 待つもの:
   - YGO-078（`package.json` とロックファイル）。YGO-078 は YGO-088（実装のジョブで `node`・`npm` を動かす権限）を待つ。
-  - YGO-070（CI の定義で `prepare.sh` を `check.sh` の前に置く）。CI が緑になるのはそのあと。このチケットの `done` は、`sh scripts/check.sh` がネットワークなしで通ることで決める `[assumed]`。
+  - 秘書の CI の定義（`check.yml`）の `prepare.sh` の段（ADR-0109 の D2・G-079）。CI が緑になるのはそのあと。このチケットの `done` は、`sh scripts/check.sh` がネットワークなしで通ることで決める `[assumed]`。
 
 ## 範囲
 - `GET /api/v1/me` の、TC-001 が読む項目（住所とプロフィール）を返すところ `[assumed]`。

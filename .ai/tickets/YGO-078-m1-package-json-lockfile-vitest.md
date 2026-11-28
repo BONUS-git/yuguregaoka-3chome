@@ -7,12 +7,12 @@ M: M1
 YGO-062 が作ったテストの土台（`scripts/prepare.sh`・`check.sh` の Node.js とロックファイルの段と Vitest の段・`vitest.config.ts`・TC-033 のテスト）に、
 `package.json` とロックファイルを入れて、`check.sh` から Vitest を実際に動かし、JUnit XML を `test-results/junit.xml` に書かせる。
 YGO-062 から分けた理由は、YGO-062 の「分けた理由」の節に書いた（ADR-0106 の D2）。
-`.ai/gaps.md` の G-082（YGO-078 の出し直しと R-074 の書き直し）も、ADR-0108 の D3・D6 によりこのチケットで追う。
+`.ai/gaps.md` の G-082（YGO-078 の出し直しと R-074 の書き直し）も、ADR-0109 の D8・D11 によりこのチケットで追う。
 
 ## 依存
 - YGO-062（`.ai/tickets/YGO-062-m1-test-harness.md`）が `状態: done`。
 - 実装のジョブで次が許されていること: Bash・`node -v`・`npm --version`・`npm_config_cache` を付けた `npm install --package-lock-only --ignore-scripts`・`sh scripts/prepare.sh`・`sh scripts/check.sh`（`.ai/environment.md` §5 の「ジョブがコマンドを動かす権限」・`.ai/gaps.md` の G-080）。
-- 秘書は、このチケットの実装（`package.json` を入れる変更）の前に、CI の定義に `sh scripts/prepare.sh` の段を `sh scripts/check.sh` の前に足すことをマスターに伝える（ADR-0105 の D2・G-079）。段ができるのは待たない。
+- CI の定義（秘書の `check.yml`）の `sh scripts/prepare.sh` の段は秘書が置く（ADR-0109 の D2・G-079）。このチケットは段ができるのを待たない。
 
 ## 確かめた事実（変更 20261127-19ab3d の時点）
 - 前提: YGO-062 は `状態: done`。YGO-065 は YGO-073 で分けられ（`addresses`・`tenancies` と TC-005）、このチケットは依存しない。このチケットが YGO-072・YGO-080 の依存で、逆ではない。
@@ -44,11 +44,11 @@ YGO-062 から分けた理由は、YGO-062 の「分けた理由」の節に書�
 - `.ai/gaps.md` の G-082 の行を、閉じる条件（G-080 が閉じ、このチケットが `状態: done`）を満たした変更で閉じる（理由の列に済んだことと「残りはない」、出どころの列に `（YGO-078）`）。
 
 ## 直さないところと理由
-- CI の定義（`.github/`）: ジョブが書いてよい範囲の外（CLAUDE.md）。CI の定義に `prepare.sh` の段があることの確かめは YGO-070 の受け入れ確認 1（ADR-0105 の D4）。CI が緑かは M1 の達成の確認で見る。
+- CI の定義（`.github/`）: ジョブが書いてよい範囲の外（CLAUDE.md）。CI の定義に `prepare.sh` の段があることは、どのチケットの受け入れ確認にも入れず `.ai/gaps.md` の G-079 で追う（ADR-0109 の D4）。CI が緑かは M1 の達成の確認で見る。
 - `package.json` がないときにテストを飛ばす問題: YGO-072。
 - 使い捨ての PostgreSQL: YGO-076。依存を足すたびにロックファイルを直す決定: ADR-0106（YGO-075）。
 - `.ai/status.md`: 秘書が書く。
-- 新しい OQ・新しい ADR は 0 件（ロックファイルは ADR-0106、CI の順は ADR-0105、道具の用意は OQ-086 の決定で決まっている）。
+- 新しい OQ・新しい ADR は 0 件（ロックファイルは ADR-0106、CI の順は ADR-0109、道具の用意は OQ-086 の決定で決まっている）。
 
 ## 受け入れ確認
 1. このチケットの 1〜3 行目が `# YGO-078 G-082 M1 の package.json とロックファイルで Vitest を動かす`・`状態: done`・`M: M1`。

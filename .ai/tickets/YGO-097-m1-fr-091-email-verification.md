@@ -16,7 +16,7 @@ M: M1
   - YGO-096（J18 確認のメールを送るジョブ）
 - 待つもの:
   - YGO-078（`package.json` とロックファイル）。YGO-078 は YGO-088（実装のジョブで `node`・`npm` を動かす権限）を待つ。
-  - YGO-070（CI の定義で `prepare.sh` を `check.sh` の前に置く）。CI が緑になるのはそのあと。このチケットの `done` は、`sh scripts/check.sh` がネットワークなしで通ることで決める `[assumed]`。
+  - 秘書の CI の定義（`check.yml`）の `prepare.sh` の段（ADR-0109 の D2・G-079）。CI が緑になるのはそのあと。このチケットの `done` は、`sh scripts/check.sh` がネットワークなしで通ることで決める `[assumed]`。
 
 ## 範囲
 - `POST /api/v1/email-verifications` の登録の確認のトークン: 鍵付きのハッシュで `auth_tokens` を引き、`used_at` と `email_verified_at` を同じトランザクションで書いて 204。違う・切れた・使ったトークンは 400（`token_invalid`）。

@@ -17,7 +17,7 @@ M: M1
 - 1 回の登録が 4 表を同じトランザクションで書くので、スキーマの YGO-065 のほかに YGO-077・YGO-082・YGO-085 に依存する。
 - 待つもの:
   - YGO-078（`package.json` とロックファイル）。YGO-078 は YGO-088（実装のジョブで `node`・`npm` を動かす権限）を待つ。
-  - YGO-070（CI の定義で `prepare.sh` を `check.sh` の前に置く）。CI が緑になるのはそのあと。このチケットの `done` は、`sh scripts/check.sh` がネットワークなしで通ることで決める `[assumed]`。
+  - 秘書の CI の定義（`check.yml`）の `prepare.sh` の段（ADR-0109 の D2・G-079）。CI が緑になるのはそのあと。このチケットの `done` は、`sh scripts/check.sh` がネットワークなしで通ることで決める `[assumed]`。
 
 ## 範囲
 - `GET /api/v1/addresses/candidates`: 認証なし。プールの住所のうち `addresses` に行のない住所から 2 件以上を返し、件数の項目を持たない。

@@ -15,7 +15,7 @@ M: M1
   - YGO-090（登録の経路）
 - 待つもの:
   - YGO-078（`package.json` とロックファイル）。YGO-078 は YGO-088（実装のジョブで `node`・`npm` を動かす権限）を待つ。
-  - YGO-070（CI の定義で `prepare.sh` を `check.sh` の前に置く）。CI が緑になるのはそのあと。このチケットの `done` は、`sh scripts/check.sh` がネットワークなしで通ることで決める `[assumed]`。
+  - 秘書の CI の定義（`check.yml`）の `prepare.sh` の段（ADR-0109 の D2・G-079）。CI が緑になるのはそのあと。このチケットの `done` は、`sh scripts/check.sh` がネットワークなしで通ることで決める `[assumed]`。
 
 ## 範囲
 - 期限切れの確認が済まない登録を消す関数を 1 つ作り、登録の経路（割り当ての前、同じトランザクション）と J14 `retention.purge` の両方から呼ぶ。TC-016 と TC-017 は同じ関数を確かめるので 1 枚にまとめる `[assumed]`（FR は FR-010 の 1 つ）。

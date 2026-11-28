@@ -11,7 +11,7 @@ TC-019 は「429 では `auth_tokens` の行も J18 もできない」を確か�
 - 前に要るチケット（どれも `状態: done` になるのを待つ）: YGO-062（テストの土台）・YGO-077（6 表のチケット。`rate_limit_buckets`）・YGO-080（差し替えられる時計。窓の区切り）。
 - 待つもの:
   - YGO-078（`package.json` とロックファイル）。YGO-078 は YGO-088（実装のジョブで `node`・`npm` を動かす権限）を待つ。
-  - YGO-070（CI の定義で `prepare.sh` を `check.sh` の前に置く）。CI が緑になるのはそのあと。このチケットの `done` は、`sh scripts/check.sh` がネットワークなしで通ることで決める `[assumed]`。
+  - 秘書の CI の定義（`check.yml`）の `prepare.sh` の段（ADR-0109 の D2・G-079）。CI が緑になるのはそのあと。このチケットの `done` は、`sh scripts/check.sh` がネットワークなしで通ることで決める `[assumed]`。
 
 ## 範囲
 - `rate_limit_buckets` で数え、上限を超えたら 429（`rate_limited`）を返す部品。値と対象の経路は `security.md` §3.5・ADR-0088 のとおり。経路につなぐのは使う FR のチケット（YGO-094 ほか）。
