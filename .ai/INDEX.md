@@ -195,6 +195,7 @@
 - `.ai/reviews/0002-phase-evaluation-2026-11-25.md` — 段階の評価（2026-11-25）
 - `.ai/reviews/0003-phase-evaluation-2026-11-26.md` — 段階の評価（2026-11-26、R-060〜R-064）
 - `.ai/reviews/0004-phase-evaluation-2026-11-27.md` — 段階の評価（2026-11-27、R-065〜R-070）
+- `.ai/reviews/0005-phase-evaluation-2026-11-28.md` — 段階の評価（2026-11-28、R-071〜R-076）
 
 ## チケット（`.ai/tickets/`）
 
@@ -284,3 +285,4 @@
 - `.ai/tickets/YGO-084-m1-worker-job-runner.md`
 - `.ai/tickets/YGO-085-m1-keyprovider-fake-keys.md`
 - `.ai/tickets/YGO-086-m1-pg-boss-dependency.md`
+- `.ai/tickets/YGO-087-r-075-retros-ygo-078-repeats.md`
