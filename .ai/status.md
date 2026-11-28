@@ -5,7 +5,7 @@
 - 段階: 実装
 - 今の M: M1
 - 点検 1 件
-- チケット 51/65
+- チケット 51/66
 - TC 0/65（結果なし）
 - FR の TC 18/18
 - gaps のチケットなし 3
@@ -93,6 +93,7 @@
 - YGO-084 M1 の worker のジョブの実行（open）
 - YGO-085 M1 の KeyProvider の偽の鍵（open）
 - YGO-086 M1 の pg-boss を依存に足す（open）
+- YGO-087 R-075 YGO-078の6回の空振りがretrosにない（open）
 
 ## 暫定対応（`.ai/gaps.md` の暫定）
 - G-001（M6）掲示板の投稿の消し方は J14 の行を足すだけ。`rejected` は 30 日で本文を消し、`deleted` の行は通報のクローズから 1 年で消す `[assumed]
