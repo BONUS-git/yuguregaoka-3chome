@@ -44,3 +44,14 @@ M: M1
 6. `.ai/gaps.md` の G-080 の行の理由の列に「Bash）が拒まれること」という今の状態の文がなく、仕分けの列が `暫定` のまま（閉じた形の「残りはない」がない）。
 7. `.ai/tickets/YGO-078-m1-package-json-lockfile-vitest.md` に、このチケットの変更による差分がない。
 8. `sh scripts/check.sh` が通る。
+
+## 止まっている理由（変更 20261128-8deb4f）
+- 止まったところ: 実装のジョブの最初のコマンド `node -v` で、コマンドを動かす道具（Bash）が拒まれた。エラーの 1 行: `Permission to use Bash has been denied because Claude Code is running in don't ask mode.`
+  そのため `npm --version`・`sh scripts/prepare.sh`・`sh scripts/check.sh` も動かせず、`sh scripts/check.sh` が通ることもこのジョブでは確かめていない。
+- 足りない前提: 秘書が、ジョブの実行の設定で `.ai/environment.md` §5 の「ジョブがコマンドを動かす権限」の一覧（Bash・`node -v`・`npm --version`・`npm_config_cache` を付けた `npm install --package-lock-only --ignore-scripts`・`sh scripts/prepare.sh`・`sh scripts/check.sh`）を実装のジョブに許すこと。計画の段階で動くことは、実装のジョブで動くことの根拠にならない。
+- 依存する順:
+  1. 秘書が一覧を実装のジョブに許す。
+  2. このチケット（YGO-088）を実装する（`environment.md` §5 と表の注記・準備書 §4・G-080 の行の今の状態の書き直し、check.sh の食い違いの段）。
+  3. YGO-078 を出し直す。31d9315 の見直しの指摘（R3-F1 と中）の本文を指示に入れることも要る（G-082）。YGO-078 が `状態: done` になれば、G-080・G-082 が閉じる。
+  4. YGO-072 を出す。G-083 の段のまとめも YGO-072 の範囲。YGO-076・YGO-077・YGO-080 も 3. を待つ。
+- `.ai/retros.md` の決まり（同じチケットが同じ段で 2 回止まったら、足りない外の用意が済んだことを確かめるまで出し直さない）により、1. が済んだことを確かめるまで、このチケットも出し直さない。
