@@ -189,7 +189,8 @@
 - `.ai/adr/0104-ci-runs-prepare-then-check.md` — 置き換え（→ 0105）
 - `.ai/adr/0105-ci-definition-check-in-ygo-070.md` — 採用
 - `.ai/adr/0106-lockfile-in-every-dependency-change.md` — 採用
-- `.ai/adr/0107-follow-up-job-work-gets-ticket.md` — 採用
+- `.ai/adr/0107-follow-up-job-work-gets-ticket.md` — 置き換え（→ 0108）
+- `.ai/adr/0108-gaps-wait-rows-ticket-owners.md` — 採用
 
 ## レビュー（`.ai/reviews/`）
 
@@ -299,3 +300,5 @@
 - `.ai/tickets/YGO-096-m1-j18-verification-mail.md`
 - `.ai/tickets/YGO-097-m1-fr-091-email-verification.md`
 - `.ai/tickets/YGO-098-m1-fr-001-verified-registration.md`
+- `.ai/tickets/YGO-099-k-020-gaps-wait-rows-tickets.md`
+- `.ai/tickets/YGO-100-g-081-replace-k-021-adr-withdraw-ygo-070.md`
