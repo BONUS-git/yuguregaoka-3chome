@@ -17,7 +17,7 @@
 | 年齢と誕生日 | `.ai/diagrams/m1-er.md`・`.ai/diagrams/m1-registration-sequence.md` | `.ai/db.md` §2 の `residents`、`.ai/api.md` §7 F-02、ADR-0093 |
 | プロセスの分け方（web / worker）と C1〜C13 の置き場 | `.ai/diagrams/m1-components.md` | ADR-0100、`.ai/architecture.md` §1 の 1・§2 の「動くプロセス」の列 |
 | M1 の FR の一覧 | — | `.ai/roadmap.md` §4 の「今の M の範囲」、`.ai/mvp.md` (b) |
-| M1 の TC が依存する M0 の土台のチケットと依存の順 | — | `.ai/roadmap.md` §4 の「M1 の土台のチケット」（YGO-062・YGO-078・YGO-075・YGO-076・YGO-065・YGO-077・YGO-080〜YGO-086） |
+| M1 の TC が依存する M0 の土台のチケットと依存の順 | — | `.ai/roadmap.md` §4 の「M1 の土台のチケット」（YGO-062・YGO-078・YGO-075・YGO-076・YGO-103・YGO-077・YGO-080〜YGO-086） |
 | M1 の FR のチケットと TC の対応・依存の順・チケットに入らない TC の行き先 | — | `.ai/roadmap.md` §4 の「M1 の FR のチケット」（YGO-089〜YGO-098 の表と、行き先の表） |
 | M の分け方と、手紙の一続きが通る M・中心の体験の全体がそろう M | — | `.ai/roadmap.md` §4 の段階、ADR-0099・ADR-0097、`.ai/gaps.md` G-069 |
 | 要回答で止まる M・FR があるか | — | `.ai/roadmap.md` §8、ADR-0099 の D6、`.ai/open-questions.md` §2（一覧） |
@@ -305,3 +305,4 @@
 - `.ai/tickets/YGO-100-g-081-replace-k-021-adr-withdraw-ygo-070.md`
 - `.ai/tickets/YGO-101-g-079-record-check-yml-prepare-step.md`
 - `.ai/tickets/YGO-102-k-021-ci-definition-owner-adr-0109.md`
+- `.ai/tickets/YGO-103-m1-addresses-tenancies-tc-005.md`

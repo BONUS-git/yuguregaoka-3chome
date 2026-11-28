@@ -10,11 +10,11 @@ M: M1
 - 全体の順（`.ai/roadmap.md` §4「M1 の FR のチケット」）: 各チケットは、表の「前に要るチケット」に書いたチケットだけを待つ。
 - 前に要るチケット（どれも `状態: done` になるのを待つ）:
   - YGO-062（テストの土台）
-  - YGO-065（`addresses`・`tenancies` の 2 表）
+  - YGO-103（`addresses`・`tenancies` の 2 表）
   - YGO-077（6 表のチケット。1 回の登録が `residents`・`credentials` も同じトランザクションで書く）
   - YGO-082（環境変数の読み込み）・YGO-085（KeyProvider の偽の鍵。`credentials` のメールアドレスの暗号化と HMAC）
   - YGO-089（住所のプール）
-- 1 回の登録が 4 表を同じトランザクションで書くので、スキーマの YGO-065 のほかに YGO-077・YGO-082・YGO-085 に依存する。
+- 1 回の登録が 4 表を同じトランザクションで書くので、スキーマの YGO-103 のほかに YGO-077・YGO-082・YGO-085 に依存する。
 - 待つもの:
   - YGO-078（`package.json` とロックファイル）。YGO-078 は YGO-088（実装のジョブで `node`・`npm` を動かす権限）を待つ。
   - 秘書の CI の定義（`check.yml`）の `prepare.sh` の段（ADR-0109 の D2・G-079）。CI が緑になるのはそのあと。このチケットの `done` は、`sh scripts/check.sh` がネットワークなしで通ることで決める `[assumed]`。

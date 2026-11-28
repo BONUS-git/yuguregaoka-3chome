@@ -9,12 +9,12 @@ M: M1
 
 ## 依存
 - YGO-062（M1 のテストの土台）と YGO-078（`package.json` とロックファイル）の両方が `状態: done` であること。
-- YGO-065 のあとに並べる。依存の順: YGO-062 → YGO-075 と YGO-078（並んで進む）→ YGO-076 → YGO-065 → **YGO-080（このチケット）**。YGO-065 が `状態: done` であること。
+- YGO-103 のあとに並べる。依存の順: YGO-062 → YGO-075 と YGO-078（並んで進む）→ YGO-076 → YGO-103 → **YGO-080（このチケット）**。YGO-103 が `状態: done` であること。
 - 部品どうしの順: YGO-080・YGO-082・YGO-086 → YGO-081・YGO-083・YGO-085 → YGO-084。このチケットは先頭の組で、ほかの部品のチケットを待たない。YGO-084 がこのチケットを待つ。
 
 ## 前提（変更 20261127-50bc9e の時点で満たされていない）
 - YGO-078（`package.json`・`package-lock.json`・Vitest）が `状態: done` でない。develop（9301ab8）に `package.json`・`package-lock.json` がなく、`sh scripts/prepare.sh` は「package.json がないので入れる依存はない」で終わり、`sh scripts/check.sh` は Vitest の段を飛ばして `check: ok` になる。`test-results/` はできず、JUnit XML は書かれない。YGO-078 を止めているものは YGO-078 の「止まっている理由」の節と `gaps.md` の G-080・G-082 にある。
-- YGO-065（住民と住所の DB のスキーマとマイグレーション）が `状態: done` でない。
+- YGO-103（`addresses`・`tenancies` の 2 表と TC-005）が `状態: done` でない。
 - この 2 つがそろい、`sh scripts/prepare.sh` のあと `sh scripts/check.sh` が Vitest を動かして `test-results/junit.xml` を書くまで、このチケットは実装しない（時計のアダプタもテストも足さない）。
 
 ## 範囲
@@ -30,7 +30,7 @@ M: M1
 
 ## 受け入れ確認
 1. このチケットの 1〜3 行目が `# YGO-080 M1 の差し替えられる時計`・`状態: done`・`M: M1`。
-2. YGO-062・YGO-078・YGO-065 のチケットの 2 行目が `状態: done`。
+2. YGO-062・YGO-078・YGO-103 のチケットの 2 行目が `状態: done`。
 3. `sh scripts/prepare.sh` のあと `sh scripts/check.sh` がネットワークなしで `check: ok` で終わる。
 4. 実時間を返す時計と、決まった時刻を返し進められる時計があり、経路とジョブが時計を引数で受け取る形になっている。
 5. `CLOCK_OFFSET` を読むコードがない。
