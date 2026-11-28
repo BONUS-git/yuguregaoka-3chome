@@ -69,6 +69,6 @@
 
 - `environment.md` §7.4 の 1〜4 の順に進める（手順はそこにだけ書く）。1 のマスターの承認（OQ-085・NFR-080）がないうちは、2 以降に進まない。
 - G-078: 道具の主版の一覧は `environment.md` §5.1 の表にある（YGO-069 で閉じた。`.ai/gaps.md`）。
-- G-079: CI の定義に `sh scripts/prepare.sh` の段を `sh scripts/check.sh` の前に足す（入れるのは秘書、ADR-0109 の D2。`.ai/gaps.md`）。秘書が `check.yml` を入れたあと、YGO-101 がそれを読んで確かめた事実を G-079 に記録し、この箇条と `environment.md` §5 を今の状態に書き直して G-079 を閉じる（ADR-0109 の D4・D6。CI の定義の事実は受け入れ確認に入れない）。決まった形がこの段を含むことは `[assumed]` で、含まないなら CI が緑にならず M1 の達成を止めるので、段を足すことを秘書に伝える（マスターへの要回答ではない）。
+- G-079: CI の定義に `sh scripts/prepare.sh` の段を `sh scripts/check.sh` の前に足す（入れるのは秘書、ADR-0109 の D2。`.ai/gaps.md`）。秘書が `check.yml` を入れたあと、YGO-101 がそれを読んで確かめた事実を G-079 に記録し、この箇条と `environment.md` §5 を今の状態に書き直す。`sh scripts/prepare.sh` の行が `sh scripts/check.sh` の行より前にあれば G-079 を閉じ、段がないか後ろにあれば閉じずに秘書に伝え、題に G-079 を付けた続きのチケットを切る `[assumed]`（続きのチケットは ADR-0109 の D6・D8 から導いた暫定。記録と書き直しは D4・D6。CI の定義の事実は受け入れ確認に入れない）。今はレポジトリに `.github/` がなく、YGO-101 は秘書が `check.yml` を入れるのを待つ。決まった形がこの段を含むことは `[assumed]` で、含まないなら CI が緑にならず M1 の達成を止めるので、段を足すことを秘書に伝える（マスターへの要回答ではない）。
 - G-080: 実装のジョブではコマンドを動かす道具（Bash）が拒まれる。秘書が許すものは Bash・`node -v`・`npm --version`・`npm_config_cache` を付けた `npm install --package-lock-only --ignore-scripts`・`sh scripts/prepare.sh`・`sh scripts/check.sh`（止まっているのは YGO-078。与えるのは秘書のジョブの実行の設定。`environment.md` §5 の「ジョブがコマンドを動かす権限」。道具を入れること、OQ-086 とは別。`.ai/gaps.md`）。これらが許されないまま YGO-078 を出し直しても進まない（G-082）。許したあと、実装のジョブで一覧が動くのを確かめるのは YGO-088。
 - §2 で「未確認」の 2 行（リージョン・戻し方）と「マスターの用意が要る」の 3 行。「用意済み」の行はまだない。
