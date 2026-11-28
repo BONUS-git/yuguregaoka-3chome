@@ -5,7 +5,7 @@
 - 段階: 実装
 - 今の M: M1
 - 点検 1 件
-- チケット 57/81
+- チケット 58/82
 - TC 0/65（結果なし）
 - FR の TC 18/18
 - gaps のチケットなし 1
@@ -69,6 +69,7 @@
 - YGO-062 M1 のテストの土台（check.sh・JUnit XML・CI）
 - YGO-063 K-018 最初のロックファイルの作り方とネットワークの例外
 - YGO-064 仕分け 9 回目の「今決める」は 0 件
+- YGO-065 M1 の住民と住所の DB のスキーマとマイグレーション
 - YGO-066 K-019 CI は prepare.sh のあとに check.sh を動かす
 - YGO-067 仕分け 10 回目の「今決める」は 0 件
 - YGO-068 G-077 デプロイしない前提の準備書を作る
@@ -85,7 +86,6 @@
 - YGO-102 K-021 CI の定義の担い手を ADR-0109 で決める
 
 ## 未実装（M1 のチケットで done でない）
-- YGO-065 M1 の住民と住所の DB のスキーマとマイグレーション（open）
 - YGO-072 R-067 G-083 package.json がないと check.sh がテストを飛ばして通る（open）
 - YGO-076 check.sh の使い捨ての PostgreSQL と主版 18 の確かめ（open）
 - YGO-077 M1 の住民と認証の 6 表のマイグレーション（open）
@@ -109,6 +109,7 @@
 - YGO-097 M1 FR-091 メールの確認の完了（open）
 - YGO-098 M1 FR-001 確認まで済ませた登録（open）
 - YGO-101 G-079 秘書の check.yml の prepare.sh の段を確かめて記録する（open）
+- YGO-103 M1 の addresses・tenancies の 2 表と TC-005（open）
 
 ## 暫定対応（`.ai/gaps.md` の暫定）
 - G-001（M6）掲示板の投稿の消し方は J14 の行を足すだけ。`rejected` は 30 日で本文を消し、`deleted` の行は通報のクローズから 1 年で消す `[assumed]
