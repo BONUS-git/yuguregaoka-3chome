@@ -9,6 +9,7 @@ M: M1
 
 ## 依存
 - 前提: YGO-078（`.ai/tickets/YGO-078-m1-package-json-lockfile-vitest.md`。`package.json` とロックファイル。YGO-062 から分けた）が `状態: done`、または同じ変更で `package.json` を入れること。どちらも満たさない間は、このチケットの指示を出さない `[assumed]`。
+- 順: YGO-088（G-080。実装のジョブで許すコマンドの一覧が動くのを確かめる）→ YGO-078 → このチケット。YGO-078 は YGO-088 のあとに出し、このチケットは、前提の行のとおり YGO-078 が `状態: done` になってから（または同じ変更で `package.json` を入れる形で）出す。
 - 理由: この段を入れると、`package.json` がない間は、それ以降のすべての変更で `check.sh` が失敗する。
 
 ## 範囲
