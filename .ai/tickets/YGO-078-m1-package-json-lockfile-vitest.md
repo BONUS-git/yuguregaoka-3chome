@@ -1,4 +1,4 @@
-# YGO-078 M1 の package.json とロックファイルで Vitest を動かす
+# YGO-078 G-082 M1 の package.json とロックファイルで Vitest を動かす
 状態: open
 M: M1
 
@@ -7,6 +7,7 @@ M: M1
 YGO-062 が作ったテストの土台（`scripts/prepare.sh`・`check.sh` の Node.js とロックファイルの段と Vitest の段・`vitest.config.ts`・TC-033 のテスト）に、
 `package.json` とロックファイルを入れて、`check.sh` から Vitest を実際に動かし、JUnit XML を `test-results/junit.xml` に書かせる。
 YGO-062 から分けた理由は、YGO-062 の「分けた理由」の節に書いた（ADR-0106 の D2）。
+`.ai/gaps.md` の G-082（YGO-078 の出し直しと R-074 の書き直し）も、ADR-0108 の D3・D6 によりこのチケットで追う。
 
 ## 依存
 - YGO-062（`.ai/tickets/YGO-062-m1-test-harness.md`）が `状態: done`。
@@ -39,6 +40,8 @@ YGO-062 から分けた理由は、YGO-062 の「分けた理由」の節に書�
 - ロックファイル: ADR-0106 の D1 のコマンド `npm install --package-lock-only --ignore-scripts` を引数なしで 1 回動かして作る（手で書かない）。npm のキャッシュがホームの下に書けないジョブでは `npm_config_cache` に一時ディレクトリを渡す `[assumed]`。できたファイルに絶対パスと非公開のレジストリの URL がないことを確かめる。作れなければ ADR-0106 の D2 のとおり、止まった段とエラーの行をこのチケットに書き、`package.json` も入れない。
 - `sh scripts/prepare.sh` → `sh scripts/check.sh` を動かし、下の受け入れ確認を 1 つずつ確かめる。失敗するはずの状態は、確かめたら元に戻す。
 - `.ai/environment.md`（§3.1 の `engines` の行・§5 の「ジョブがコマンドを動かす権限」・「マスターが用意するもの」の表の npm（ジョブ）の待つチケット）と `.ai/gaps.md` の G-080 を、入れたあとの状態に書き直す。
+- R-074（G-082）: このチケットを次に出す変更で、「31d9315 の見直しの指摘」の節の推測の部分を消し、指示に渡された見直しの原文だけを書く `[assumed]`。
+- `.ai/gaps.md` の G-082 の行を、閉じる条件（G-080 が閉じ、このチケットが `状態: done`）を満たした変更で閉じる（理由の列に済んだことと「残りはない」、出どころの列に `（YGO-078）`）。
 
 ## 直さないところと理由
 - CI の定義（`.github/`）: ジョブが書いてよい範囲の外（CLAUDE.md）。CI の定義に `prepare.sh` の段があることの確かめは YGO-070 の受け入れ確認 1（ADR-0105 の D4）。CI が緑かは M1 の達成の確認で見る。
@@ -48,7 +51,7 @@ YGO-062 から分けた理由は、YGO-062 の「分けた理由」の節に書�
 - 新しい OQ・新しい ADR は 0 件（ロックファイルは ADR-0106、CI の順は ADR-0105、道具の用意は OQ-086 の決定で決まっている）。
 
 ## 受け入れ確認
-1. このチケットの 1〜3 行目が `# YGO-078 M1 の package.json とロックファイルで Vitest を動かす`・`状態: done`・`M: M1`。
+1. このチケットの 1〜3 行目が `# YGO-078 G-082 M1 の package.json とロックファイルで Vitest を動かす`・`状態: done`・`M: M1`。
 2. `sh scripts/prepare.sh` のあと `sh scripts/check.sh` が終了コード 0 で `check: ok` で終わり、`test-results/junit.xml` ができる。
 3. その XML に、名前に `TC-033` を含む `testcase` がちょうど 1 つあり、その中に `skipped`・`failure`・`error` の要素がない。
 4. `node_modules/` がない状態で `sh scripts/check.sh` を動かすと、終了コードが 0 でなく、`prepare.sh` を動かすよう出す。
@@ -56,7 +59,9 @@ YGO-062 から分けた理由は、YGO-062 の「分けた理由」の節に書�
 6. `package.json` の `engines.node` の主版と、`.ai/environment.md` §3.1 の Node.js の行の主版が同じ。
 7. `package.json` の `engines.node` を別の主版にした状態で `sh scripts/check.sh` が終了コード 0 以外で終わり、要る主版と「検証の環境に Node.js」を含む文を出す。
 8. `package-lock.json` を消した状態で `sh scripts/prepare.sh` と `sh scripts/check.sh` がどちらも終了コード 0 以外で終わる（ADR-0106 の D3）。
-9. このチケットが `状態: done` のとき、`scripts/prepare.sh` を消した状態で `sh scripts/check.sh` が終了コード 0 以外で終わる。
+9. このチケットが `状態: done` のとき、`scripts/prepare.sh` を消した状態で `sh scripts/check.sh` が終了コード 0 以外で終わる（YGO-072 のあとは、チケットの名前に依らない G-083 の段が同じ事実を確かめる）。
 10. TC-033 のテストを `test.skip` にした状態で `sh scripts/check.sh` が終了コード 0 以外で終わる。
 11. この変更で `.github/` の下のファイルを足していない・変えていない。
 12. `.ai/environment.md` の「マスターが用意するもの」の表の npm（ジョブ）の行の待つチケットが `—` で、§5 の「ジョブがコマンドを動かす権限」に、ジョブで npm が拒まれているという文が残っていない。`.ai/gaps.md` の G-080 の行が閉じた形（残りはない）になっている。
+13. このチケットの「31d9315 の見直しの指摘」の節に、「指示からの推測」「と考えられる」という推測の文がなく、書かれている指摘の中身は指示に渡された見直しの原文だけである（R-074）。
+14. `.ai/gaps.md` の G-082 の行の理由の列に「残りはない」があり、出どころの列に `（YGO-078）` がある。

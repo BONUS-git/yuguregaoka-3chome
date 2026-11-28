@@ -72,8 +72,8 @@ CI の定義（`.github/workflows/`）の項目は入れない（受け持つの
 8. このチケットの「範囲」に、作るもの（Vitest を `check.sh` からつなぐ台本・設定・例のテスト・`prepare.sh`）と、YGO-078 に回すもの（`package.json`・ロックファイル）と、YGO-076 に回すもの（使い捨ての PostgreSQL）と、YGO-080〜YGO-086 に回すもの（時計・pg-boss の依存・`jobs` のキューに積む口・環境変数の読み込み・モックのメールのアダプタ・worker のジョブの実行・偽の鍵）が書かれ、それとは別の文に、使う TC のチケットを切るときに扱うもの（`dev-db.sh`・`APP_ENV` の起動の検査）が書かれている。
 9. `scripts/check.sh` に、次の行がある: `node` がない・主版が `engines.node` と違うときに要る主版と「検証の環境に Node.js」を出して終了コード 1、`package-lock.json` がないときに ADR-0103 を示して終了コード 1、`node_modules/` がないときに `prepare.sh` を動かすよう出して終了コード 1、`test-results/junit.xml` がない・`<skipped` がある・名前に TC-NNN のない `testcase` があるときに終了コード 1。
 10. `vitest.config.ts` の報告が `default` と `junit` で、出力が `test-results/junit.xml`。`test/test_TC_033_no_oauth_webauthn_routes.test.ts` のテストの名前が `TC-033` で始まり、`skip`・`todo`・`only` でない。`src/app.ts` に `buildApp()` がある。
-11. `scripts/check.sh` の、done なのに `package.json`・`package-lock.json`・`scripts/prepare.sh` のどれかがなければ失敗する段が、YGO-078 のチケットを見る（このチケットの done では `package.json` を求めない）。
-12. `.ai/tickets/YGO-078-m1-package-json-lockfile-vitest.md` があり、1〜3 行目が `# YGO-078 M1 の package.json とロックファイルで Vitest を動かす`・`状態: open`・`M: M1`。その受け入れ確認に、このチケットから外した項目（`prepare.sh` → `check.sh` が 0 で JUnit XML ができる・TC-033 の testcase が 1 つで skip・failure・error がない・`node_modules/` がないと失敗・依存と固定の版とロックファイル・`engines.node` と §3.1 の主版・主版が違うと失敗・ロックファイルがないと失敗・done で `prepare.sh` がないと失敗・`test.skip` で失敗）がある。
+11. `scripts/check.sh` で `package.json`・`package-lock.json` がなければ失敗する段が、このチケットの `状態: done` を条件にしていない（YGO-072 の前は YGO-078 の done を条件にし、YGO-072 のあとはチケットの名前に依らず、テスト・コード・道具のどれかがあることを条件にする。G-083）。
+12. `.ai/tickets/YGO-078-m1-package-json-lockfile-vitest.md` があり、1〜3 行目が `# YGO-078 G-082 M1 の package.json とロックファイルで Vitest を動かす`・`状態: open`・`M: M1`。その受け入れ確認に、このチケットから外した項目（`prepare.sh` → `check.sh` が 0 で JUnit XML ができる・TC-033 の testcase が 1 つで skip・failure・error がない・`node_modules/` がないと失敗・依存と固定の版とロックファイル・`engines.node` と §3.1 の主版・主版が違うと失敗・ロックファイルがないと失敗・done で `prepare.sh` がないと失敗・`test.skip` で失敗）がある。
 
 ## 確かめた結果
 受け入れ確認を 1 項目ずつ、今のファイルと照らした結果（変更 20261127-e16545 の時点。コマンドは動かせなかったので、どれもファイルを読んで確かめた）。
