@@ -304,3 +304,4 @@
 - `.ai/tickets/YGO-099-k-020-gaps-wait-rows-tickets.md`
 - `.ai/tickets/YGO-100-g-081-replace-k-021-adr-withdraw-ygo-070.md`
 - `.ai/tickets/YGO-101-g-079-record-check-yml-prepare-step.md`
+- `.ai/tickets/YGO-102-k-021-ci-definition-owner-adr-0109.md`
