@@ -16,7 +16,7 @@ M: M1
 - KeyProvider（C9、ADR-0006・ADR-0021）の偽の鍵のアダプタ（`src/adapters/keys/` など）`[assumed]`: 鍵の変数の文字列 `EXAMPLE_KEY_DO_NOT_USE:<用途>:<版>` の SHA-256 から、版ごとの 32 バイトの鍵を作る（`environment.md` §3.3）。
 - 対象は M1 の経路とジョブが使う鍵: `EMAIL_KEYRING`・`EMAIL_KEY_CURRENT_VERSION`（web・worker）と `EMAIL_HMAC_KEYRING`・`EMAIL_HMAC_KEY_CURRENT_VERSION`（web）。鍵の変数は YGO-082 の読み込みで読む。
 - テストで使う値は偽の値（`environment.md` §4.2）。
-- 部品だけを確かめる TC は `.ai/tests/test-plan.md` にないため、このチケットはテストを足さない `[assumed]`。使う FR のチケット（YGO-071 で切る）の TC-018・TC-019・TC-020・TC-023・TC-001 で確かめる。
+- 部品だけを確かめる TC は `.ai/tests/test-plan.md` にないため、このチケットはテストを足さない `[assumed]`。使う FR のチケット（YGO-094・YGO-097・YGO-095・YGO-098）の TC-018・TC-019・TC-020・TC-023・TC-001 で確かめる。
 
 ## 直さないところと理由
 - `LETTER_KEYRING`・`LETTER_KEY_CURRENT_VERSION`: 手紙は M2 で扱う。

@@ -18,6 +18,7 @@
 | プロセスの分け方（web / worker）と C1〜C13 の置き場 | `.ai/diagrams/m1-components.md` | ADR-0100、`.ai/architecture.md` §1 の 1・§2 の「動くプロセス」の列 |
 | M1 の FR の一覧 | — | `.ai/roadmap.md` §4 の「今の M の範囲」、`.ai/mvp.md` (b) |
 | M1 の TC が依存する M0 の土台のチケットと依存の順 | — | `.ai/roadmap.md` §4 の「M1 の土台のチケット」（YGO-062・YGO-078・YGO-075・YGO-076・YGO-065・YGO-077・YGO-080〜YGO-086） |
+| M1 の FR のチケットと TC の対応・依存の順・チケットに入らない TC の行き先 | — | `.ai/roadmap.md` §4 の「M1 の FR のチケット」（YGO-089〜YGO-098 の表と、行き先の表） |
 | M の分け方と、手紙の一続きが通る M・中心の体験の全体がそろう M | — | `.ai/roadmap.md` §4 の段階、ADR-0099・ADR-0097、`.ai/gaps.md` G-069 |
 | 要回答で止まる M・FR があるか | — | `.ai/roadmap.md` §8、ADR-0099 の D6、`.ai/open-questions.md` §2（一覧） |
 | M1 の受け入れ条件 | — | `.ai/roadmap.md` §4 の受け入れ条件（A-01〜A-18） |
@@ -288,3 +289,13 @@
 - `.ai/tickets/YGO-086-m1-pg-boss-dependency.md`
 - `.ai/tickets/YGO-087-r-075-retros-ygo-078-repeats.md`
 - `.ai/tickets/YGO-088-g-080-job-command-permissions.md`
+- `.ai/tickets/YGO-089-m1-fr-002-address-pool.md`
+- `.ai/tickets/YGO-090-m1-fr-010-candidates-and-registration.md`
+- `.ai/tickets/YGO-091-m1-fr-007-exclude-vacant-addresses.md`
+- `.ai/tickets/YGO-092-m1-fr-010-expired-unverified-registrations.md`
+- `.ai/tickets/YGO-093-m1-rate-limiter.md`
+- `.ai/tickets/YGO-094-m1-fr-091-registration-accept.md`
+- `.ai/tickets/YGO-095-m1-fr-092-login.md`
+- `.ai/tickets/YGO-096-m1-j18-verification-mail.md`
+- `.ai/tickets/YGO-097-m1-fr-091-email-verification.md`
+- `.ai/tickets/YGO-098-m1-fr-001-verified-registration.md`

@@ -16,7 +16,7 @@ M: M1
 - 環境変数の読み込み（`src/config.ts` など）`[assumed]`: web と worker がそれぞれ自分の列の変数（`environment.md` §8.1）を読み、型のある設定の値にする。テストは環境変数を書き換えずに設定の値を渡せる。
 - `MAIL_ADAPTER`（worker）: `mock`／`smtp_local` だけを受け付け、設定がなければ `mock`。ほかの値は、変数の名前と受け付ける値を出して起動に失敗する。
 - `smtp_local` のアダプタはまだないため、`smtp_local` を選ぶと「`smtp_local` のアダプタはまだない」と理由を出して起動に失敗する `[assumed]`。
-- 部品だけを確かめる TC は `.ai/tests/test-plan.md` にないため、このチケットはテストを足さない `[assumed]`。使う FR のチケット（YGO-071 で切る）の TC-020 で確かめる。
+- 部品だけを確かめる TC は `.ai/tests/test-plan.md` にないため、このチケットはテストを足さない `[assumed]`。使う FR のチケット（YGO-097）の TC-020 で確かめる。
 
 ## 直さないところと理由
 - `APP_ENV` の起動の検査（`staging`・`production` で偽の鍵か `CLOCK_OFFSET` があれば起動に失敗）と、自分の列にない秘密での起動の失敗: M1 の TC はどれも確かめないため、M1 のチケットにしない。使う TC のチケットを切るときに扱う。
