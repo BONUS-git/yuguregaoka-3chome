@@ -123,3 +123,4 @@
 - [0104 — CI は prepare.sh のあとに check.sh を動かす](0104-ci-runs-prepare-then-check.md)（ADR-0105 で置き換え）
 - [0105 — CI の定義の確かめは YGO-070 が受け持つ](0105-ci-definition-check-in-ygo-070.md)
 - [0106 — 依存を足す変更ごとにロックファイルを直す](0106-lockfile-in-every-dependency-change.md)
+- [0107 — 外待ちでもあとにジョブが作るものがあればチケット](0107-follow-up-job-work-gets-ticket.md)

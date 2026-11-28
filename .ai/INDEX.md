@@ -188,6 +188,7 @@
 - `.ai/adr/0104-ci-runs-prepare-then-check.md` — 置き換え（→ 0105）
 - `.ai/adr/0105-ci-definition-check-in-ygo-070.md` — 採用
 - `.ai/adr/0106-lockfile-in-every-dependency-change.md` — 採用
+- `.ai/adr/0107-follow-up-job-work-gets-ticket.md` — 採用
 
 ## レビュー（`.ai/reviews/`）
 
@@ -286,3 +287,4 @@
 - `.ai/tickets/YGO-085-m1-keyprovider-fake-keys.md`
 - `.ai/tickets/YGO-086-m1-pg-boss-dependency.md`
 - `.ai/tickets/YGO-087-r-075-retros-ygo-078-repeats.md`
+- `.ai/tickets/YGO-088-g-080-job-command-permissions.md`
