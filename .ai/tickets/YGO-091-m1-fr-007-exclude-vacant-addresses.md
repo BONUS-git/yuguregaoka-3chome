@@ -15,7 +15,7 @@ MVP では空き家を候補に戻さない（ADR-0062）。候補に `vacant_*`
 - TC-007・TC-008 は YGO-090（YGO-071 の範囲の 2）が作る経路を呼ぶので、YGO-090 → このチケットの順に進める。
 - 待つもの:
   - YGO-078（`package.json` とロックファイル）。YGO-078 は YGO-088（実装のジョブで `node`・`npm` を動かす権限）を待つ。
-  - YGO-070（CI の定義で `prepare.sh` を `check.sh` の前に置く）。CI が緑になるのはそのあと。このチケットの `done` は、`sh scripts/check.sh` がネットワークなしで通ることで決める `[assumed]`。
+  - 秘書の CI の定義（`check.yml`）の `prepare.sh` の段（ADR-0109 の D2・G-079）。CI が緑になるのはそのあと。このチケットの `done` は、`sh scripts/check.sh` がネットワークなしで通ることで決める `[assumed]`。
 
 ## 範囲
 - 候補の経路が `addresses` に行のある住所（`vacant_*` を含む）を出さないことを確かめ、要れば直す。

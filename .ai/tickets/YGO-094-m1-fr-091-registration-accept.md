@@ -16,7 +16,7 @@ M: M1
   - YGO-093（流量の制限の部品。TC-019 の 429）
 - 待つもの:
   - YGO-078（`package.json` とロックファイル）。YGO-078 は YGO-088（実装のジョブで `node`・`npm` を動かす権限）を待つ。
-  - YGO-070（CI の定義で `prepare.sh` を `check.sh` の前に置く）。CI が緑になるのはそのあと。このチケットの `done` は、`sh scripts/check.sh` がネットワークなしで通ることで決める `[assumed]`。
+  - 秘書の CI の定義（`check.yml`）の `prepare.sh` の段（ADR-0109 の D2・G-079）。CI が緑になるのはそのあと。このチケットの `done` は、`sh scripts/check.sh` がネットワークなしで通ることで決める `[assumed]`。
 
 ## 範囲
 - 201 の本文を `{"status":"accepted"}` にし、住所・ID・`Set-Cookie` を返さない。招待と紹介者の項目を受け取らない（ADR-0030）。

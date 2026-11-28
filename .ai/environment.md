@@ -4,7 +4,7 @@
 - 日付: 2026-11-21
 - チケット: YGO-009
 - 根拠: `.ai/brief.md`・`requirements.md`（NFR-058・NFR-063・NFR-065・NFR-067・NFR-071〜NFR-080・NFR-091・NFR-092）・`architecture.md`・`async.md`・`db.md`・`security.md`・`roadmap.md`・ADR-0006・0009〜0012・0021・0033・0076・0085・0086・0100
-- 関連 ADR: 0052（ローカルの開発と `check.sh` の環境・IaC は OpenTofu で設計だけ）・0068（使い終わった道具は片付ける）・0106（依存を足す・変える変更ごとのロックファイル）・0105（CI は prepare.sh のあとに check.sh、CI の定義の確かめは YGO-070）
+- 関連 ADR: 0052（ローカルの開発と `check.sh` の環境・IaC は OpenTofu で設計だけ）・0068（使い終わった道具は片付ける）・0106（依存を足す・変える変更ごとのロックファイル）・0109（CI は prepare.sh のあとに check.sh、CI の定義は秘書の決まった形の check.yml）
 
 ---
 
@@ -109,7 +109,7 @@
      秘書は「マスターが用意するもの」の表を読み、DB のテストを足す前に道具があることを確かめる（`roadmap.md` §4 の M0 の依存）。
      `prepare.sh` は npm の依存だけを入れ（IaC のあとは `tofu init` も）、OS の道具は入れない [assumed]。
 5. マイグレーションを当てたデータベースを 1 つ作り、それをひな型（`CREATE DATABASE ... TEMPLATE`）にして、テストのファイルごとにデータベースを作る [assumed]。テストどうしが互いのデータを見ない。
-6. Vitest を動かす（ADR-0009）。`node_modules/` がなければ `sh scripts/prepare.sh` を先に動かすよう出して失敗する。`check.sh` は `prepare.sh` も `npm ci` も呼ばず、依存は CI と手元で `check.sh` の前に `prepare.sh` が入れる（ADR-0105 の D1・D3）。`npx --no-install vitest run` で動かし、結果を JUnit XML で `test-results/junit.xml` に書く（標準の出力の報告も残す）。XML がない・`skipped`（skip と todo）がある・名前に TC-NNN のないテストがある、のどれでも失敗する。単体・統合（DB）・API（Fastify の `inject`。ポートを開かない）・組版のスナップショット・C1 の部品のテスト（Vitest と Testing Library）。
+6. Vitest を動かす（ADR-0009）。`node_modules/` がなければ `sh scripts/prepare.sh` を先に動かすよう出して失敗する。`check.sh` は `prepare.sh` も `npm ci` も呼ばず、依存は CI と手元で `check.sh` の前に `prepare.sh` が入れる（ADR-0109 の D1・D3）。`npx --no-install vitest run` で動かし、結果を JUnit XML で `test-results/junit.xml` に書く（標準の出力の報告も残す）。XML がない・`skipped`（skip と todo）がある・名前に TC-NNN のないテストがある、のどれでも失敗する。単体・統合（DB）・API（Fastify の `inject`。ポートを開かない）・組版のスナップショット・C1 の部品のテスト（Vitest と Testing Library）。
 7. 最後に `check: ok` を出す。
 
 ブラウザを動かす端から端までのテストは `check.sh` に入れない（ブラウザの取り込みにネットワークが要る。範囲は NFR-064 のとおり実装の段階で決める）。
@@ -141,9 +141,10 @@
 
 ## §5 CI の計画
 
-- **CI の設定のファイルは秘書の変更の外**（NFR-091・CLAUDE.md）。足すのはマスター。ここは計画だけ。
-- CI の仕事は 1 つ: レポジトリを取り出す → `sh scripts/prepare.sh`（依存の取り込み。CI でネットワークを使うのはここだけ。CI ではロックファイルを作らず、コミットしたものを `npm ci` で使う。ロックファイルを作り・直す例外は依存を足す・変える変更の中だけ、ADR-0106）→ `sh scripts/check.sh`。この順は ADR-0105 の D1 で、M1 のテストは Vitest と npm の依存で書くため、`prepare.sh` の段がないと `check.sh` は `node_modules/` がないとして失敗する。
-  秘書は、`package.json` を入れる変更（YGO-078 の実装）の前に、CI の定義に `sh scripts/prepare.sh` の段を `sh scripts/check.sh` の前に足すことをマスターに伝える。足すのはマスター（ADR-0105 の D2）。段があるまでは `.ai/gaps.md` の G-079 で追う。段があることをファイルで確かめるのは YGO-070 の受け入れ確認 1 で、YGO-062・YGO-078 の受け入れ確認には入れない（ADR-0105 の D4）。
+- **CI の設定のファイルはジョブの変更の外**（NFR-091・CLAUDE.md）。CI の定義は秘書の CI の決まった形 `.github/workflows/check.yml` で、入れるのは秘書（ADR-0109 の D2）。ジョブは書かない・変えない。ここは計画だけ。
+  NFR-091 と CLAUDE.md の「変えないもの」はジョブ（秘書の変更のジョブ）の変更の決まりで、秘書が決まった形の `check.yml` をプロジェクトに入れること（CLAUDE.md の作り方の節）を止めない。CI の実行の環境に道具を入れるのはマスター（OQ-086 → 決定）。
+- CI の仕事は 1 つ: レポジトリを取り出す → `sh scripts/prepare.sh`（依存の取り込み。CI でネットワークを使うのはここだけ。CI ではロックファイルを作らず、コミットしたものを `npm ci` で使う。ロックファイルを作り・直す例外は依存を足す・変える変更の中だけ、ADR-0106）→ `sh scripts/check.sh`。この順は ADR-0109 の D1 で、M1 のテストは Vitest と npm の依存で書くため、`prepare.sh` の段がないと `check.sh` は `node_modules/` がないとして失敗する。
+  秘書の `check.yml` が、`sh scripts/prepare.sh` の段を `sh scripts/check.sh` の前に置く（ADR-0109 の D2）`[assumed]`。決まった形が `check.sh` だけを動かすなら CI は緑にならず M1 の達成を止めるので、段を足すことを秘書に伝える（G-079）。段があるまでは `.ai/gaps.md` の G-079 を YGO-101 で追う。YGO-101 は秘書が `check.yml` を入れるのを待ち、そのあとで読んで確かめた事実を G-079 に記録し、この段落と準備書を今の状態に書き直す。CI の定義に段があることはどのチケットの受け入れ確認にも入れない（ADR-0109 の D4・D6）。CI が緑かは M1 の達成の確認で見る。
   Node.js と PostgreSQL のサーバーの道具は、CI の実行の環境（イメージ）にあらかじめ入れておく（§4.1）。マスターが入れる（OQ-086 → 決定）。入れた道具は使い終わっても置いたままにする（OQ-090 → 決定、§4.4）。マスターが用意する道具と主版は「マスターが用意するもの」の表にある。
   `check.sh` の中身は手元と同じで、CI だけの確認を作らない。
 - **ジョブがコマンドを動かす権限**: 道具を入れること（下の表、OQ-086）とは別に、秘書の実装のジョブに許すものは次の 1 つの一覧で、文書どうしでこれを使う: コマンドを動かす道具（Bash）・`node -v`・`npm --version`・`npm_config_cache` を付けた `npm install --package-lock-only --ignore-scripts`・`sh scripts/prepare.sh`・`sh scripts/check.sh`。許すのは秘書（ジョブの実行の設定で、許すコマンドに足す）で、マスターの道具の用意とは分ける `[assumed]`。今の状態: 実装のジョブではコマンドを動かす道具（Bash）が拒まれる。そのため一覧のどのコマンドも動かせず、これが YGO-078（`package.json` とロックファイル）を止めている（止まった回数と変更は `.ai/gaps.md` の G-082 にだけ置く。G-080・G-082。準備書 `.ai/deploy/readiness.md` §4 で追う。許したあと、実装のジョブで一覧が動くのを確かめるのは YGO-088）。計画の段階では道具が許され、`npm --version` が `11.20.0` を返し、レジストリ `https://registry.npmjs.org/` に届いた。npm は入っていて、許されるものが段階ごとに違う。ジョブでは既定の npm のキャッシュ（ホームの下）に書けないため、npm のコマンドには `npm_config_cache` に一時ディレクトリを渡す `[assumed]`。道具が拒まれるあいだは、ロックファイルを作れない（ADR-0106 の D2）。`check.sh` の Node.js・ロックファイル・Vitest の段も、動かして確かめられない。
@@ -378,7 +379,7 @@ infra/
 
 金額は書かない。事業者が決まっていない（OQ-085）ので、ここでは量と式だけを書き、事業者の料金表で計算するのはデプロイの準備のとき（契約と支出はマスターの事前承認、NFR-080）。
 
-- **開発とテスト**: 手元と CI で動くだけで、費用はかからない（クラウドを使わない、NFR-072・NFR-076）。CI の実行の時間は、使う CI の無料の範囲に収まるかをマスターが CI を足すときに確かめる。
+- **開発とテスト**: 手元と CI で動くだけで、費用はかからない（クラウドを使わない、NFR-072・NFR-076）。CI の実行の時間は、使う CI の無料の範囲に収まるかを、秘書が `check.yml` を入れるときに確かめる（ADR-0109 の D2。費用がかかるならマスターの事前承認、NFR-080）。
 - **外部の LLM**: `roadmap.md` §9.1（ADR-0086）。ここでは数えない。
 
 | 項目 | 量（ADR-0012 の規模、[assumed]）| 式 |
@@ -406,7 +407,7 @@ infra/
 
 - デプロイ・IaC の適用・クラウドの契約・アカウントの作成・ドメインの取得（NFR-071・NFR-072）。
 - IaC のコード（`infra/`）を書くこと（ADR-0052 の D5）。
-- CI の設定を足すこと（NFR-091。マスターが足す）。
+- CI の設定を足すこと（NFR-091。`check.yml` は秘書が入れる、ADR-0109 の D2）。
 - `.env*` のファイルを作ること（NFR-091）。
 
 ### §10.2 未確定事項

@@ -7,7 +7,7 @@ M: M1
 M1 の機能を実装するチケットが、それぞれ TC のテストを足すだけで済むように、テストを動かす土台を先に作る。
 このチケットが作るのは、ファイルを読めば確かめられる土台（台本・設定・例のテスト・文書）まで。`package.json` とロックファイルを入れて Vitest を実際に動かすことは YGO-078 に分けた（「分けた理由」の節）。
 CI の定義（`.github/workflows/`）があり `sh scripts/prepare.sh` → `sh scripts/check.sh` の順に動かすことの確かめは、このチケットに入れない。
-同じ中身は YGO-070 の受け入れ確認 1 が確かめる（ADR-0105 の D4）。CI が緑かは M1 の達成の確認で見る。
+同じ中身はどのチケットの受け入れ確認にも入れず、`.ai/gaps.md` の G-079 で追う（ADR-0109 の D4）。CI が緑かは M1 の達成の確認で見る。
 
 ## 確かめた事実
 - ある:
@@ -16,9 +16,9 @@ CI の定義（`.github/workflows/`）があり `sh scripts/prepare.sh` → `sh 
   - `vitest.config.ts`（報告は `default` と `junit`、出力は `test-results/junit.xml`）・`src/app.ts`（`buildApp()`）・`test/test_TC_033_no_oauth_webauthn_routes.test.ts`（名前は `TC-033 …` で始まる。`skip`・`todo` でない）。
   - `.gitignore` の `node_modules/`（7 行目）と `test-results/`（13 行目）の行。
 - ない: `package.json`・`package-lock.json`（YGO-078 で入れる）。そのため今の `check.sh` は Node.js とロックファイルの段と Vitest の段を飛ばし、`check: ok` は Vitest の土台が動くことの裏付けではない。
-- ない: `.github/`。足すのはマスター（`.ai/environment.md` §5）。
+- ない: `.github/`。入れるのは秘書（`.ai/environment.md` §5・ADR-0109 の D2）。
 - CLAUDE.md は `.github/workflows/check.yml` を秘書の CI の決まった形の名前とし、ジョブは書かない・変えないとする。
-- ADR-0105: D1 CI は `sh scripts/prepare.sh` → `sh scripts/check.sh` の順に動かし、M1 のテストは Vitest と npm の依存で書く。D2 CI の定義に `prepare.sh` の段を足すのはマスター。D3 `check.sh` は `prepare.sh` も `npm ci` も呼ばず、`node_modules/` がなければ失敗する。D4 CI の定義をファイルで確かめるのは YGO-070 の受け入れ確認 1。
+- ADR-0109: D1 CI は `sh scripts/prepare.sh` → `sh scripts/check.sh` の順に動かし、M1 のテストは Vitest と npm の依存で書く。D2 CI の定義は秘書の決まった形の `check.yml` で、秘書が `prepare.sh` の段を置く。D3 `check.sh` は `prepare.sh` も `npm ci` も呼ばず、`node_modules/` がなければ失敗する。D4 CI の定義の確かめはどのチケットにも置かず、G-079 で追う。
 - ADR-0009: TypeScript・Fastify・Vitest。ADR-0103: 最初のロックファイルの作り方（D1）・作れないときの扱い（D2）・`prepare.sh` はロックファイルを作らない（D3）。
 - `.ai/tests/test-plan.md`: テストの名前の頭に `TC-NNN …`、ファイルの名前は `test_TC_001_…` の形にする決まりがある。TC-033（FR-092、単体）は「ルートの一覧に OAuth と WebAuthn の経路がない」。
 
@@ -43,15 +43,15 @@ M0 の残りのうち M1 の TC が使う部品（時計・pg-boss の依存・`
 
 ## 直さないところと理由
 - `package.json` とロックファイル・Vitest を実際に動かす確かめ: YGO-078（「分けた理由」の節）。
-- CI の定義（`.github/`）: ジョブが書いてよい範囲の外（CLAUDE.md）。足すのはマスター（`.ai/environment.md` §5）。
-  その定義があり `sh scripts/prepare.sh` → `sh scripts/check.sh` の順に動かすことは、YGO-070 の受け入れ確認 1 で確かめる（ADR-0105 の D4）。CI の結果（緑かどうか）は、M1 の達成の確認で見る。
+- CI の定義（`.github/`）: ジョブが書いてよい範囲の外（CLAUDE.md）。入れるのは秘書（`.ai/environment.md` §5・ADR-0109 の D2）。
+  その定義があり `sh scripts/prepare.sh` → `sh scripts/check.sh` の順に動かすことは、`.ai/gaps.md` の G-079 で追う（ADR-0109 の D4）。CI の結果（緑かどうか）は、M1 の達成の確認で見る。
 - 使い捨ての PostgreSQL の起動と片付け（§4.1 の 4・5、§4.4）: YGO-076 で、初めて DB を使う TC（TC-005、YGO-065）より前に足す。
 - `roadmap.md` §4 の M0 の行の残りのうち M1 の TC が使う部品: YGO-080（差し替えられる時計）・YGO-086（pg-boss の依存）・YGO-081（`jobs` のキューに積む口）・YGO-082（環境変数の読み込みと `MAIL_ADAPTER` の選択）・YGO-083（モックのメールのアダプタ）・YGO-084（worker のジョブの実行）・YGO-085（KeyProvider の偽の鍵）で足す。
 - `scripts/dev-db.sh`（開発の DB の台本。`check.sh` は使い捨ての PostgreSQL を使い、TC はこの台本を使わない）と `APP_ENV` の起動の検査（`staging`・`production` で偽の鍵か `CLOCK_OFFSET` があれば起動に失敗する。M1 の TC はどれも確かめない）: M1 の TC が使わないため M1 のチケットにせず、使う TC のチケットを切るときに扱う `[assumed]`。
 - 型の検査と lint（§4.1 の 3）: M1 の TC が依存しないため、M1 のチケットにしない `[assumed]`。
 - M1 の FR の機能の実装: 別のチケットで 1 つずつ。
 - `.ai/status.md`: 秘書が書くもので、ジョブは変えない。
-- 新しい OQ・要回答は 0 件。新しい ADR は 0 件。ADR-0105 を丸ごと置き換える ADR（`.ai/gaps.md` の G-081 の予定）は、YGO-078 が `状態: done` になった次の変更で、題に G-081 を付けた別のチケットで作る。
+- 新しい OQ・要回答は 0 件。新しい ADR は 0 件。CI の定義の担い手は ADR-0109（YGO-100）が決めた。
 
 ## 分けた理由
 - 変更 20261127-e16545 の実装のジョブでは、コマンドを動かす道具そのものが権限で拒まれ、`npm`・`node`・`sh scripts/prepare.sh`・`sh scripts/check.sh` のどれも動かせなかった（エラーの行は「確かめた結果」の節）。
@@ -60,7 +60,7 @@ M0 の残りのうち M1 の TC が使う部品（時計・pg-boss の依存・`
 - 片付く条件（YGO-078 の依存）: ジョブが `npm` のコマンドと `sh scripts/prepare.sh`・`sh scripts/check.sh` を動かせる（`.ai/gaps.md` の G-080）。
 
 ## 受け入れ確認
-CI の定義（`.github/workflows/`）の項目は入れない（受け持つのは YGO-070 の受け入れ確認 1、ADR-0105 の D4）。
+CI の定義（`.github/workflows/`）の項目は入れない（`.ai/gaps.md` の G-079 で追う、ADR-0109 の D4）。
 
 1. このチケットの 1〜3 行目が `# YGO-062 M1 のテストの土台（check.sh・JUnit XML・CI）`・`状態: done`・`M: M1`。
 2. `scripts/check.sh` に、ネットワークを使うコマンド（`npm ci`・`npm install`・`curl`・`wget` など）がなく、`vitest` は `npx --no-install` で呼ぶ。

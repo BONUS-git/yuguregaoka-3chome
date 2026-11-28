@@ -5,7 +5,7 @@ M: M1
 ## 目的
 `reviews/0004-phase-evaluation-2026-11-27.md` の R-067（区別: 中、評価の ID: E-021）を直す。
 `scripts/check.sh` の 1 の段（Node.js とロックファイル）と 6 の段（Vitest）は `if [ -e package.json ]` で飛ばすので、`test/` にテストがあっても `package.json` がなければ `check: ok` になる。確かめる相手があるのに飛ばす組み合わせを、失敗にする。
-あわせて `.ai/gaps.md` の G-083（R-076。`check.sh` のチケットの名前に依る段）を、ADR-0108 の D3・D7 によりこのチケットで追う。
+あわせて `.ai/gaps.md` の G-083（R-076。`check.sh` のチケットの名前に依る段）を、ADR-0109 の D8・D12 によりこのチケットで追う。
 
 ## 依存
 - この段を入れると、`package.json` がない間は、それ以降のすべての変更で `check.sh` が失敗する。そのため、YGO-078（`package.json` とロックファイル。YGO-062 から分けた）と同じ変更か、YGO-078 の done のあとに入れる `[assumed]`。
