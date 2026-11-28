@@ -4,7 +4,7 @@ M: M1
 
 ## 目的
 目標の受け入れ条件 1（今の M の TC のテストがすべて `scripts/check.sh` で通り、CI が緑）を進める。
-`.ai/db.md` §2「住民・住所」の 8 表のうち、YGO-065 の `addresses`・`tenancies` を除く 6 表 `residents`・`credentials`・`sessions`・`auth_tokens`・`staff_roles`・`rate_limit_buckets` のマイグレーションを作る。M1 の登録・確認・ログインの FR のチケット（YGO-071 で切るもの）は、この 6 表に読み書きする。
+`.ai/db.md` §2「住民・住所」の 8 表のうち、YGO-065 の `addresses`・`tenancies` を除く 6 表 `residents`・`credentials`・`sessions`・`auth_tokens`・`staff_roles`・`rate_limit_buckets` のマイグレーションを作る。M1 の登録・確認・ログインの FR のチケット（YGO-090・YGO-092・YGO-094〜YGO-098）は、この 6 表に読み書きする。
 YGO-073 で YGO-065 から分けた 4 枚目（機能の実装）。範囲はこの 6 表と、`tenancies.resident_id` の外部キーだけ。
 
 ## 依存
@@ -22,8 +22,8 @@ YGO-073 で YGO-065 から分けた 4 枚目（機能の実装）。範囲はこ
   - 当て方は YGO-076 の `check.sh` のひな型の DB の段（`psql -v ON_ERROR_STOP=1 --single-transaction -f`）。
 
 ## 直さないところと理由
-- TC のテスト: `.ai/tests/test-plan.md` に、経路を通さずにこの 6 表だけで確かめる TC がない。6 表を使う TC（TC-016・TC-018・TC-020・TC-023 など）は、YGO-071 で切る FR のチケットが書く。
-- 経路・登録のトランザクション・J14・J18: YGO-071 で切る FR のチケットと、M0 の部品のチケット YGO-080〜YGO-086。
+- TC のテスト: `.ai/tests/test-plan.md` に、経路を通さずにこの 6 表だけで確かめる TC がない。6 表を使う TC（TC-016・TC-018・TC-020・TC-023 など）は、FR のチケット（YGO-092・YGO-094・YGO-097・YGO-095）が書く。
+- 経路・登録のトランザクション・J14・J18: M1 の FR のチケット YGO-089〜YGO-098（`roadmap.md` §4「M1 の FR のチケット」）と、M0 の部品のチケット YGO-080〜YGO-086。
 - 「住民・住所」より後の表（手紙・配達回・新聞など）: 使う M のチケットで足す。
 - 新しい OQ・要回答は 0 件（列の型と NOT NULL の細部は db.md と `[assumed]`）。
 

@@ -14,7 +14,7 @@
 - どのテストも `sh scripts/check.sh` から、ネットワークなしで動かす（`.ai/environment.md` §4.1）。使うのは使い捨ての PostgreSQL（Unix ソケットだけ）・Fastify の `inject`・差し替えた時計。テストの準備で、外への接続を失敗させる。
 - メールは ADR-0033 のモックのアダプタで確かめる（外の SMTP には送らない）。
 - 偽の値は `.ai/environment.md` §4.2 のとおり: メールは `test@example.invalid`、住所は `夕暮ヶ丘三丁目 2-5`、存在しない住所は `夕暮ヶ丘三丁目 99-1`、鍵は `EXAMPLE_KEY_DO_NOT_USE`、漏れを探す目印の文字列は `EXAMPLE_MARKER_DO_NOT_USE` `[assumed]`。
-- TC-033 のテストは YGO-062 が土台の例として書く。ほかの TC のテストは FR のチケットで書く。実装済みかどうかは `.ai/status.md` が示す。
+- TC-033 のテストは YGO-062 が土台の例として書く。ほかの TC のテストは FR のチケットで書く（チケットと TC の対応は `.ai/roadmap.md` §4「M1 の FR のチケット」）。実装済みかどうかは `.ai/status.md` が示す。
 
 ## 種類
 

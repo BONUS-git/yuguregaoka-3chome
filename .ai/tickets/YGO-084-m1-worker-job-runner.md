@@ -16,10 +16,10 @@ M: M1
 - worker の入口（`src/worker.ts`、ADR-0100）`[assumed]`: 設定（YGO-082）を読み、キュー（YGO-081）からジョブを取り、名前ごとに登録したハンドラに、時計（YGO-080）・DB の接続・メールのアダプタ（YGO-083）・KeyProvider（YGO-085）を渡して動かす。
 - J14 `retention.purge`・J18 `mail.send` の名前でハンドラを登録する口。このチケットでは中身のないハンドラを置かない（中身は FR のチケットが登録する）`[assumed]`。
 - テストからは、ポートを開かずに、積んだジョブを 1 回取って動かし終わるまで待てる口（差し替えた時計で J14・J18 を動かす、`tests/test-plan.md` の種類「ジョブ」）`[assumed]`。
-- 部品だけを確かめる TC は `.ai/tests/test-plan.md` にないため、このチケットはテストを足さない `[assumed]`。使う FR のチケット（YGO-071 で切る）の TC-017・TC-020 で確かめる。
+- 部品だけを確かめる TC は `.ai/tests/test-plan.md` にないため、このチケットはテストを足さない `[assumed]`。使う FR のチケット（YGO-092・YGO-097）の TC-017・TC-020 で確かめる。
 
 ## 直さないところと理由
-- J14・J18 のハンドラの中身: YGO-071 で切る FR のチケット。
+- J14・J18 のハンドラの中身: YGO-092（J14）・YGO-096（J18）。
 - web の入口（`src/server.ts`）と開発の起動のコマンド（`npm run dev:worker` など、`environment.md` §3.2）: M1 の TC が使わないため、使う TC のチケットを切るときに扱う。
 - cron と M1 より後のジョブ（J0〜J8・J15〜J17）: 使う M のチケット。
 - 新しい OQ・要回答・ADR は 0 件。
