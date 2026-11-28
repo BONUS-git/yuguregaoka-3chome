@@ -45,7 +45,7 @@ M0 の残りのうち M1 の TC が使う部品（時計・pg-boss の依存・`
 - `package.json` とロックファイル・Vitest を実際に動かす確かめ: YGO-078（「分けた理由」の節）。
 - CI の定義（`.github/`）: ジョブが書いてよい範囲の外（CLAUDE.md）。入れるのは秘書（`.ai/environment.md` §5・ADR-0109 の D2）。
   その定義があり `sh scripts/prepare.sh` → `sh scripts/check.sh` の順に動かすことは、`.ai/gaps.md` の G-079 で追う（ADR-0109 の D4）。CI の結果（緑かどうか）は、M1 の達成の確認で見る。
-- 使い捨ての PostgreSQL の起動と片付け（§4.1 の 4・5、§4.4）: YGO-076 で、初めて DB を使う TC（TC-005、YGO-065）より前に足す。
+- 使い捨ての PostgreSQL の起動と片付け（§4.1 の 4・5、§4.4）: YGO-076 で、初めて DB を使う TC（TC-005、YGO-103）より前に足す。
 - `roadmap.md` §4 の M0 の行の残りのうち M1 の TC が使う部品: YGO-080（差し替えられる時計）・YGO-086（pg-boss の依存）・YGO-081（`jobs` のキューに積む口）・YGO-082（環境変数の読み込みと `MAIL_ADAPTER` の選択）・YGO-083（モックのメールのアダプタ）・YGO-084（worker のジョブの実行）・YGO-085（KeyProvider の偽の鍵）で足す。
 - `scripts/dev-db.sh`（開発の DB の台本。`check.sh` は使い捨ての PostgreSQL を使い、TC はこの台本を使わない）と `APP_ENV` の起動の検査（`staging`・`production` で偽の鍵か `CLOCK_OFFSET` があれば起動に失敗する。M1 の TC はどれも確かめない）: M1 の TC が使わないため M1 のチケットにせず、使う TC のチケットを切るときに扱う `[assumed]`。
 - 型の検査と lint（§4.1 の 3）: M1 の TC が依存しないため、M1 のチケットにしない `[assumed]`。

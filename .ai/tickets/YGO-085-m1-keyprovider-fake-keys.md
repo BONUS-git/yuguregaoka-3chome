@@ -9,7 +9,7 @@ M: M1
 
 ## 依存
 - YGO-062（M1 のテストの土台）と YGO-078（`package.json` とロックファイル）の両方が `状態: done` であること。
-- YGO-065 のあとに並べる。依存の順: YGO-062 → YGO-075 と YGO-078（並んで進む）→ YGO-076 → YGO-065 → **YGO-085（このチケット）**。YGO-065 が `状態: done` であること。
+- YGO-103 のあとに並べる。依存の順: YGO-062 → YGO-075 と YGO-078（並んで進む）→ YGO-076 → YGO-103 → **YGO-085（このチケット）**。YGO-103 が `状態: done` であること。
 - 部品どうしの順: YGO-080・YGO-082・YGO-086 → YGO-081・YGO-083・YGO-085 → YGO-084。このチケットは YGO-082（環境変数の読み込み）の `状態: done` を待つ。YGO-084 がこのチケットを待つ（J18 が `EMAIL_KEYRING` で復号するため）。
 
 ## 範囲
@@ -27,7 +27,7 @@ M: M1
 
 ## 受け入れ確認
 1. このチケットの 1〜3 行目が `# YGO-085 M1 の KeyProvider の偽の鍵`・`状態: done`・`M: M1`。
-2. YGO-062・YGO-078・YGO-065・YGO-082 のチケットの 2 行目が `状態: done`。
+2. YGO-062・YGO-078・YGO-103・YGO-082 のチケットの 2 行目が `状態: done`。
 3. `sh scripts/prepare.sh` のあと `sh scripts/check.sh` がネットワークなしで `check: ok` で終わる。
 4. 偽の鍵のアダプタが、`EXAMPLE_KEY_DO_NOT_USE:<用途>:<版>` の SHA-256 から版ごとの 32 バイトの鍵を返し、`EMAIL_KEYRING` と `EMAIL_HMAC_KEYRING` の版を引ける。
 5. `LETTER_KEYRING` を読むコードがない。
