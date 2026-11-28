@@ -22,13 +22,15 @@ M: M1
 2. `scripts/check.sh` に、`test/` の `*.test.ts` があることと `package.json` がないことの両方を条件にして `exit 1` する段があり、その注記に `YGO-072` と `R-067` がある。
 3. このチケットが done になった変更で、`package.json` がある（YGO-078 と同じ変更か、YGO-078 が `状態: done`）。
 
-## 確かめた事実（変更 20261127-936bd4 の時点）
-- `package.json`・`package-lock.json` はない。
-- `test/test_TC_033_no_oauth_webauthn_routes.test.ts` はある。
-- YGO-078（`.ai/tickets/YGO-078-m1-package-json-lockfile-vitest.md`）は `状態: open`。YGO-078 の変更は、実装のジョブではコマンドを動かす道具（Bash）が拒まれるため、同じ段（ロックファイルの作成）で 4 回止まり（変更 20261127-5812ca・20261127-54c015・20261127-6b7da1・20261127-19e8fa）、どれも `.ai/` の記録だけで終わった（G-080）。G-080 の一覧が許されるまで YGO-078 を出し直しても進まない（G-082）。
-- `scripts/check.sh` には、テストがあり `package.json` がないときに止める段はまだない。1 の段と 6 の段は `if [ -e package.json ]` で飛ばしている。前の YGO-072 の変更（c741492）が変えたのは、このチケットの事実の節だけ。
-- この変更では段とテストを入れなかった。段を入れると `package.json` がない間は `sh scripts/check.sh` が失敗し、それ以降のどの変更もマージできなくなる。テストは Vitest で動かすので、`package.json` がないと動かず JUnit XML もできない。
-- `scripts/check.sh` には、このチケットが `状態: done` なのに `package.json` がないときに止める段がある（受け入れ確認 3 を固定のコードで確かめる）。
+## 確かめた事実（変更 20261128-69c910 の時点）
+- 直っていない: `scripts/check.sh` の 1 の段（9 行目）と 6 の段（184 行目）は `if [ -e package.json ]` でテストを飛ばしている。テストがあり `package.json` がないときに止める段はない。
+- `package.json`・`package-lock.json`・`node_modules/` はない。テストは `test/test_TC_033_no_oauth_webauthn_routes.test.ts` が 1 つある。
+- YGO-078（`.ai/tickets/YGO-078-m1-package-json-lockfile-vitest.md`）は `状態: open`。実装のジョブではコマンドを動かす道具（Bash）が拒まれるため、YGO-078 は同じ段（ロックファイルの作成）で 6 回止まっている（G-080・G-082）。
+- `scripts/check.sh` の 176〜180 行目には、このチケットが `状態: done` なのに `package.json` がないときに止める段がある（受け入れ確認 3 を固定のコードで確かめる）。
+- 今は段もテストも入れられない。理由は次の 3 つ。
+  - 段を入れると、今のレポジトリ（テストはあり、`package.json` はない）がちょうど失敗の組み合わせになり、`sh scripts/check.sh` が 0 以外で終わって、この変更もそれ以降のどの変更もマージできなくなる。
+  - テストは Vitest で動き、結果を `test-results/junit.xml` に出す。`package.json` がないと Vitest が動かず、XML もできない。
+  - `done` にすると 176〜180 行目の段が失敗にし、受け入れ確認 3（`package.json` がある）も満たせない。`package.json` を入れるのは YGO-078 の範囲。
 - 受け入れ確認 1〜3 は、どれも満たしていない。
 
 ## 止まっている理由と再開の条件
