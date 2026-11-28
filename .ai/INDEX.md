@@ -306,3 +306,4 @@
 - `.ai/tickets/YGO-101-g-079-record-check-yml-prepare-step.md`
 - `.ai/tickets/YGO-102-k-021-ci-definition-owner-adr-0109.md`
 - `.ai/tickets/YGO-103-m1-addresses-tenancies-tc-005.md`
+- `.ai/tickets/YGO-104-g-084-withdraw-ygo-102.md`
